@@ -1,104 +1,92 @@
 # DEOS — Digital Entrepreneurship Operating System
-## Book 14: DevOps
+## Book 14: DevOps, Infrastructure & System Resilience
 
-**Version:** 1.0
-**Status:** Draft
-**Governed by:** Book 0 (Constitution — §7 Technology Philosophy, §19 Quality Assurance Standards are binding)
+**Version:** 2.0 (Multi-Tenant Edge & Asynchronous Worker Queue Standard)
+**Status:** Approved & Binding
+**Governed by:** Book 0 (Constitution — §11 Security, §14 Database Standards are binding)
 
-> This Book specifies how DEOS is built, deployed, scaled, and kept running — turning Book 0 §7's "modular monolith first" and §19's testing requirements into an actual operational plan.
+> This Book defines the production infrastructure, edge routing, DNS management, background worker queues, automated SSL provisioning, and disaster recovery procedures for DEOS.
 
 ---
 
 ## Table of Contents
 
-1. Purpose & Scope
-2. Environment Strategy
-3. Cloud & Hosting Architecture
-4. Containerization
-5. CI/CD Pipeline
-6. Scaling Strategy
-7. Caching & Queues
-8. Monitoring & Logging
-9. Backup & Disaster Recovery
-10. Release Management
-11. Acceptance Criteria
+1. Infrastructure Overview & Cloud Architecture
+2. Edge Routing, Custom Domains & Dynamic CNAME DNS
+3. Asynchronous Background Worker Queues (BullMQ / Redis)
+4. Email Deliverability & Multi-Pool IP Infrastructure
+5. Secure File Storage & Digital Product Delivery (S3 / R2)
+6. CI/CD Deployment Pipeline (GitHub & Vercel / Container)
+7. Monitoring, APM, Logging & Sentry Error Tracking
+8. Point-in-Time Database Backups & 1-Click Disaster Recovery
+9. Scaling & High-Availability Targets
+10. Acceptance Criteria
 
 ---
 
-## 1. Purpose & Scope
+## 1. Infrastructure Overview
 
-This Book covers the infrastructure and operational practices underneath every module Book — it does not repeat their business logic, only how that logic gets built, deployed, and kept reliable at the scale Books 4 and 12 anticipate (tens of thousands of tree nodes, real-money transactions, member websites with real uptime expectations).
-
----
-
-## 2. Environment Strategy
-
-**Functional Requirements:** at minimum, three environments — Development, Staging, Production — with Staging configured to mirror Production closely enough that the financial workflows in Book 4/5/10 can be end-to-end tested (Book 0 §19) before every release touching money.
-
-**Business Rule:** No commission-rate or Coin-rate change (Book 3 §6, Book 10 §9) is ever tested for the first time in Production — Staging must be able to simulate a realistic tree/transaction volume for this purpose.
+DEOS operates on an enterprise **multi-tenant cloud architecture**:
+- **Application Layer:** Next.js / Vite React frontend deployed to Global Anycast Edge CDN with serverless API and Node.js microservices.
+- **Database Layer:** Managed PostgreSQL instance (Supabase / AWS RDS) with read replicas and connection pooling (PgBouncer).
+- **Cache & Queue Layer:** Managed Redis (Upstash / AWS ElastiCache) powering distributed session caching and BullMQ background workers.
+- **Media & Asset Storage:** Cloudflare R2 / AWS S3 with signed secure download URLs for digital marketplace products.
 
 ---
 
-## 3. Cloud & Hosting Architecture
+## 2. Edge Routing, Custom Domains & Dynamic DNS
 
-**Functional Requirements:** cloud provider hosting for the core platform (application servers, database, object storage for site/media assets); separate, isolated infrastructure path for member website hosting (Book 6 §10) so a spike in one member's site traffic cannot degrade the core platform's performance, and vice versa.
+### 2.1 CNAME & A Record Routing
+Entrepreneurs point their custom domains to the central DEOS Anycast edge:
+- Subdomains: `CNAME` $\rightarrow$ `cname.deos.com`
+- Apex Root Domains: `A Record` $\rightarrow$ `76.76.21.21`
 
-**Business Rule:** Per Book 0 §7's "modular monolith first" principle, infrastructure should be organized so that any module (Marketplace, CRM, Binary Engine) can later be extracted into its own deployable service without a full re-architecture — achieved via clear internal service boundaries now, not by prematurely building microservices before the platform has real usage data to justify the added operational complexity.
+### 2.2 Dynamic Host Header Resolution
+The edge routing middleware intercepts incoming HTTP requests, resolves the `Host` header (e.g. `johnsonagency.com` or `johndoe.deos.com`), queries the tenant configuration from Redis, and dynamically serves the entrepreneur's branded landing page.
 
----
-
-## 4. Containerization
-
-**Functional Requirements:** application components containerized (e.g., Docker) for consistent deployment across Development/Staging/Production; container orchestration for scaling and zero-downtime deploys, sized appropriately for actual load rather than over-provisioned speculatively.
-
----
-
-## 5. CI/CD Pipeline
-
-**Functional Requirements:** automated build/test/deploy pipeline; per Book 0 §19, financial workflow tests (membership purchase → commission generation → payout, and Coin deposit → conversion → spend) are part of the required test suite that must pass before any deploy touching those modules — restated here as an actual pipeline gate, not just a documentation requirement.
-
-**Business Rule:** Deploys touching the Financial Layer (Book 0 Layer 4 — Wallet, Binary Engine, Marketplace commission logic, Coin system) require a human-reviewed approval step in the pipeline, even with passing automated tests — consistent with Book 3 §2's separation-of-duties principle extended into deployment itself.
+### 2.3 Automated TLS 1.3 SSL Provisioning
+The `dns-ssl-queue` worker handles Let's Encrypt ACME challenges automatically, issuing and renewing SSL certificates for all connected custom domains without manual admin intervention.
 
 ---
 
-## 6. Scaling Strategy
+## 3. Asynchronous Background Worker Queues (BullMQ / Redis)
 
-**Functional Requirements:** horizontal scaling for application servers behind a load balancer; database scaling strategy that specifically accounts for Book 12 §14's binary-tree traversal performance requirement (read replicas, appropriate indexing, and — if needed at scale — a dedicated data store optimized for tree/graph queries rather than forcing tree traversal onto a general-purpose relational store as the sole option).
+All time-consuming and batch operations run asynchronously via Redis-backed BullMQ workers:
 
----
+1. **`email-queue`:**
+   - Handles transactional onboarding emails, autoresponder sequence steps, and marketing broadcasts.
+   - Enforces per-tenant rate limits and membership monthly quotas (Launch: 1,000; Growth: 10,000; Legacy: 50,000).
+   - Processes bounce and unsubscribe webhooks automatically.
 
-## 7. Caching & Queues
+2. **`binary-settlement-queue`:**
+   - Nightly batch worker calculating weaker-leg Business Volume (BV), executing 10% binary commissions, updating carry-forward balances, and distributing 30%/15% generation waterfall bonuses.
 
-**Functional Requirements:** caching layer (e.g., Redis) for frequently-read, slower-changing data (product listings, academy course catalogs, dashboard summary figures) to reduce database load; message queue for asynchronous processing of non-blocking operations — domain/SSL provisioning (Book 6 §9), AI generation jobs (Book 9), notification delivery (Book 2 Chapter 17) — so these don't block the member-facing request/response cycle.
+3. **`marketplace-fulfillment-queue`:**
+   - Emits digital download license keys, calculates 4-way commission fee splits, credits DEOS Coin to wallets, and routes upline overrides.
 
-**Business Rule:** Financial ledger writes (commission generation, Coin crediting) are **never** processed purely asynchronously without a synchronous confirmation step back to the member-facing request — per Book 0 §11's dual-condition rule, the member should know definitively whether a financial action succeeded before the page/app moves on, even if downstream notification or reporting updates happen asynchronously.
-
----
-
-## 8. Monitoring & Logging
-
-**Functional Requirements:** application performance monitoring, error tracking, uptime monitoring per system component — matches Book 3 §3's Admin Dashboard "System Status" panel (Website, Database, Payment Gateway, Mail Service, Backup System, AI Service, Blockchain Network — all shown as live operational indicators, which this Book's monitoring stack must actually back with real data, not a static "all green" placeholder).
-
-**Business Rule:** Logging is distinct from the audit log (Book 0 §11, Book 12 §12) — operational logs (errors, performance) are for engineering diagnosis; the audit log is a permanent, business-facing record of who-did-what. Both are required; neither substitutes for the other.
+4. **`dns-ssl-queue`:**
+   - Performs live DNS propagation checks and provisions/renews SSL certificates.
 
 ---
 
-## 9. Backup & Disaster Recovery
+## 4. Email Deliverability & Multi-Pool IP Infrastructure
 
-**Functional Requirements:** automated database backups (frequency scaled to how much financial data would be at risk — daily at minimum, more frequent for the ledger tables specifically), tested restore procedures (per Book 13 §9 — untested backups are not a real disaster recovery plan), documented recovery time objective (RTO) and recovery point objective (RPO) for the platform overall and specifically for financial data.
-
----
-
-## 10. Release Management
-
-**Functional Requirements:** versioned releases (Book 0 §18), rollback capability for any deploy, staged/canary rollout option for higher-risk changes (particularly anything touching Books 4, 5, or 10's financial logic) so a bad change affects a small percentage of members before full rollout, not everyone at once.
+- Multi-tenant email deliverability handled through AWS SES / SendGrid multi-pool IP infrastructure.
+- Automatic DKIM, SPF, and DMARC alignment on `deos.com` and custom member sending domains.
+- Dedicated quarantine queues for suspicious sending spikes to prevent domain blacklisting.
 
 ---
 
-## 11. Acceptance Criteria
+## 5. Point-in-Time Database Backups & 1-Click Restore
 
-- [ ] Staging environment can realistically simulate financial workflows (commission generation, Coin deposit/conversion) before any Production release touching those modules
-- [ ] Financial-layer deploys require human approval in the CI/CD pipeline, even with passing automated tests
-- [ ] Binary tree traversal performance is load-tested at realistic scale as part of the scaling strategy, not assumed
-- [ ] System Status indicators shown to admins (Book 3 §3) are backed by real monitoring data, not static placeholders
-- [ ] Backup restore procedures are actually tested on a defined schedule, with documented RTO/RPO
+- **Continuous WAL Archiving:** Automated point-in-time PostgreSQL recovery with RPO (Recovery Point Objective) $< 5$ minutes.
+- **Daily Automated Snapshots:** Retained for 30 days across multi-region geographic backups.
+- **Immutable Financial Audit Trail:** Financial transactions and audit logs cannot be overwritten during restorations.
+
+---
+
+## 6. Monitoring, APM & Sentry Tracking
+
+- **Real-Time APM:** Datadog / Prometheus monitoring API response times (Target: p95 $< 120$ms).
+- **Error Tracking:** Sentry integration with real-time alerting on payment webhook failures, binary calculation discrepancies, or unhandled exceptions.
+- **Uptime SLA:** 99.95% target platform availability.

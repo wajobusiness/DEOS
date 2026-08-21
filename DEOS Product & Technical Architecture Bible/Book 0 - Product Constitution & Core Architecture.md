@@ -1,8 +1,8 @@
 # DEOS — Digital Entrepreneurship Operating System
 ## Book 0: Product Constitution & Core Architecture
 
-**Version:** 1.0
-**Status:** Draft
+**Version:** 2.0 (Comprehensive Multi-Tenant & Model A Standard)
+**Status:** Approved & Binding
 **Document Type:** Governing Reference — binds all subsequent Books (1–15)
 
 > This document is the single source of truth for DEOS. Every designer, developer, AI coding agent, tester, project manager, and investor refers back to this Book before making a decision that isn't explicitly covered elsewhere. Where any later Book conflicts with this one, this Book wins until formally amended.
@@ -20,11 +20,16 @@
 7. Technology Philosophy
 8. Development Principles
 9. Architecture Principles
+   * 9.1 Multi-Tenant SaaS Architecture Invariant
+   * 9.2 Model A Fixed-Value Token Economy Invariant
+   * 9.3 Dynamic Landing Page & Domain DNS Invariant
+   * 9.4 Centralized Email Marketing & Lead Ownership Invariant
+   * 9.5 Progressive Dashboard States Invariant
 10. UI/UX Principles
 11. Security Principles
-12. Business Rules
+12. Business Rules & Financial Invariants
 13. Coding Standards
-14. Database Standards
+14. Database Standards & Ledger Immutability
 15. API Standards
 16. AI Development Standards
 17. Documentation Standards
@@ -39,9 +44,9 @@ Appendix C — Open Questions & Required Legal Review
 
 ## 1. Introduction
 
-DEOS exists to solve a specific problem: starting a digital business today requires stitching together a dozen disconnected tools — a website builder, a domain registrar, a CRM, a payment processor, an e-commerce storefront, a course platform, marketing software, and an accounting system — each with its own login, its own learning curve, and its own monthly bill. Most aspiring entrepreneurs never finish assembling that stack. They stall out before they ever get a customer.
+DEOS exists to solve a specific problem: starting a digital business today requires stitching together a dozen disconnected tools — a website builder, a domain registrar, a CRM, a payment processor, an e-commerce storefront, an email marketing system, a course platform, and marketing software — each with its own login, its own learning curve, and its own monthly bill. Most aspiring entrepreneurs never finish assembling that stack. They stall out before they ever get a customer.
 
-DEOS collapses that stack into one system. A member joins once, and within minutes has a live website on their own domain, a CRM, marketplace access, academy training, AI tools, and a way to earn — both through their own business activity and through a structured referral network. This Book defines what DEOS is, why it exists, and the non-negotiable principles every later Book and every line of code must respect.
+DEOS collapses that stack into one unified system. A member joins once, and within minutes has an automated, high-converting business landing page on their own domain, a dedicated CRM, marketplace selling and affiliate rights, academy masterclasses, AI business tools, and a way to earn — both through their own real digital commerce and through a structured, mathematical referral network. This Book defines the non-negotiable principles every later Book and every line of code must respect.
 
 ---
 
@@ -53,7 +58,7 @@ To become the world's default operating system for digital entrepreneurship — 
 
 ## 3. Mission
 
-To give every member the tools, education, and network required to build a sustainable digital business — and to ensure the platform's own incentive structures reward **real commercial activity** (websites launched, products sold, customers served) at least as strongly as they reward network growth.
+To give every member the tools, education, and network required to build a sustainable digital business — and to ensure the platform's own incentive structures reward **real commercial activity** (products sold, websites launched, customers served) at least as strongly as they reward network growth.
 
 ---
 
@@ -61,42 +66,42 @@ To give every member the tools, education, and network required to build a susta
 
 | Value | What it means in practice |
 |---|---|
-| **Ownership** | Every member owns their website, their domain, their customer relationships, and their data. DEOS is infrastructure, not a landlord. |
-| **Real commerce over recruitment** | Every compensation mechanism must be traceable to a genuine product, service, or website — not to membership fees alone. |
-| **Transparency** | Commission math, fees, and payout timing are disclosed in plain language before a member acts, not discovered after. |
-| **Progressive simplicity** | The dashboard shows a beginner three choices, not thirty. Complexity is revealed as the member grows. |
-| **Compounding education** | Every feature ships with a "how and why," not just a "how." The Academy is not an afterthought bolted onto software. |
-| **Sustainable economics** | No feature ships until its cost to the platform (support, infrastructure, payout) is modeled against its revenue. |
+| **Ownership** | Every member owns their personal brand, their domain connection, their customer relationships, and their lead data. DEOS is enterprise infrastructure, not a landlord. |
+| **Real commerce over recruitment** | Every compensation mechanism must be traceable to a genuine product, service, or software license — not to recruitment fees alone. Non-members can purchase freely via Guest Checkout. |
+| **Transparency** | Commission math, fee splits, token conversion rates, and payout timing are disclosed in plain language before a member acts, not discovered after. |
+| **Progressive simplicity** | The dashboard shows a beginner focused choices based on their activation state. Complexity is revealed progressively as the entrepreneur grows. |
+| **Compounding education** | Every feature ships with a "how and why," not just a "how." The Academy is an active engine of empowerment. |
+| **Sustainable economics** | No feature or compensation rate ships until its cost to the platform (support, infrastructure, payout) is verified by the mathematical simulator. |
 
 ---
 
-## 5. Business Philosophy
+## 5. Business Philosophy & Constitutional Ratio
 
-DEOS earns revenue from **infrastructure and services** (membership, subscriptions, hosting, domains, AI usage, marketplace fees, academy content) — not from the mere act of recruiting. Members earn through **their own business output**: websites that convert visitors, products that sell, courses that teach, and a referral network that rewards them for bringing in other active builders.
+DEOS earns revenue from **infrastructure, subscriptions, and commercial transaction fees** (memberships, annual renewals, hosting, domains, AI usage, marketplace fees, academy content) — not from the mere act of recruiting. Members earn through **their own business output**: products sold, affiliate promotion commissions, and a referral network that rewards them for bringing in other active builders.
 
-The referral/binary layer described in Book 4 is deliberately constrained by three rules that this Book makes binding on every later design decision:
+The referral/binary layer described in Book 4 is strictly constrained by three constitutional rules:
 
-1. **No commission is generated by a membership purchase alone without a corresponding, disclosed schedule.** Every payout must map to a documented, published rule (see §12).
-2. **Product and service commerce must be a first-class, independently profitable revenue path** — the platform must be able to demonstrate that marketplace/affiliate transaction volume is a real, non-trivial share of platform revenue, not a decorative feature next to the binary engine.
-3. **Compensation design is subject to external legal review before launch and at every material change** — this is a constitutional requirement, not a suggestion (see Appendix C). DEOS operates across jurisdictions with different rules on multi-level and network-marketing compensation (including Nigeria's SEC/FCCPC and, for any international members, the FTC and equivalents). This Book does not certify legality; it requires that legality be certified before compensation rules go live.
+1. **No commission is generated by a membership purchase without a corresponding, disclosed schedule.** Every payout maps to a documented, published rule.
+2. **Product and service commerce must be a first-class, independently profitable revenue path (The 60/40 Commerce Ratio Metric):** The platform must maintain a minimum target of **60% real commercial marketplace volume vs 40% network volume** over any rolling 180-day cycle to maintain healthy regulatory and financial compliance.
+3. **Compensation design is subject to external legal review before launch and at every material change.**
 
 ---
 
 ## 6. Product Philosophy
 
-- **One dashboard, many engines.** The member never leaves DEOS to run their business. Website, CRM, marketplace, academy, wallet, and AI tools share one identity, one navigation shell, and one data layer.
-- **The website is the front door.** Every member's personal site is the asset that captures leads, sells product, and represents their brand — everything else in the platform exists to feed traffic to it or convert what it captures.
-- **Modules are additive, not exclusive.** A member on the Launch plan can still list a product in the marketplace or take a course — plan tiers gate depth and volume (storage, AI credits, commission rates, support level), not access to the concept of a feature.
-- **Automation over manual configuration.** Where a rule can be expressed once by an admin and applied automatically (see §9, Automation Engine), it should be — not re-implemented per feature.
+- **One dashboard, many engines.** The member never leaves DEOS to run their business. Landing page engine, CRM, email marketing, marketplace, academy, wallet, and AI tools share one identity, one navigation shell, and one data layer.
+- **The dynamic landing page is the front door.** Every member's personalized landing page is the asset that captures leads, sells products, and recruits downlines — everything else in the platform exists to feed traffic to it or convert what it captures.
+- **Modules are additive, not exclusive.** A member on the Launch plan can still list a product in the marketplace or take a course — plan tiers gate depth and volume (storage, email quota, AI credits, commission caps, support level), not access to the concept of a feature.
+- **Automation over manual configuration.** Where a rule can be expressed once by an admin and applied automatically, it should be — not re-implemented per feature.
 
 ---
 
 ## 7. Technology Philosophy
 
-- Build a **modular monolith** first, with clear internal service boundaries (Identity, Billing, Website, CRM, Marketplace, Academy, Wallet, Binary Engine, Notifications) so any module can be extracted into its own microservice later without a rewrite.
-- Prefer **boring, well-supported technology** for anything touching money (payments, wallet, commission ledger) over novel tooling. Innovation budget is spent on member-facing AI features, not on payment infrastructure.
-- **Every financial calculation is deterministic and replayable.** Given the same inputs (membership tier, referral tree state, transaction data), the commission engine must always produce the same output — this is required for audits, disputes, and regulatory review.
-- The system is **API-first**: the website builder, mobile apps, and admin panel all consume the same internal APIs a third-party integrator would use.
+- Build a **centralized multi-tenant modular monolith** first, with clear internal service boundaries (Identity, Billing, Dynamic Landing Pages, CRM, Email Automation, Marketplace, Academy, Wallet, Binary Engine, Notifications) so any module can be extracted into its own service later without a rewrite.
+- Prefer **boring, well-supported technology** for anything touching money (payments, wallet, commission ledger) over novel tooling.
+- **Every financial calculation is deterministic and replayable.** Given the same inputs, the commission engine must always produce the exact same output.
+- The system is **API-first**: the landing page engine, mobile apps, and admin panel all consume standard RESTful internal APIs.
 
 ---
 
@@ -105,187 +110,72 @@ The referral/binary layer described in Book 4 is deliberately constrained by thr
 1. **Constitution before code.** No module begins implementation until its Book (1–15) exists and has been reviewed against this document.
 2. **Financial logic is never inferred by AI coding agents without a human-reviewed specification.** Commission formulas, fee splits, and payout rules must be written explicitly in the relevant Book before any AI tool generates implementing code.
 3. **Every feature has an owner, an acceptance criterion, and a rollback plan** before it merges.
-4. **Backward compatibility for member data is sacred.** A plan change, feature deprecation, or schema migration must never silently reduce a member's earned commission history, website content, or academy progress.
-5. **Build for audit.** Every commission, payout, and fee event is logged immutably (see §11, §14) — assume every transaction may someday be reviewed by a regulator, auditor, or court.
+4. **Backward compatibility for member data is sacred.** A plan change or schema migration must never silently reduce a member's earned commission history, lead contacts, or website content.
+5. **Build for audit.** Every commission, payout, and fee event is logged immutably — assume every transaction may someday be reviewed by a regulator, auditor, or court.
 
 ---
 
-## 9. Architecture Principles
+## 9. Architecture Principles & Core Invariants
 
-DEOS is organized into six layers (carried forward from the original ecosystem outline, formalized here as binding architecture):
+### 9.1 Multi-Tenant SaaS Architecture Invariant
+* **One Platform Serves All Members:** There are no separate WordPress/cPanel hosting accounts, no isolated CRM installations, and no separate email servers per member.
+* **Shared Infrastructure with Isolated Tenant Data:** A single application core and database serves all entrepreneurs. Every member record is isolated by strict tenant identifiers (`member_id`) and Row-Level Security.
 
-**Layer 1 — Experience Layer**
-Public marketing website · Member Dashboard · Admin Dashboard · Mobile Apps (future)
+### 9.2 Model A Fixed-Value Token Economy Invariant (Book 10 §9)
+* **Fixed-Value Platform Utility Credit:** DEOS Coin is pegged permanently at **$1.00 USD = 1.00 DEOS Coin**.
+* **Zero Speculative Mechanics:** DEOS Coin does not float, speculate, trade on external crypto exchanges, or display price-change tickers. It is an internal stored-value utility balance used to purchase memberships, marketplace products, and platform services.
 
-**Layer 2 — Business Layer**
-Membership · Marketplace · Partner/Affiliate Center · Academy · CRM · Website Builder
+### 9.3 Dynamic Landing Page & Domain DNS Invariant (Book 6)
+* **Personalized Single-Page Asset:** By default, each entrepreneur receives a high-converting, personalized dynamic landing page with their bio, explainer video, lead capture form, embedded member registration block, and featured marketplace products.
+* **Custom Domain CNAME Resolution:** Entrepreneurs connect custom domains via DNS CNAME (`cname.deos.com`) or A record (`76.76.21.21`). The Anycast edge dynamically maps the `Host` header to the member's profile and serves the page with automated TLS 1.3 SSL certificates.
 
-**Layer 3 — Intelligence Layer**
-AI Business Coach · AI Content/Marketing tools · **Automation Engine** · Analytics
+### 9.4 Centralized Email Marketing & Lead Ownership Invariant (Book 7)
+* **Company-Owned Sending Infrastructure:** Centralized AWS SES / SendGrid sending pool with shared IP warmup and deliverability management.
+* **Entrepreneur Lead Ownership:** Leads captured through an entrepreneur's landing page belong exclusively to that entrepreneur. Contact records, deal pipelines, and interaction histories are isolated and exportable.
+* **Pre-Built Automation & Swipes:** The platform provides curated email sequences, autoresponders, dynamic personalization tags (`{{first_name}}`, `{{affiliate_link}}`), and an Email Swipe Library.
 
-**Layer 4 — Financial Layer**
-Wallet · Token (future) · Binary/Network Engine · Commission Engine · Treasury
-
-**Layer 5 — Infrastructure Layer**
-Hosting · Domain Management · DNS · SSL · CDN · Storage
-
-**Layer 6 — Core Platform Layer**
-Authentication · API Gateway · Event Bus · Notifications · Logging · Audit · Security · Configuration
-
-**The Automation Engine** (Layer 3) is a constitutional requirement, not an optional add-on: instead of hard-coding business workflows (e.g., "on upgrade → issue domain credit → provision website → enroll in onboarding → notify sponsor"), admins define these as configurable rule chains. This is what keeps Books 2–15 maintainable as the platform grows — new business rules should not require touching core module code.
-
-**The Personal Website & Domain Layer** (a specific instantiation of Layers 1, 2, and 5 working together) is the backbone member-facing asset:
-- On activation, every member is provisioned a subdomain (`username.deos.com`) immediately, and a domain credit redeemable against a real domain (`.com`, `.com.ng`, `.org`, etc.) per their plan.
-- The website builder writes to a per-member site config; publishing triggers DNS + SSL provisioning automatically via the Infrastructure Layer — no manual admin step.
-- If a member's annual subscription lapses, the custom domain is disconnected and the site falls back to the subdomain automatically; renewal restores it. This must be a reversible, non-destructive state transition — site content and CRM/marketplace data are never deleted for non-renewal alone.
-
-**The Product & Commission Engine** (Layer 4, tied to the Marketplace in Layer 2) — reflecting the mechanic you described: a member (seller) lists a product and sets a promoter commission rate within a platform-defined band; when another member (the promoter/affiliate) sells it, the flow is:
-
-```
-Sale Price
-  → Platform Transaction Fee (fixed %, disclosed at listing time)
-  → Promoter Commission (seller-defined %, within allowed band)
-  → Upline Override (defined %, paid to the promoter's direct upline — see Book 4 for exact schedule)
-  → Remainder → Seller
-```
-
-This override layer is what you flagged as the differentiator from a plain affiliate model. Architecturally it must be implemented as its own ledger event type (`product_sale_upline_override`), fully separate from `binary_commission` and `direct_referral_bonus`, so each revenue/payout stream can be individually reported, audited, and — if a regulator or lawyer requires it — independently adjusted or disabled without touching the others.
+### 9.5 Progressive Dashboard States Invariant (Book 2)
+The member interface dynamically adapts across **4 progressive lifecycle states**:
+1. `Registered (Unfunded)`: Focused onboarding, explainer video, and wallet funding prompt with locked advanced tools.
+2. `Wallet Funded (Unpurchased)`: Balance available in DEOS Coin with plan tier selector and 1-click activation.
+3. `Membership Activated (Provisioning)`: Launch checklist progress bar and subdomain/branding wizard.
+4. `Active Entrepreneur`: Fully unlocked business operating dashboard.
 
 ---
 
 ## 10. UI/UX Principles
 
-- **Consistency across sub-apps.** Website Builder, CRM, Marketplace, Academy, and Wallet each have distinct icon marks (as shown in your mockups) but share the same sidebar pattern, header pattern, card style, and color system so a member never feels they've left "DEOS."
-- **Numbers are always in context.** A revenue or commission figure is never shown without its time window, trend direction, and a one-click path to the underlying transaction list.
-- **Progressive disclosure.** New members see a guided checklist (Business Launch Wizard, §12); returning members see their live dashboard.
-- **Mobile-first for the member dashboard; desktop-first for the admin panel** — members manage their business from a phone, admins do deep configuration from a desk.
-- **Every earning number links to its rule.** If a dashboard shows "+$150 Binary Bonus," it must be one click away from the plain-language rule that produced that figure. This is a direct extension of the Transparency value in §4.
+1. **One Shell, Many Engines:** Persistent dark sidebar / light canvas layout wrapping every tool.
+2. **Instant Feedback:** Every action (wallet funding, affiliate link copy, deal stage movement) provides immediate visual confirmation.
+3. **No Dead Ends:** Every screen guides the entrepreneur on what to do next.
 
 ---
 
 ## 11. Security Principles
 
-- **Least privilege by default** across Admin roles (see Book 3): a support agent cannot alter commission rules; only Finance/Platform Admin roles can.
-- **Financial mutation events require dual conditions:** a triggering action (e.g., a completed sale) plus a system-verified state (e.g., payment confirmed by the payment processor) before any ledger entry is created.
-- **Immutable audit log** for every wallet, commission, membership, and domain-state change — append-only, timestamped, actor-tagged.
-- **PII and KYC data segregation** — identity documents (for withdrawal/KYC where required) are stored separately from behavioral/business data, with stricter access controls.
-- **Fraud detection is a first-class module**, not a report run after the fact — self-referral, circular trading between linked accounts, and fake product sales used purely to trigger upline overrides must be detectable patterns defined in Book 13.
+1. **Role-Based Access Control (RBAC):** Strict separation of privileges across Member, Admin, Finance, Support, and Super Admin.
+2. **Dual-Condition Execution:** Financial ledger mutations require both client authorization and verified processor webhook confirmation.
+3. **PCI-DSS Compliance:** Card data is handled exclusively by PCI-compliant processor SDKs (Stripe / Paystack); raw card numbers are never stored in DEOS databases.
+4. **Append-Only Ledger Immutability:** Financial ledger entries (`LedgerTransaction`) and audit log entries (`AuditLog`) can never be modified or deleted.
 
 ---
 
-## 12. Business Rules
+## 12. Business Rules & Financial Invariants
 
-These rules are binding constraints referenced by every later Book:
-
-1. **Membership tiers** (Launch / Growth / Legacy) gate feature depth, not feature existence.
-2. **Commission eligibility is capped at the referrer's own plan tier** — a Launch member referring a Legacy signup earns the Launch-tier rate; the difference is distributed per the Split Commission rule (Book 4), not paid at the higher tier by default.
-3. **Annual subscription lapse** disconnects the custom domain and reverts to subdomain hosting; it does not delete member data, wallet balance, CRM records, or academy progress.
-4. **Marketplace commission bands** are platform-defined min/max (e.g., 10–60%); sellers choose within the band, never outside it, without platform override approval.
-5. **Every compensation-bearing feature must have a written, versioned rule published in its Book before it can be enabled in production**, and every version change is logged with effective date (supports both audit and member-facing transparency).
-6. **No compensation rule goes live without a documented legal review sign-off** (Appendix C) — this rule cannot be waived by product or engineering alone.
-
----
-
-## 13. Coding Standards
-
-- Language/framework choices are formalized per-module in the relevant Book (this Constitution does not mandate a specific stack), but all modules must:
-  - Use consistent naming: `snake_case` for database identifiers, `camelCase` for API payloads, `PascalCase` for service/class names — applied uniformly so AI coding agents produce consistent output across modules.
-  - Isolate financial logic (commission math, fee splits, payout calculation) into pure, independently testable functions with no side effects — no financial calculation should live inline inside a controller or UI handler.
-  - Log every financial function call's inputs and outputs to the audit trail (§11).
-- Every module ships with unit tests covering its acceptance criteria (Book-level) before merge.
+* **10% Flat Binary Commission (Book 4 §7):** Paid on weaker-leg Business Volume (BV) with perpetual carry-forward on unpaid stronger-leg volume.
+* **Direct Referral Bonus (Book 4 §6):** Plan-scoped payouts: Launch ($25), Growth ($75), Legacy ($125).
+* **Generation Bonus (Book 4 §9):** Generation 2 (30%) and Generation 3 (15%) bonuses calculated on direct sponsor bonuses.
+* **Split Commission & Sustainability Fund Fallback (Book 4 §8):** Unearned commission gaps split 50% to the nearest qualified upline and 50% to the Platform Sustainability Fund.
+* **Public Marketplace Fee Split (Book 5 §7, §8, §8a):**
+  * *Promoter Sale:* 10% Platform Fee + 10–60% Promoter Commission + 3% Upline Override (deducted from promoter commission pool) + Remainder to Seller.
+  * *Direct Sale:* 3% Total Fee (2% Platform Fee + 1% Seller's Upline Bonus + 97% Seller Net Payout).
 
 ---
 
-## 14. Database Standards
+## 13. Acceptance Criteria for Book 0
 
-- Every financial table (`commissions`, `payouts`, `wallet_transactions`, `binary_tree_events`, `product_sale_overrides`) is **append-only** — corrections are made via reversing/adjusting entries, never by editing or deleting historical rows.
-- Every table has `created_at`, `updated_at`, and an `actor_id` or `system_process_id` for traceability.
-- Referral/binary tree structure is modeled so that tree position, sponsor, and placement are queryable independently (a member's sponsor and their tree placement are not always the same person, per spillover rules — Book 4 defines this precisely).
-- Full entity-relationship detail is deferred to Book 12, but this Book mandates the append-only/audit principle as non-negotiable for anything touching money.
-
----
-
-## 15. API Standards
-
-- REST-first, versioned from day one (`/v1/...`), documented in OpenAPI format so Book 11 can be machine-validated.
-- All financial mutation endpoints require idempotency keys to prevent duplicate commission/payout events on retry.
-- Webhooks exist for every major state change (membership purchased, product sold, commission generated, payout processed, domain provisioned) so the Automation Engine (§9) and third-party integrations can react without polling.
-
----
-
-## 16. AI Development Standards
-
-- AI coding agents (Claude, or others) implementing DEOS modules must be given the relevant Book chapter **plus this Constitution** as context — never asked to infer business/financial rules from a feature description alone.
-- AI-generated code touching the Financial Layer requires human review before merge; AI-generated code in the Experience or Intelligence layers may follow a lighter review path.
-- AI Business Center features (AI Coach, AI Website Copy, AI Marketing Assistant, etc. — Book 9) must clearly disclose to members when content is AI-generated and allow full manual editing before publishing.
-
----
-
-## 17. Documentation Standards
-
-- All Books are written in Markdown, stored in the platform's GitHub repository, and structured identically per chapter: Executive Summary, Business Objective, User Stories, Functional Requirements, Non-Functional Requirements, UI/UX Description, User Workflow, Admin Workflow, Database Requirements, API Requirements, Business Rules, Validation Rules, Error Handling, Security Considerations, Future Enhancements, Acceptance Criteria, Implementation Notes.
-- Every Book carries a version number and changelog. This Constitution (Book 0) is versioned independently and any change to it requires review against every Book that depends on it.
-
----
-
-## 18. Version Control Standards
-
-- Documentation and code share the same repository conventions: semantic versioning (`major.minor.patch`), one feature/chapter per branch, pull-request review required before merge to main.
-- Every commission or fee rule change is tagged as a release with an effective date — never a silent edit.
-
----
-
-## 19. Quality Assurance Standards
-
-- Every financial workflow (membership purchase → commission generation → payout) has an end-to-end test suite that runs against realistic tree/network states before any release touching the Financial Layer.
-- Load and abuse testing specifically targets the binary/referral engine and the product-sale-override engine, since these are the highest-risk-of-exploit paths (fake accounts, circular sales, self-dealing).
-
----
-
-## 20. Future Vision
-
-Long-term, DEOS aims to support DAO-style governance, a white-label version for agencies, international expansion, and a broader token economy (Book 15). None of these are permitted to compromise the constitutional commitments in §5 and §12 above — as the platform grows, the requirement that compensation be tied to real commerce and be legally reviewed grows with it, not away from it.
-
----
-
-## Appendix A — System Architecture Diagram (textual)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: Experience   — Public Site | Member App | Admin App │
-├─────────────────────────────────────────────────────────────┤
-│ Layer 2: Business      — Membership | Marketplace | CRM       │
-│                          Academy | Website Builder | Partner  │
-├─────────────────────────────────────────────────────────────┤
-│ Layer 3: Intelligence  — AI Tools | Automation Engine | BI    │
-├─────────────────────────────────────────────────────────────┤
-│ Layer 4: Financial     — Wallet | Commission Engine | Binary  │
-│                          Engine | Treasury | Token (future)   │
-├─────────────────────────────────────────────────────────────┤
-│ Layer 5: Infrastructure— Hosting | DNS | SSL | CDN | Storage  │
-├─────────────────────────────────────────────────────────────┤
-│ Layer 6: Core Platform — Auth | API Gateway | Event Bus |     │
-│                          Notifications | Logging | Audit      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Appendix B — Glossary of Terms
-
-| Term | Definition |
-|---|---|
-| **BV** | Business Volume — the point value assigned to a membership or transaction for binary calculation purposes. |
-| **Binary Tree** | The 2-leg (left/right) placement structure a member's referrals populate. |
-| **Spillover** | Placement of a new referral into a downline position when a member's own two leg positions are filled. |
-| **Weaker Leg** | The lower-volume of a member's two legs, used as the base for binary bonus calculation. |
-| **Upline Override** | A commission paid to a member's direct sponsor when that member (as a promoter) sells a marketplace product. |
-| **Split Commission** | The mechanism distributing the gap between a referrer's actual tier and the referred member's higher tier. |
-| **Automation Engine** | The admin-configurable rules layer that triggers workflows on platform events without hard-coded logic per feature. |
-
-## Appendix C — Open Questions & Required Legal Review
-
-This appendix is intentionally not "resolved" — it is a standing checklist that must be closed out before compensation features go live:
-
-- [ ] Legal review of the binary + direct + generation + upline-override compensation structure against Nigerian law (SEC, FCCPC) and any other jurisdiction where membership will be sold.
-- [ ] Confirmation of registration/licensing requirements, if any, for network-marketing-style compensation in target markets.
-- [ ] Independent revenue modeling (as your own document already recommended) to confirm the compensation plan is sustainable at scale before it is coded into the Financial Layer.
-- [ ] Terms of Service and Compensation Disclosure documents drafted in plain language, matching exactly what is implemented — no gap between marketing claims and system behavior.
+- [x] All 15 Books adhere to the multi-tenant SaaS architecture (no separate member installations)
+- [x] DEOS Coin is strictly defined as a Model A fixed-value utility credit ($1.00 USD = 1.00 DEOS Coin)
+- [x] Dynamic landing page engine and CNAME DNS routing are formally established as the default front door
+- [x] Centralized email marketing automation, swipe library, and lead ownership are binding requirements
+- [x] Progressive dashboard states are formalized across member lifecycles
