@@ -1,0 +1,171 @@
+// DEOS Unified TypeScript Contracts
+
+export type LedgerEventType = 
+  | 'direct_referral_bonus'
+  | 'binary_commission'
+  | 'generation_bonus'
+  | 'split_commission_platform'
+  | 'split_commission_upline'
+  | 'platform_transaction_fee'
+  | 'promoter_commission'
+  | 'product_sale_upline_override'
+  | 'direct_sale_upline_bonus' // Book 5 §8a v1.2/1.3
+  | 'seller_payout'
+  | 'academy_instructor_revenue'
+  | 'coin_deposit'
+  | 'coin_conversion'
+  | 'wallet_withdrawal'
+  | 'wallet_transfer_in'
+  | 'wallet_transfer_out';
+
+export type PlanTier = 'launch' | 'growth' | 'legacy';
+
+export type PaymentProcessorType = 'stripe' | 'paystack' | 'crypto_trc20' | 'direct_bank';
+
+export type ViewType = 
+  | 'landing'
+  | 'onboarding'
+  | 'dashboard'
+  | 'wallet'
+  | 'deposit'
+  | 'binary'
+  | 'partner'
+  | 'marketplace'
+  | 'sellers'
+  | 'academy'
+  | 'builder'
+  | 'domains'
+  | 'crm'
+  | 'ai-center'
+  | 'marketing'
+  | 'analytics'
+  | 'events'
+  | 'team'
+  | 'settings'
+  | 'support'
+  | 'admin';
+
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  avatar: string;
+  plan: PlanTier;
+  role: 'member' | 'admin' | 'super_admin';
+  status: 'active' | 'suspended' | 'banned';
+  memberSince: string;
+  renewalDate: string;
+  rank: string;
+  nextRank: string;
+  walletBalance: number;
+  tokenBalance: number;
+  availableBalance: number;
+  binaryVolume: number;
+  activeReferrals: number;
+}
+
+export interface TreeNode {
+  id: string;
+  name: string;
+  avatar: string;
+  role: string;
+  leg: 'left' | 'right' | 'root';
+  status: 'active' | 'inactive';
+  bv: number;
+  directBonusEarned?: number;
+  children?: TreeNode[];
+}
+
+export interface WalletTransaction {
+  id: string;
+  type: LedgerEventType;
+  description: string;
+  amount: number;
+  currency: 'USDT' | 'DEOS' | 'USD';
+  status: 'Completed' | 'Pending' | 'Failed';
+  date: string;
+  time: string;
+}
+
+export interface Product {
+  id: string;
+  slug?: string;
+  title: string;
+  category: string;
+  price: number;
+  affiliateCommissionRate: number; // e.g. 0.40 = 40%
+  salesCount: number;
+  rating: number;
+  reviewsCount: number;
+  sellerName: string;
+  sellerAvatar: string;
+  badge?: 'Best Seller' | 'New' | 'Top Rated' | 'Hot';
+  image: string;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  avatar: string;
+  company: string;
+  source: string; // IMMUTABLE
+  status: 'New' | 'Contacted' | 'Qualified' | 'Lost';
+  createdAt: string;
+}
+
+export interface Deal {
+  id: string;
+  title: string;
+  company: string;
+  amount: number;
+  stage: 'New' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won';
+  contact: string;
+  probability: number;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  category: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  lessonsCount: number;
+  completedLessons: number;
+  rating: number;
+  studentsCount: number;
+  image: string;
+  status: 'In Progress' | 'Completed' | 'Not Started';
+}
+
+export interface EventItem {
+  id: string;
+  title: string;
+  category: 'Live Event' | 'Webinar' | 'Virtual Event' | 'Draft';
+  date: string;
+  time: string;
+  instructor: string;
+  instructorAvatar: string;
+  registered: number;
+  capacity: number;
+  revenue: number;
+  status: 'Upcoming' | 'Live' | 'Past' | 'Draft';
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: 'Admin' | 'Manager' | 'Editor' | 'Analyst' | 'Support' | 'Designer' | 'Developer' | 'Viewer';
+  department: string;
+  status: 'Active' | 'Inactive';
+  joinedDate: string;
+  lastActive: string;
+}
+
+export interface SystemStatus {
+  service: string;
+  status: 'Operational' | 'Degraded' | 'Outage';
+  latency: string;
+}
