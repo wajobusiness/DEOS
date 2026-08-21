@@ -34,3 +34,4 @@ lerna-debug.log*
 # Prisma generated artifacts
 prisma/*.db
 prisma/*.db-journal
+
