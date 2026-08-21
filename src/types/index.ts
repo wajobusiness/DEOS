@@ -64,6 +64,7 @@ export interface Member {
   availableBalance: number;
   binaryVolume: number;
   activeReferrals: number;
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface TreeNode {

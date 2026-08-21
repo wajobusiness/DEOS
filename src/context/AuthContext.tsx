@@ -59,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const metaCountry = authUser.user_metadata?.country || 'Global';
     const metaSponsor = authUser.user_metadata?.sponsorCode || 'DEOS100245';
     const memberCode = authUser.user_metadata?.memberCode || `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
+    const hasCompleted = authUser.user_metadata?.hasCompletedOnboarding === true;
 
     return {
       id: authUser.id,
@@ -79,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       availableBalance: 0.00,
       binaryVolume: 0,
       activeReferrals: 0,
+      hasCompletedOnboarding: hasCompleted,
     };
   };
 
@@ -113,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           availableBalance: Number(data.walletBalance || 0),
           binaryVolume: Number(data.binaryLeftVolume || 0) + Number(data.binaryRightVolume || 0),
           activeReferrals: 0,
+          hasCompletedOnboarding: true,
         };
 
         setMember(profile);
@@ -205,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             country: country || 'Global',
             sponsorCode: sponsorCode || 'DEOS100245',
             memberCode: code,
+            hasCompletedOnboarding: false,
           },
         },
       });
@@ -222,7 +226,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(data.session);
         }
 
-        const newProfile = buildProfileFromUser(data.user);
+        // Fresh sign up starts with hasCompletedOnboarding: false
+        const newProfile: Member = {
+          ...buildProfileFromUser(data.user),
+          hasCompletedOnboarding: false,
+        };
         setMember(newProfile);
         localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
 
@@ -288,7 +296,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
         setSession(data.session);
         localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(data.user));
-        await fetchMemberProfile(data.user);
+        const prof = await fetchMemberProfile(data.user);
+        // If user is returning/existing, onboarding is marked completed
+        const updated = { ...prof, hasCompletedOnboarding: true };
+        setMember(updated);
+        localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
         return { success: true };
       }
 
@@ -318,10 +330,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update Plan Tier
+  // Update Plan Tier & Mark Onboarding Complete
   const updatePlan = async (plan: PlanTier) => {
     if (member) {
-      const updated = { ...member, plan };
+      const updated: Member = { ...member, plan, hasCompletedOnboarding: true };
       setMember(updated);
       localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
 

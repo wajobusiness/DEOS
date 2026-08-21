@@ -21,12 +21,14 @@ import {
   CheckCircle2,
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Zap,
+  Tag,
+  ArrowRight
 } from 'lucide-react';
 import { Member, ViewType } from '../types';
 import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
-
 import { LaunchWizardModal } from '../components/common/LaunchWizardModal';
 
 interface UserDashboardProps {
@@ -40,74 +42,66 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 }) => {
   const [showWizard, setShowWizard] = React.useState(false);
 
+  // Dynamic user computations based on authenticated member profile
+  const totalEarnings = currentUser.walletBalance + (currentUser.binaryVolume * 0.10);
+  const binaryBV = currentUser.binaryVolume || 0;
+  const directReferrals = currentUser.activeReferrals || 0;
+  const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.deos.com`;
+
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
-      {/* 15-Step Launch Wizard Modal */}
+      {/* Launch Wizard Modal */}
       <LaunchWizardModal
         isOpen={showWizard}
         onClose={() => setShowWizard(false)}
         onNavigate={onNavigate}
       />
 
-      {/* Progressive Onboarding Hero for New Unfunded Members */}
-      {currentUser.walletBalance === 0 && (
-        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 rounded-3xl p-6 sm:p-8 text-white border border-indigo-500/30 shadow-2xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  <span>Account Verified</span>
-                </span>
-                <span className="text-xs text-indigo-300 font-semibold">Welcome to DEOS</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
-                Let's Launch Your Digital Business, {currentUser.name}! 🚀
-              </h2>
-              <p className="text-xs text-slate-300 max-w-2xl">
-                Your entrepreneur workspace is ready. Complete the 3 quick launch steps below to fund your wallet, choose your business plan, and publish your personal landing page.
-              </p>
-            </div>
-
-            <button
-              onClick={() => onNavigate('deposit')}
-              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 shrink-0"
-            >
-              <span>Fund Wallet & Activate</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </button>
+      {/* Plan Status Banner */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white font-black text-xl">
+            {currentUser.name?.charAt(0)?.toUpperCase() || 'D'}
           </div>
-
-          {/* 3 Step Quick Setup Pipeline */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs font-mono font-bold text-indigo-400">Step 01</span>
-              <h4 className="text-sm font-bold text-white">Fund DEOS Wallet</h4>
-              <p className="text-[11px] text-slate-400">Deposit using Credit Card, Bank Transfer, or USDT TRC20 ($100–$500).</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                Good morning, {currentUser.name}! 👋
+              </h2>
+              <Badge variant="purple" size="sm">
+                {currentUser.plan.toUpperCase()} PLAN
+              </Badge>
             </div>
-
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs font-mono font-bold text-purple-400">Step 02</span>
-              <h4 className="text-sm font-bold text-white">Choose Membership Plan</h4>
-              <p className="text-[11px] text-slate-400">Select Launch ($100), Growth ($300), or Legacy ($500) with 1 click.</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs font-mono font-bold text-pink-400">Step 03</span>
-              <h4 className="text-sm font-bold text-white">Publish Landing Page & CRM</h4>
-              <p className="text-[11px] text-slate-400">Your personal subdomain and 10% binary network position go live instantly.</p>
-            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Member ID: <span className="font-mono font-bold text-indigo-600">{currentUser.id}</span> • Renewal Date: {currentUser.renewalDate}
+            </p>
           </div>
         </div>
-      )}
 
-      {/* 5 KPI Metric Cards Strip */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={() => setShowWizard(true)}
+            className="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Launch Guide</span>
+          </button>
+          <button
+            onClick={() => onNavigate('deposit')}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/30 transition-all flex items-center gap-1.5 ml-auto md:ml-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Deposit</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5 Dynamic KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard
           title="Total Earnings"
-          value="$24,560.00"
-          change="+12.5%"
-          subtitle="vs last month"
+          value={`$${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          subtitle="Net commissions earned"
           icon={DollarSign}
           iconBg="bg-indigo-50"
           iconColor="text-indigo-600"
@@ -115,8 +109,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         />
         <MetricCard
           title="Wallet Balance"
-          value={`$${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-          subtitle="USDT Available"
+          value={`$${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          subtitle="DEOS Available"
           icon={Wallet}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
@@ -124,9 +118,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         />
         <MetricCard
           title="Binary Volume (BV)"
-          value="125,000 BV"
-          change="+18.2%"
-          subtitle="10% flat rate"
+          value={`${binaryBV.toLocaleString()} BV`}
+          subtitle="10% flat binary payout"
           icon={Network}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -134,9 +127,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         />
         <MetricCard
           title="Active Referrals"
-          value="256"
-          change="+15"
-          subtitle="this week"
+          value={`${directReferrals}`}
+          subtitle="Direct sponsors"
           icon={Users}
           iconBg="bg-amber-50"
           iconColor="text-amber-600"
@@ -155,7 +147,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
       {/* Row 1: Earnings Analytics, Donut & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Earnings Overview Chart Card (7 cols) */}
+        {/* Earnings Overview Card (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -163,18 +155,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 Earnings Overview
               </p>
               <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-2xl font-extrabold text-slate-900">$24,560.00</h3>
-                <span className="text-xs font-bold text-emerald-600">↑ 12.5%</span>
+                <h3 className="text-2xl font-extrabold text-slate-900">
+                  ${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
               </div>
             </div>
             <select className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 outline-none">
               <option>This Month</option>
               <option>Last 30 Days</option>
-              <option>This Year</option>
+              <option>All Time</option>
             </select>
           </div>
 
-          {/* Styled SVG Line Chart */}
+          {/* Styled SVG Chart */}
           <div className="h-48 w-full mt-4 flex flex-col justify-end">
             <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
               <defs>
@@ -184,28 +177,24 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 </linearGradient>
               </defs>
               <path
-                d="M 0 120 Q 50 100 100 80 T 200 60 T 300 40 T 400 20 L 400 150 L 0 150 Z"
+                d="M 0 130 Q 100 120 200 110 T 300 90 T 400 70 L 400 150 L 0 150 Z"
                 fill="url(#earningsGradient)"
               />
               <path
-                d="M 0 120 Q 50 100 100 80 T 200 60 T 300 40 T 400 20"
+                d="M 0 130 Q 100 120 200 110 T 300 90 T 400 70"
                 fill="none"
                 stroke="#4F46E5"
                 strokeWidth="3"
                 strokeLinecap="round"
               />
-              {/* Highlight points */}
-              <circle cx="200" cy="60" r="5" fill="#4F46E5" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="400" cy="20" r="5" fill="#4F46E5" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="200" cy="110" r="5" fill="#4F46E5" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="400" cy="70" r="5" fill="#4F46E5" stroke="#FFFFFF" strokeWidth="2" />
             </svg>
             <div className="flex justify-between text-[10px] font-semibold text-slate-400 mt-2 px-1">
-              <span>1 May</span>
-              <span>6 May</span>
-              <span>11 May</span>
-              <span>16 May</span>
-              <span>21 May</span>
-              <span>26 May</span>
-              <span>31 May</span>
+              <span>Week 1</span>
+              <span>Week 2</span>
+              <span>Week 3</span>
+              <span>Week 4</span>
             </div>
           </div>
         </div>
@@ -216,7 +205,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Earnings Breakdown
             </h4>
-            <span className="text-xs text-indigo-600 font-bold">$24,560 Total</span>
+            <span className="text-xs text-indigo-600 font-bold">${totalEarnings.toFixed(2)} Total</span>
           </div>
 
           <div className="flex items-center gap-6 my-auto">
@@ -224,17 +213,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             <div className="relative w-32 h-32 shrink-0">
               <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                 <circle cx="18" cy="18" r="14" fill="transparent" stroke="#EEF2FF" strokeWidth="4" />
-                {/* Binary 50.5% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#4F46E5" strokeWidth="4" strokeDasharray="44.4 100" strokeDashoffset="0" />
-                {/* Partner 25.5% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#3B82F6" strokeWidth="4" strokeDasharray="22.4 100" strokeDashoffset="-44.4" />
-                {/* Generation 15.9% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#10B981" strokeWidth="4" strokeDasharray="14 100" strokeDashoffset="-66.8" />
-                {/* Marketplace 8.1% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F59E0B" strokeWidth="4" strokeDasharray="7.1 100" strokeDashoffset="-80.8" />
+                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#4F46E5" strokeWidth="4" strokeDasharray="50 100" strokeDashoffset="0" />
+                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#10B981" strokeWidth="4" strokeDasharray="30 100" strokeDashoffset="-50" />
+                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F59E0B" strokeWidth="4" strokeDasharray="20 100" strokeDashoffset="-80" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-xs font-bold text-slate-900">$24.5k</span>
+                <span className="text-xs font-bold text-slate-900">${totalEarnings.toFixed(0)}</span>
                 <span className="text-[9px] text-slate-400 font-medium">Earned</span>
               </div>
             </div>
@@ -244,36 +228,29 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                   <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-                  Binary Bonus
+                  Binary Bonus (10%)
                 </span>
-                <span className="font-bold text-slate-900">$12,400</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-slate-600 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                  Partner Comm.
-                </span>
-                <span className="font-bold text-slate-900">$6,250</span>
+                <span className="font-bold text-slate-900">${(binaryBV * 0.10).toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  Generation
+                  Direct Referrals
                 </span>
-                <span className="font-bold text-slate-900">$3,900</span>
+                <span className="font-bold text-slate-900">${(directReferrals * 20).toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  Marketplace
+                  Marketplace Store
                 </span>
-                <span className="font-bold text-slate-900">$2,010</span>
+                <span className="font-bold text-slate-900">$0.00</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Activities (3 cols) */}
+        {/* Dynamic Activity Feed (3 cols) */}
         <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -287,54 +264,41 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <TrendingUp className="w-3.5 h-3.5" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">Binary Bonus</p>
-                  <p className="text-[10px] text-slate-400">Today, 10:24 AM</p>
+                  <p className="font-semibold text-slate-800">Plan Activated</p>
+                  <p className="text-[10px] text-slate-400">{currentUser.plan.toUpperCase()} Tier</p>
                 </div>
               </div>
-              <span className="font-bold text-emerald-600">+$250.00</span>
+              <span className="font-bold text-emerald-600">Active</span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Wallet className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">DEOS Wallet</p>
+                  <p className="text-[10px] text-slate-400">Initialized</p>
+                </div>
+              </div>
+              <span className="font-bold text-slate-700">0.00 DEOS</span>
             </div>
 
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Users className="w-3.5 h-3.5" />
+                  <Globe className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">Partner Comm.</p>
-                  <p className="text-[10px] text-slate-400">Today, 09:15 AM</p>
+                  <p className="font-semibold text-slate-800">Landing Page Site</p>
+                  <p className="text-[10px] text-slate-400">DNS Ready</p>
                 </div>
               </div>
-              <span className="font-bold text-emerald-600">+$120.00</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">Marketplace Sale</p>
-                  <p className="text-[10px] text-slate-400">Yesterday, 08:45 PM</p>
-                </div>
-              </div>
-              <span className="font-bold text-emerald-600">+$80.00</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-                  <ArrowDownLeft className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">Withdrawal</p>
-                  <p className="text-[10px] text-slate-400">May 15, 2025</p>
-                </div>
-              </div>
-              <span className="font-bold text-slate-900">-$200.00</span>
+              <span className="font-bold text-indigo-600">Live</span>
             </div>
           </div>
         </div>
@@ -356,258 +320,113 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
               <div className="flex items-center gap-2.5">
                 <Globe className="w-5 h-5 text-indigo-400" />
                 <div>
-                  <p className="text-xs font-bold text-white">johnsonagency.com</p>
+                  <p className="text-xs font-bold text-white">{subdomain}</p>
                   <p className="text-[10px] text-slate-400">SSL & Hosting Active</p>
                 </div>
               </div>
-              <ExternalLink className="w-4 h-4 text-slate-400" />
-            </div>
-
-            <p className="text-[11px] text-slate-500">
-              Last updated: Today, 08:30 AM • Connected to CRM Lead Capture
-            </p>
-          </div>
-
-          <div className="flex gap-2.5 mt-4">
-            <button
-              onClick={() => onNavigate('builder')}
-              className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors"
-            >
-              Edit Website
-            </button>
-            <button
-              onClick={() => onNavigate('landing')}
-              className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-            >
-              View Live
-            </button>
-          </div>
-        </div>
-
-        {/* AI Business Assistant Banner (4 cols) */}
-        <div className="lg:col-span-4 rounded-2xl p-6 bg-gradient-to-tr from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-card flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
-
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-              <Bot className="w-6 h-6 text-indigo-200" />
-            </div>
-            <h4 className="text-lg font-bold text-white tracking-tight">
-              AI Business Assistant
-            </h4>
-            <p className="text-xs text-indigo-200 mt-1 leading-relaxed">
-              Get content ideas, marketing copy, and automated business strategies to scale your revenue.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onNavigate('ai-center')}
-            className="mt-4 inline-flex items-center justify-between py-2.5 px-4 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 text-xs font-bold shadow-md transition-all group"
-          >
-            <span>Open AI Business Center</span>
-            <ChevronRight className="w-4 h-4 text-indigo-600 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-
-        {/* Quick Actions 8-Grid (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card">
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Quick Actions
-          </h4>
-
-          <div className="grid grid-cols-4 gap-2.5 text-center">
-            <button
-              onClick={() => onNavigate('deposit')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Plus className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Deposit</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('wallet')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <ArrowUpRight className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Withdraw</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('binary')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Network className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Buy BV</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('team')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Invite</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('sellers')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Package className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Product</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('marketing')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Megaphone className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Campaign</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('ai-center')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <PenTool className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">AI Writer</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('support')}
-              className="p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 hover:border-slate-200 flex flex-col items-center gap-1 transition-all group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <HelpCircle className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-slate-700">Help</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Team Overview, Academy Progress & Marketplace Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Team Overview (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                My Team Overview
-              </h4>
-              <Badge variant="info" size="sm">Balanced (2:1)</Badge>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-center p-3 rounded-xl bg-slate-50 border border-slate-100 mb-3">
-              <div>
-                <p className="text-[10px] text-slate-400 font-semibold">Total Size</p>
-                <p className="text-lg font-bold text-slate-900 mt-0.5">256</p>
-              </div>
-              <div className="border-x border-slate-200 px-1">
-                <p className="text-[10px] text-slate-400 font-semibold">Left Leg</p>
-                <p className="text-lg font-bold text-indigo-600 mt-0.5">128</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-semibold">Right Leg</p>
-                <p className="text-lg font-bold text-purple-600 mt-0.5">128</p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigate('binary')}
-            className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-          >
-            <span>View Binary Tree</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Academy Progress (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Academy Progress
-              </h4>
-              <span className="text-xs font-bold text-indigo-600">75% Complete</span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                <Play className="w-4 h-4 fill-white" />
-              </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-slate-900 truncate">
-                  Digital Marketing Masterclass
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Lesson 14: Social Media Ad Funnels
-                </p>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full w-[75%]" />
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigate('academy')}
-            className="w-full mt-3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors"
-          >
-            Continue Learning
-          </button>
-        </div>
-
-        {/* Marketplace Overview (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Marketplace Overview
-              </h4>
-              <button onClick={() => onNavigate('marketplace')} className="text-xs font-bold text-indigo-600">
-                View Catalog
+              <button
+                onClick={() => onNavigate('builder')}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors"
+                title="Edit Website"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center p-3 rounded-xl bg-slate-50 border border-slate-100 mb-3">
-              <div>
-                <p className="text-[10px] text-slate-400 font-semibold">Total Sales</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">$1,850</p>
+            <div className="space-y-1.5 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span>Theme Template:</span>
+                <span className="font-semibold text-slate-900">Modern SaaS Pro</span>
               </div>
-              <div className="border-x border-slate-200 px-1">
-                <p className="text-[10px] text-slate-400 font-semibold">Orders</p>
-                <p className="text-sm font-bold text-indigo-600 mt-0.5">27</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-semibold">Earned</p>
-                <p className="text-sm font-bold text-emerald-600 mt-0.5">$925</p>
+              <div className="flex justify-between">
+                <span>Total Page Views:</span>
+                <span className="font-semibold text-slate-900">0 views</span>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate('sellers')}
-            className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-          >
-            Open Seller Center
-          </button>
+          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
+            <button
+              onClick={() => onNavigate('builder')}
+              className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Edit Page</span>
+            </button>
+            <button
+              onClick={() => onNavigate('domains')}
+              className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Connect Domain</span>
+            </button>
+          </div>
+        </div>
+
+        {/* AI Business Assistant Banner (5 cols) */}
+        <div className="lg:col-span-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 p-6 text-white border border-indigo-500/20 shadow-card flex flex-col justify-between relative overflow-hidden">
+          <div className="space-y-2 relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <Bot className="w-3 h-3" />
+                <span>AI Business Center</span>
+              </span>
+            </div>
+            <h3 className="text-xl font-bold tracking-tight text-white">
+              Launch Your Next Marketing Campaign with AI
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed max-w-sm">
+              Generate landing page copy, sales email sequences, and social media captions in seconds.
+            </p>
+          </div>
+
+          <div className="pt-4 relative z-10">
+            <button
+              onClick={() => onNavigate('ai-center')}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
+            >
+              <span>Open AI Business Center</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Operations Strip (3 cols) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">
+            Quick Operations
+          </span>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => onNavigate('crm')}
+              className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition-colors"
+            >
+              <span>Manage CRM Leads</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+            <button
+              onClick={() => onNavigate('marketplace')}
+              className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition-colors"
+            >
+              <span>Browse Marketplace</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+            <button
+              onClick={() => onNavigate('binary')}
+              className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition-colors"
+            >
+              <span>View Binary Matrix</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+            <button
+              onClick={() => onNavigate('academy')}
+              className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition-colors"
+            >
+              <span>Digital Academy</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -52,7 +52,6 @@ export function App() {
   }, []);
 
   const handleNavigate = (view: ViewType) => {
-    // If not authenticated and trying to access protected views
     const publicViews: ViewType[] = ['landing', 'marketplace'];
     if (!publicViews.includes(view) && !isAuthenticated) {
       setAuthModalMode('login');
@@ -89,7 +88,7 @@ export function App() {
     );
   }
 
-  // 1. Unauthenticated Visitor Flow (Landing Page or Public Marketplace)
+  // 1. Unauthenticated Visitor Flow (Public Landing Page or Public Marketplace)
   if (!isAuthenticated) {
     if (currentView === 'marketplace') {
       return (
@@ -131,22 +130,22 @@ export function App() {
     );
   }
 
-  // 2. Authenticated Onboarding Wizard sequence
-  if (currentView === 'onboarding') {
+  // 2. Authenticated New User: Must Complete Onboarding (Plan Selection -> Wallet Payment -> Video Tour)
+  // At this point, the user does not have access to the full user dashboard
+  if (member && member.hasCompletedOnboarding === false) {
     return (
       <OnboardingWizard
+        currentUser={member}
         onComplete={(purchasedPlan: PlanTier) => {
           updatePlan(purchasedPlan);
           setCurrentView('dashboard');
         }}
-        onCancel={() => {
-          setCurrentView('dashboard');
-        }}
+        onCancel={handleLogout}
       />
     );
   }
 
-  // 3. Authenticated Operating System Shell (User Dashboard, Wallet, CRM, etc.)
+  // 3. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
   const activeMember = member || {
     id: 'DEOS_ACTIVE',
     name: 'Entrepreneur',
@@ -166,6 +165,7 @@ export function App() {
     availableBalance: 0.00,
     binaryVolume: 0,
     activeReferrals: 0,
+    hasCompletedOnboarding: true,
   };
 
   return (
