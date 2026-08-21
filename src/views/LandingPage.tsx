@@ -43,7 +43,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   // Auth Modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   // Mobile menu drawer state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

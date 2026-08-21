@@ -30,6 +30,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const { signIn, signUp } = useAuth();
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen, initialMode]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
