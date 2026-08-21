@@ -35,7 +35,7 @@ import { Badge } from '../components/common/Badge';
 
 export const SuperAdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'kyc' | 'treasury' | 'binary_rules' | 'marketplace' | 'academy' | 'audit_log' | 'system'
+    'overview' | 'corporate_leads' | 'kyc' | 'treasury' | 'binary_rules' | 'marketplace' | 'academy' | 'audit_log' | 'system'
   >('overview');
 
   const [kycList, setKycList] = useState<KYCSubmission[]>(initialKYCList);
@@ -43,6 +43,56 @@ export const SuperAdminPanel: React.FC = () => {
   const [selectedKyc, setSelectedKyc] = useState<KYCSubmission | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialAuditLogs);
   const [sustainabilityFund, setSustainabilityFund] = useState(45820.00);
+
+  // Corporate Leads State
+  const [corporateLeads, setCorporateLeads] = useState<any[]>([
+    {
+      id: 'LED-CORP-201',
+      name: 'Alexander Wright',
+      email: 'alex@enterprise-global.com',
+      phone: '+1 800 555 0199',
+      company: 'Enterprise Global Corp',
+      leadSource: 'company_website',
+      source: 'Corporate Website (Contact Sales / Demo)',
+      ownerType: 'company',
+      assignedTo: 'Marcus (Enterprise Sales)',
+      status: 'New',
+      stage: 'Qualified',
+      dealValue: 25000,
+      createdAt: 'May 24, 2025'
+    },
+    {
+      id: 'LED-CORP-202',
+      name: 'Victoria Vance',
+      email: 'vvance@vancemedia.co',
+      phone: '+1 888 234 9876',
+      company: 'Vance Media Network',
+      leadSource: 'company_website',
+      source: 'Corporate Website (Partnership Request)',
+      ownerType: 'company',
+      assignedTo: 'Sarah (Partnerships Lead)',
+      status: 'Contacted',
+      stage: 'Proposal',
+      dealValue: 40000,
+      createdAt: 'May 23, 2025'
+    },
+    {
+      id: 'LED-CORP-203',
+      name: 'Jonathan Sterling',
+      email: 'j.sterling@apexholdings.org',
+      phone: '+44 20 7123 4567',
+      company: 'Apex Holdings International',
+      leadSource: 'company_website',
+      source: 'Corporate Website (Request Demo)',
+      ownerType: 'company',
+      assignedTo: 'David (Inbound Sales)',
+      status: 'Qualified',
+      stage: 'Negotiation',
+      dealValue: 60000,
+      createdAt: 'May 22, 2025'
+    }
+  ]);
+  const [leadSearchQuery, setLeadSearchQuery] = useState('');
 
   // Approve / Reject KYC
   const handleApproveKYC = (id: string) => {
@@ -85,6 +135,10 @@ export const SuperAdminPanel: React.FC = () => {
     alert(`Payout ${id} approved and sent to TRC20 settlement queue.`);
   };
 
+  const handleAssignStaff = (leadId: string, staffName: string) => {
+    setCorporateLeads(prev => prev.map(l => l.id === leadId ? { ...l, assignedTo: staffName } : l));
+  };
+
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* Super Admin Top Header */}
@@ -99,7 +153,7 @@ export const SuperAdminPanel: React.FC = () => {
               <Badge variant="purple" size="sm">BOOK 3 SPECIFICATION</Badge>
             </div>
             <p className="text-xs text-slate-400">
-              Desktop-first central command for Treasury, KYC, Binary Engine, and Security Audit
+              Desktop-first central command for Treasury, Corporate Leads, KYC, Binary Engine, and Security Audit
             </p>
           </div>
         </div>
@@ -108,6 +162,7 @@ export const SuperAdminPanel: React.FC = () => {
         <div className="flex gap-1.5 bg-slate-800 p-1.5 rounded-xl text-xs font-bold w-full md:w-auto overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview' },
+            { id: 'corporate_leads', label: `Corporate Leads (${corporateLeads.length})` },
             { id: 'kyc', label: `KYC Queue (${kycList.filter(k => k.status === 'Pending').length})` },
             { id: 'treasury', label: 'Finance & Treasury' },
             { id: 'binary_rules', label: 'Binary Engine' },
@@ -130,6 +185,151 @@ export const SuperAdminPanel: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Tab: Corporate Lead Management System (Book 7 & Multi-Tenant Architecture) */}
+      {activeTab === 'corporate_leads' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header & Description */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Corporate CRM
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">Central Inbound Sales & Enterprise Inquiries</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">Corporate Website Leads Management</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                All inquiries submitted directly via the DEOS corporate website (Request a Demo, Contact Sales, Partnerships) belong to the Company.
+              </p>
+            </div>
+
+            <button
+              onClick={() => alert('Exporting Corporate Leads CSV...')}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md self-start md:self-auto"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Leads CSV</span>
+            </button>
+          </div>
+
+          {/* 4 Corporate KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
+              <span className="text-xs font-semibold text-slate-400 uppercase">Total Corporate Leads</span>
+              <h3 className="text-2xl font-black text-slate-900 mt-1">{corporateLeads.length}</h3>
+              <p className="text-xs text-emerald-600 font-semibold mt-1">↑ Direct Corporate Submissions</p>
+            </div>
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
+              <span className="text-xs font-semibold text-slate-400 uppercase">New Leads (24h)</span>
+              <h3 className="text-2xl font-black text-indigo-600 mt-1">2</h3>
+              <p className="text-xs text-slate-400 mt-1">Pending Staff Outreach</p>
+            </div>
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
+              <span className="text-xs font-semibold text-slate-400 uppercase">Enterprise Pipeline</span>
+              <h3 className="text-2xl font-black text-purple-600 mt-1">$125,000</h3>
+              <p className="text-xs text-slate-400 mt-1">High-ticket deals in review</p>
+            </div>
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
+              <span className="text-xs font-semibold text-slate-400 uppercase">Conversion Velocity</span>
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">33.3%</h3>
+              <p className="text-xs text-slate-400 mt-1">Direct corporate closing rate</p>
+            </div>
+          </div>
+
+          {/* Corporate Leads Management Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
+            <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Inbound Corporate Inquiries</h4>
+                <p className="text-xs text-slate-500">Assign leads to sales representatives and convert to platform members</p>
+              </div>
+
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search corporate leads..."
+                  value={leadSearchQuery}
+                  onChange={(e) => setLeadSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                  <tr>
+                    <th className="p-4">Lead Name</th>
+                    <th className="p-4">Company</th>
+                    <th className="p-4">Inquiry Type / Source</th>
+                    <th className="p-4">Owner</th>
+                    <th className="p-4">Assigned Sales Staff</th>
+                    <th className="p-4">Pipeline Stage</th>
+                    <th className="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {corporateLeads
+                    .filter(
+                      (l) =>
+                        l.name.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
+                        l.company.toLowerCase().includes(leadSearchQuery.toLowerCase())
+                    )
+                    .map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <img src={lead.avatar} alt={lead.name} className="w-8 h-8 rounded-full object-cover" />
+                            <div>
+                              <p className="font-bold text-slate-900">{lead.name}</p>
+                              <p className="text-[10px] text-slate-400">{lead.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 font-bold text-slate-800">{lead.company}</td>
+                        <td className="p-4">
+                          <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">
+                            {lead.source}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="purple" size="sm">Company HQ</Badge>
+                        </td>
+                        <td className="p-4">
+                          <select
+                            value={lead.assignedTo}
+                            onChange={(e) => handleAssignStaff(lead.id, e.target.value)}
+                            className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 outline-none cursor-pointer text-slate-800"
+                          >
+                            <option value="Marcus (Enterprise Sales)">Marcus (Enterprise Sales)</option>
+                            <option value="Sarah (Partnerships Lead)">Sarah (Partnerships Lead)</option>
+                            <option value="David (Inbound Sales)">David (Inbound Sales)</option>
+                            <option value="Unassigned">Unassigned</option>
+                          </select>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={lead.stage === 'Proposal' ? 'purple' : lead.stage === 'Negotiation' ? 'warning' : 'info'} size="sm">
+                            {lead.stage} (${lead.dealValue?.toLocaleString()})
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => alert(`Converting ${lead.name} into registered DEOS enterprise account...`)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors"
+                          >
+                            Convert to Member
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab 1: Overview & Constitutional Metric */}
       {activeTab === 'overview' && (

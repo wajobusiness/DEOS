@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ViewType, PlanTier } from './types';
-import { currentUser } from './store/mockData';
+import { useAuth } from './context/AuthContext';
+import { currentUser as defaultMockUser } from './store/mockData';
 
 // Layout Shell Components
 import { Sidebar } from './components/layout/Sidebar';
@@ -31,10 +32,14 @@ import { AnalyticsOverview } from './views/AnalyticsOverview';
 import { SuperAdminPanel } from './views/SuperAdminPanel';
 
 export function App() {
+  const { member, isAuthenticated, signOut, updatePlan } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  // Active user profile (authenticated Supabase member or fallback template)
+  const activeUser = member || defaultMockUser;
 
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
@@ -67,6 +72,7 @@ export function App() {
     return (
       <OnboardingWizard
         onComplete={(purchasedPlan: PlanTier) => {
+          updatePlan(purchasedPlan);
           setCurrentView('dashboard');
         }}
         onCancel={() => {
@@ -89,7 +95,7 @@ export function App() {
       <Sidebar
         currentView={currentView}
         onNavigate={handleNavigate}
-        currentUser={currentUser}
+        currentUser={activeUser}
         isAdminMode={isAdminMode}
         onToggleAdminMode={handleToggleAdminMode}
         isOpen={isMobileSidebarOpen}
@@ -100,7 +106,7 @@ export function App() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         {/* Top Header Command Bar */}
         <Header
-          currentUser={currentUser}
+          currentUser={activeUser}
           currentView={currentView}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
@@ -110,13 +116,13 @@ export function App() {
         {/* View Canvas Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {currentView === 'dashboard' && (
-            <UserDashboard currentUser={currentUser} onNavigate={handleNavigate} />
+            <UserDashboard currentUser={activeUser} onNavigate={handleNavigate} />
           )}
           {currentView === 'binary' && <BinaryNetwork />}
-          {currentView === 'partner' && <PartnerCenter currentUser={currentUser} />}
+          {currentView === 'partner' && <PartnerCenter currentUser={activeUser} />}
           {currentView === 'deposit' && <DepositFlow onNavigate={handleNavigate} />}
           {currentView === 'wallet' && (
-            <WalletDashboard currentUser={currentUser} onNavigate={handleNavigate} />
+            <WalletDashboard currentUser={activeUser} onNavigate={handleNavigate} />
           )}
           {currentView === 'marketplace' && (
             <MarketplaceHome onNavigate={handleNavigate} />
@@ -130,7 +136,7 @@ export function App() {
           {currentView === 'academy' && <AcademyHub />}
           {currentView === 'events' && <EventsWebinars />}
           {currentView === 'team' && <TeamManagement />}
-          {currentView === 'settings' && <UserSettings currentUser={currentUser} />}
+          {currentView === 'settings' && <UserSettings currentUser={activeUser} />}
           {currentView === 'support' && <SupportCommunity />}
           {currentView === 'analytics' && <AnalyticsOverview />}
           {currentView === 'admin' && <SuperAdminPanel />}

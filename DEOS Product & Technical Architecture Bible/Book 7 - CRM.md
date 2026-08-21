@@ -52,6 +52,29 @@ The CRM and Email Marketing engine gives every entrepreneur an automated sales a
 
 ---
 
+## 3a. Corporate Lead Management System
+
+The DEOS CRM is a unified multi-tenant engine supporting two distinct tiers of lead origin and ownership:
+
+### 1. Corporate Website Leads
+- **Origin:** Visitors who submit forms on the DEOS corporate website (e.g., Request a Demo, Join Waiting List, Contact Sales, General Inquiry, Partnership Request, Enterprise Inquiry).
+- **Ownership:** Belong exclusively to the **Company** (`owner_type = "company"`, `owner_id = NULL`).
+- **Management Surface:** Visible in the **Super Admin Corporate CRM Dashboard** (`SuperAdminPanel.tsx`).
+- **Capabilities:** Admin staff assignment (`assigned_to`), sales pipeline movement, automated email sequences, and 1-click conversion into registered enterprise members.
+
+### 2. Member Landing Page Leads
+- **Origin:** Prospects who submit inquiry/capture forms on an entrepreneur's dynamic landing page (e.g., `johnsonagency.com` or `johndoe.deos.com`).
+- **Ownership:** Belong exclusively to the **Entrepreneur** (`owner_type = "member"`, `owner_id = member.id`).
+- **Management Surface:** Visible only to the member in their **Personal CRM Dashboard** (`CRMDashboard.tsx`), while remaining visible to authorized Super Administrators for compliance, reporting, and support.
+- **Capabilities:** Personal notes, follow-up scheduling, automated email marketing sequences, deal pipeline tracking, and downline team conversion.
+
+### 3. Lead Attribution & Data Schema Rules
+- **Automatic Segregation:** Every lead record contains `lead_source`, `owner_type`, `owner_id`, `assigned_to`, `status`, `stage`, and `campaign_id`.
+- **Tenant Privacy Guarantee:** Member A cannot see Member B's leads under any circumstance (enforced via database Row-Level Security).
+- **Export Integrity:** Both Company administrators and Members have 1-click CSV/JSON export capabilities for their respective lead sets.
+
+---
+
 ## 4. Contacts, Companies & Activity Timelines
 
 - Contact Records: Name, Email, Phone, Company, Status, Deal Value, and Tags.

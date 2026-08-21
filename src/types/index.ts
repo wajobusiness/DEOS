@@ -110,8 +110,17 @@ export interface Lead {
   name: string;
   avatar: string;
   company: string;
-  source: string; // IMMUTABLE
-  status: 'New' | 'Contacted' | 'Qualified' | 'Lost';
+  email?: string;
+  phone?: string;
+  leadSource: 'company_website' | 'member_landing_page' | 'marketplace' | 'ad_campaign' | 'direct_referral';
+  ownerType: 'company' | 'member';
+  ownerId?: string | null; // null for company leads, member ID for member leads
+  ownerName?: string;
+  assignedTo?: string | null; // Staff / Admin ID for corporate sales follow-up
+  source: string; // IMMUTABLE source string
+  status: 'New' | 'Contacted' | 'Qualified' | 'Lost' | 'Converted' | 'Closed';
+  stage?: 'New' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  dealValue?: number;
   createdAt: string;
 }
 

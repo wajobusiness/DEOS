@@ -24,16 +24,38 @@ import {
   Smartphone,
   Layers,
   BarChart3,
-  Network
+  Network,
+  Menu,
+  X,
+  Mail,
+  Building2,
+  Phone,
+  MessageSquare
 } from 'lucide-react';
 import { ViewType, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
+import { AuthModal } from '../components/auth/AuthModal';
 
 interface LandingPageProps {
   onEnterApp: (view?: ViewType) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
+  // Auth Modal state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+
+  // Mobile menu drawer state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Corporate Contact Modal state
+  const [isCorporateContactOpen, setIsCorporateContactOpen] = useState(false);
+  const [corpName, setCorpName] = useState('');
+  const [corpEmail, setCorpEmail] = useState('');
+  const [corpCompany, setCorpCompany] = useState('');
+  const [corpInquiryType, setCorpInquiryType] = useState('Request a Demo');
+  const [corpSubmitted, setCorpSubmitted] = useState(false);
+
   // Video player state
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoProgress, setVideoProgress] = useState(35);
@@ -52,9 +74,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   // Mathematical Simulator Calculation (Book 4 Compensation Engine)
-  // Direct bonus average ($75 Growth tier assumption) = directReferralsCount * 75
-  // Binary commission = 10% on weaker leg BV = teamMonthlyBV * 0.10
-  // Generation bonus average = ~30% of direct bonuses = directBonus * 0.30
   const estimatedDirectBonus = directReferralsCount * 75;
   const estimatedBinaryBonus = Number((teamMonthlyBV * 0.10).toFixed(0));
   const estimatedGenBonus = Number((estimatedDirectBonus * 0.30).toFixed(0));
@@ -65,8 +84,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
     if (!leadEmail) return;
     setIsLeadCaptured(true);
     setTimeout(() => {
-      onEnterApp('onboarding');
-    }, 800);
+      setAuthModalMode('register');
+      setIsAuthModalOpen(true);
+    }, 600);
+  };
+
+  const handleCorporateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!corpEmail) return;
+    setCorpSubmitted(true);
+    setTimeout(() => {
+      setCorpSubmitted(false);
+      setIsCorporateContactOpen(false);
+      setCorpName('');
+      setCorpEmail('');
+      setCorpCompany('');
+    }, 1500);
+  };
+
+  const openAuth = (mode: 'login' | 'register') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+    setIsMobileMenuOpen(false);
   };
 
   const faqs = [
@@ -94,6 +133,108 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
   return (
     <div className="min-h-screen bg-[#070A12] text-slate-100 font-sans selection:bg-indigo-500 selection:text-white antialiased overflow-x-hidden">
+      {/* Auth Modal Integration */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+        onSuccess={() => {
+          onEnterApp('dashboard');
+        }}
+        defaultSponsorCode={sponsorCode}
+      />
+
+      {/* Corporate Contact Modal */}
+      {isCorporateContactOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-lg bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-white space-y-5">
+            <button
+              onClick={() => setIsCorporateContactOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                Corporate Inquiries (Book 7)
+              </span>
+              <h3 className="text-xl font-bold text-white">Contact DEOS Corporate Sales</h3>
+              <p className="text-xs text-slate-400">
+                Inquire about enterprise partnerships, group onboarding, or request a custom executive demonstration.
+              </p>
+            </div>
+
+            {corpSubmitted ? (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold text-center space-y-1">
+                <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-400 mb-1" />
+                <p className="font-bold text-sm">Thank You!</p>
+                <p>Your corporate inquiry has been assigned to our enterprise sales team.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleCorporateSubmit} className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Marcus Wright"
+                    value={corpName}
+                    onChange={(e) => setCorpName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white font-medium outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-400 mb-1">Business Email</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="marcus@enterprise.com"
+                      value={corpEmail}
+                      onChange={(e) => setCorpEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white font-medium outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-400 mb-1">Company / Organization</label>
+                    <input
+                      type="text"
+                      placeholder="Apex Global Group"
+                      value={corpCompany}
+                      onChange={(e) => setCorpCompany(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white font-medium outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">Inquiry Type</label>
+                  <select
+                    value={corpInquiryType}
+                    onChange={(e) => setCorpInquiryType(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white font-medium outline-none focus:border-indigo-500"
+                  >
+                    <option value="Request a Demo">Request an Executive Demo</option>
+                    <option value="Enterprise Team License">Enterprise Team Licensing</option>
+                    <option value="Partnership Request">Strategic Partnership Request</option>
+                    <option value="General Inquiries">General Corporate Inquiry</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all mt-2"
+                >
+                  Submit Corporate Inquiry
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Background Glows & Grid Pattern */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[850px] h-[500px] bg-gradient-to-b from-indigo-600/25 via-purple-600/15 to-transparent rounded-full blur-3xl opacity-70" />
@@ -102,12 +243,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293708_1px,transparent_1px),linear-gradient(to_bottom,#1f293708_1px,transparent_1px)] bg-[size:4rem_4rem]" />
       </div>
 
-      {/* Top Universal Navbar */}
-      <header className="sticky top-0 z-50 bg-[#070A12]/80 backdrop-blur-xl border-b border-slate-800/80">
+      {/* TOP HEADER: Modern SaaS Navigation Standard */}
+      <header className="sticky top-0 z-40 bg-[#070A12]/80 backdrop-blur-xl border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          {/* Logo & Brand */}
+          {/* Logo & Brand Area */}
           <div
-            onClick={() => onEnterApp('landing')}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
@@ -116,8 +257,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl text-white tracking-tight">DEOS</span>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  Global Platform
+                <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Global
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
@@ -126,45 +267,140 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </div>
           </div>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-300">
-            <a href="#video-explainer" className="hover:text-white transition-colors">Overview</a>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-300">
+            <a href="#hero" className="hover:text-white transition-colors">Home</a>
+            <a href="#platform" className="hover:text-white transition-colors">Platform</a>
             <button
               onClick={() => onEnterApp('marketplace')}
-              className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+              className="hover:text-indigo-400 transition-colors flex items-center gap-1"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Public Marketplace</span>
+              <span>Marketplace</span>
+              <span className="text-[9px] bg-indigo-600/30 text-indigo-300 px-1.5 py-0.2 rounded font-bold">Public</span>
             </button>
-            <a href="#economics" className="hover:text-white transition-colors">Compensation & BV</a>
-            <a href="#simulator" className="hover:text-white transition-colors">Earnings Simulator</a>
-            <a href="#social-proof" className="hover:text-white transition-colors">Testimonials</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <a href="#academy" className="hover:text-white transition-colors">Academy</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <a href="#about" className="hover:text-white transition-colors">About</a>
+            <button
+              onClick={() => setIsCorporateContactOpen(true)}
+              className="hover:text-white transition-colors"
+            >
+              Contact
+            </button>
           </nav>
 
-          {/* Action CTAs */}
-          <div className="flex items-center gap-3">
+          {/* Desktop Action CTAs */}
+          <div className="hidden sm:flex items-center gap-3">
             <button
-              onClick={() => onEnterApp('dashboard')}
+              onClick={() => openAuth('login')}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"
             >
-              Member Login
+              Login
             </button>
             <button
-              onClick={() => onEnterApp('onboarding')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all flex items-center gap-1.5"
+              onClick={() => openAuth('register')}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all flex items-center gap-1.5"
             >
-              <span>Get Started Free</span>
+              <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          {/* Mobile Hamburger Button */}
+          <div className="flex sm:hidden items-center gap-2">
+            <button
+              onClick={() => openAuth('login')}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition-colors"
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden bg-slate-950/95 border-b border-slate-800 backdrop-blur-2xl px-6 py-6 space-y-4 animate-fadeIn">
+            <nav className="flex flex-col space-y-3 text-sm font-semibold text-slate-300">
+              <a
+                href="#hero"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-1 hover:text-white transition-colors"
+              >
+                Home
+              </a>
+              <a
+                href="#platform"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-1 hover:text-white transition-colors"
+              >
+                Platform Architecture
+              </a>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onEnterApp('marketplace');
+                }}
+                className="py-1 text-left hover:text-indigo-400 transition-colors flex items-center justify-between"
+              >
+                <span>Marketplace</span>
+                <span className="text-[10px] bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded font-bold">Public Store</span>
+              </button>
+              <a
+                href="#academy"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-1 hover:text-white transition-colors"
+              >
+                Academy
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-1 hover:text-white transition-colors"
+              >
+                Membership Pricing
+              </a>
+              <a
+                href="#about"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="py-1 hover:text-white transition-colors"
+              >
+                About DEOS
+              </a>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCorporateContactOpen(true);
+                }}
+                className="py-1 text-left hover:text-white transition-colors"
+              >
+                Corporate Contact & Sales
+              </button>
+            </nav>
+
+            <div className="pt-4 border-t border-slate-900 flex flex-col gap-2.5">
+              <button
+                onClick={() => openAuth('register')}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+              >
+                <span>Get Started Free</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Main Container */}
+      {/* Main Content Sections */}
       <main className="relative z-10">
         {/* HERO SECTION WITH LEAD CAPTURE & VIDEO EXPLAINER */}
-        <section className="pt-12 sm:pt-20 pb-16 px-4 max-w-7xl mx-auto text-center space-y-8">
+        <section id="hero" className="pt-12 sm:pt-20 pb-16 px-4 max-w-7xl mx-auto text-center space-y-8">
           {/* Top Pill */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 text-xs font-bold shadow-inner">
             <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
@@ -185,7 +421,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </p>
           </div>
 
-          {/* HERO LEAD CAPTURE FORM (Prioritizing Lead & Sponsor Attribution) */}
+          {/* HERO LEAD CAPTURE FORM */}
           <div className="max-w-xl mx-auto bg-slate-900/90 border border-slate-800 p-4 sm:p-5 rounded-2xl shadow-2xl backdrop-blur-md">
             <form onSubmit={handleHeroLeadSubmit} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -228,10 +464,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </form>
           </div>
 
-          {/* ABOVE-THE-FOLD PROMINENT PLATFORM EXPLAINER VIDEO */}
+          {/* VIDEO EXPLAINER */}
           <div id="video-explainer" className="pt-6 max-w-4xl mx-auto">
             <div className="relative rounded-3xl bg-slate-950 border-2 border-indigo-500/40 overflow-hidden shadow-2xl shadow-indigo-500/10 aspect-video flex flex-col justify-between p-6 group">
-              {/* Video Header Overlay */}
               <div className="flex justify-between items-center text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
@@ -242,7 +477,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 <span className="text-slate-400 text-xs font-mono">4K Ultra HD</span>
               </div>
 
-              {/* Center Play Button Overlay */}
               <div
                 onClick={() => setIsPlaying(!isPlaying)}
                 className="w-20 h-20 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white flex items-center justify-center mx-auto cursor-pointer shadow-2xl shadow-indigo-600/60 group-hover:scale-110 transition-all border border-indigo-400/40"
@@ -250,10 +484,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 fill-white ml-1" />}
               </div>
 
-              {/* Video Bottom Scrub Bar & Chapters */}
               <div className="space-y-2">
                 <div className="flex justify-between text-[11px] text-slate-400 font-semibold">
-                  <span>Chapter: 02. Personal Website & Domain Automation</span>
+                  <span>Chapter: 02. Personal Landing Page & Domain Automation</span>
                   <span>01:18 / 03:45</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
@@ -264,388 +497,266 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
         </section>
 
-        {/* 6 FOUNDATIONAL PILLARS OF DEOS (Replacing generic pricing) */}
-        <section className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
+        {/* SECTION: 6 CORE PLATFORM PILLARS */}
+        <section id="platform" className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
           <div className="text-center space-y-3 mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400">Everything You Need in One Unified Stack</h2>
-            <h3 className="text-3xl sm:text-4xl font-extrabold text-white">
-              6 Built-In Engines. Zero Third-Party Integrations Needed.
+            <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400">All-In-One Infrastructure</h2>
+            <h3 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+              Everything You Need to Run a Digital Business
             </h3>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
-              DEOS replaces 8 disparate software subscriptions with one cohesive operating system.
+            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto">
+              No third-party plugin bloat or disconnected software. One unified SaaS architecture handles your website, CRM, marketplace, AI, and team.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                title: 'Multi-Tenant Personal Website',
-                desc: 'Auto-provisioned personal website (username.deos.com) with custom domain DNS, free TLS 1.3 SSL, and embedded recruiting forms.',
                 icon: Globe,
-                badge: 'Book 6 Engine',
+                title: 'Dynamic Landing Page & CNAME DNS',
+                desc: '1-click deployment on your free subdomain or custom domain with automated Let\'s Encrypt SSL certificates.',
+                color: 'text-indigo-400',
+                bg: 'bg-indigo-500/10'
               },
               {
-                title: 'Public Digital Marketplace',
-                desc: 'Earn up to 60% instant commissions promoting premium courses, templates, and software with guest checkout and 3% upline overrides.',
                 icon: ShoppingBag,
-                badge: 'Book 5 Engine',
+                title: 'Public Digital Marketplace',
+                desc: 'Earn 10%–60% promoter commissions on software, courses, and digital products with Guest Checkout.',
+                color: 'text-purple-400',
+                bg: 'bg-purple-500/10'
               },
               {
-                title: '10% Flat Binary MLM Engine',
-                desc: 'Fair, transparent, mathematical compensation paying 10% on weaker leg volume with carry-forward, direct bonuses & 30%/15% generation rewards.',
-                icon: Network,
-                badge: 'Book 4 Engine',
-              },
-              {
-                title: 'CRM Funnel & Lead Capture',
-                desc: 'Automated 5-stage deal pipeline with permanent immutable source attribution from your website forms directly into your CRM.',
                 icon: Users,
-                badge: 'Book 7 Engine',
+                title: 'Isolated Multi-Tenant CRM',
+                desc: 'Capture leads with immutable source attribution and execute automated multi-step email marketing sequences.',
+                color: 'text-blue-400',
+                bg: 'bg-blue-500/10'
               },
               {
-                title: 'AI Business Center',
-                desc: 'Integrated AI studio for high-converting marketing copywriting, social media calendar scheduling, image generation, and disclosures.',
                 icon: Bot,
-                badge: 'Book 9 Engine',
+                title: 'AI Business Center',
+                desc: 'Generate viral video scripts, social calendars, sales email copy, and marketing assets in seconds.',
+                color: 'text-emerald-400',
+                bg: 'bg-emerald-500/10'
               },
               {
-                title: 'Digital Entrepreneur Academy',
-                desc: 'World-class entrepreneurship masterclasses, live webinar broadcast rooms, verified blockchain certificates, and community masterminds.',
                 icon: GraduationCap,
-                badge: 'Book 8 Engine',
-              },
-            ].map((p, idx) => {
-              const Icon = p.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-slate-900/60 rounded-3xl p-6 border border-slate-800 hover:border-indigo-500/50 transition-all hover:-translate-y-1 shadow-card group space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <Badge variant="purple" size="sm">{p.badge}</Badge>
-                  </div>
-                  <h4 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{p.title}</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">{p.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* LIVE FEATURED MARKETPLACE PRODUCTS (Book 5 §4a v1.3 Requirement) */}
-        <section className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Public Commerce Storefront (Book 5 §4a)</span>
-              </div>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-white">
-                Live Featured Marketplace Products
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-                Browse and buy real digital courses, templates, and AI tools with zero registration needed.
-              </p>
-            </div>
-
-            <button
-              onClick={() => onEnterApp('marketplace')}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-2 self-start md:self-auto"
-            >
-              <span>Explore Entire Catalog</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                id: 'prod-1',
-                title: 'High-Ticket Agency Funnel Blueprint',
-                category: 'Marketing & Funnels',
-                price: 49.00,
-                rating: 4.9,
-                seller: 'Marcus Vance',
-                image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&auto=format&fit=crop&q=80',
-                badge: 'Best Seller',
-                commRate: '40%',
+                title: 'Digital Entrepreneur Academy',
+                desc: 'Structured video masterclasses, verified completion certificates, and live webinar broadcast rooms.',
+                color: 'text-amber-400',
+                bg: 'bg-amber-500/10'
               },
               {
-                id: 'prod-2',
-                title: 'AI Copywriting Master Prompts Studio',
-                category: 'AI Tools',
-                price: 29.00,
-                rating: 4.8,
-                seller: 'Elena Rostova',
-                image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
-                badge: 'Hot',
-                commRate: '50%',
-              },
-              {
-                id: 'prod-3',
-                title: 'Full-Stack SaaS Website Theme',
-                category: 'Website Templates',
-                price: 79.00,
-                rating: 5.0,
-                seller: 'David K.',
-                image: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=400&auto=format&fit=crop&q=80',
-                badge: 'Top Rated',
-                commRate: '35%',
-              },
-              {
-                id: 'prod-4',
-                title: 'Digital Entrepreneurship Masterclass',
-                category: 'Digital Courses',
-                price: 99.00,
-                rating: 4.9,
-                seller: 'Sarah Jenkins',
-                image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80',
-                badge: 'Featured',
-                commRate: '60%',
-              },
-            ].map((p) => (
+                icon: Network,
+                title: '10% Flat Binary Network Engine',
+                desc: 'Pure mathematical compensation: 10% on weaker-leg volume, carry-forward rollover, and 30%/15% generation bonuses.',
+                color: 'text-pink-400',
+                bg: 'bg-pink-500/10'
+              }
+            ].map((p, i) => (
               <div
-                key={p.id}
-                onClick={() => onEnterApp('marketplace')}
-                className="bg-slate-900/80 rounded-3xl border border-slate-800 hover:border-indigo-500/50 shadow-card overflow-hidden transition-all hover:-translate-y-1 cursor-pointer flex flex-col justify-between group"
+                key={i}
+                className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4 hover:border-indigo-500/50 hover:bg-slate-900 transition-all shadow-card group"
               >
-                <div>
-                  <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
-                    <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold shadow-md">
-                      {p.badge}
-                    </span>
-                  </div>
-
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>By {p.seller}</span>
-                      <span className="flex items-center gap-1 text-amber-400 font-bold">
-                        <Star className="w-3 h-3 fill-amber-400" /> {p.rating}
-                      </span>
-                    </div>
-
-                    <h4 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-2">
-                      {p.title}
-                    </h4>
-
-                    <div className="pt-1">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <Sparkles className="w-3 h-3" />
-                        {p.commRate} Affiliate Commission
-                      </span>
-                    </div>
-                  </div>
+                <div className={`w-12 h-12 rounded-2xl ${p.bg} ${p.color} flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
+                  <p.icon className="w-6 h-6" />
                 </div>
-
-                <div className="p-4 pt-0 border-t border-slate-800/80 flex items-center justify-between mt-2">
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-medium">Price</span>
-                    <p className="text-sm font-black text-white">{p.price.toFixed(2)} DEOS <span className="text-[10px] text-slate-400 font-normal">(${p.price.toFixed(2)})</span></p>
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEnterApp('marketplace');
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1"
-                  >
-                    <span>Buy Now</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <h4 className="text-lg font-bold text-white tracking-tight">{p.title}</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">{p.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* COMPENSATION PLAN & VISUAL INFOGRAPHIC ECONOMICS */}
-        <section id="economics" className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
-          <div className="text-center space-y-3 mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Mathematical Transparency</h2>
-            <h3 className="text-3xl sm:text-4xl font-extrabold text-white">
-              The DEOS Compensation Architecture
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto">
-              Governed strictly by Book 0 Constitution and Book 4. No arbitrary flushings. Guaranteed 10% binary payout.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Infographic 1: 10% Binary Bonus */}
-            <div className="bg-slate-900/80 rounded-3xl p-6 border border-indigo-500/30 space-y-4 shadow-xl">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
-                <Network className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-3xl font-black text-white">10%</span>
-                <h4 className="text-sm font-bold text-indigo-300 mt-1">Flat Binary Volume Commission</h4>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Earn 10% of total weaker-leg Business Volume (BV) weekly. Unused stronger-leg volume carries forward forever.
-              </p>
-              <div className="p-3 rounded-xl bg-slate-950 text-[11px] font-mono text-emerald-400">
-                10,000 BV = $1,000.00 DEOS
-              </div>
-            </div>
-
-            {/* Infographic 2: Direct Referral Bonuses */}
-            <div className="bg-slate-900/80 rounded-3xl p-6 border border-purple-500/30 space-y-4 shadow-xl">
-              <div className="w-10 h-10 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
-                <DollarSign className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-3xl font-black text-white">$25–$125</span>
-                <h4 className="text-sm font-bold text-purple-300 mt-1">Instant Direct Referral Bonus</h4>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Paid immediately upon member registration: $25 for Launch, $75 for Growth, and $125 for Legacy memberships.
-              </p>
-              <div className="p-3 rounded-xl bg-slate-950 text-[11px] font-mono text-purple-300">
-                Credited instantly to wallet
-              </div>
-            </div>
-
-            {/* Infographic 3: Generation Waterfall */}
-            <div className="bg-slate-900/80 rounded-3xl p-6 border border-blue-500/30 space-y-4 shadow-xl">
-              <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center">
-                <Layers className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-3xl font-black text-white">30% / 15%</span>
-                <h4 className="text-sm font-bold text-blue-300 mt-1">Generation 2 & 3 Rewards</h4>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Earn 30% of direct bonuses earned by Gen 2 referrals, and 15% on Gen 3 referrals across your entire sponsorship tree.
-              </p>
-              <div className="p-3 rounded-xl bg-slate-950 text-[11px] font-mono text-blue-300">
-                Multi-tier residual cascade
-              </div>
-            </div>
-
-            {/* Infographic 4: Marketplace Upline Override */}
-            <div className="bg-slate-900/80 rounded-3xl p-6 border border-emerald-500/30 space-y-4 shadow-xl">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-3xl font-black text-white">3%</span>
-                <h4 className="text-sm font-bold text-emerald-300 mt-1">Marketplace Upline Override</h4>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Earn 3% override on all promoter commission pools generated by your downline on the public marketplace.
-              </p>
-              <div className="p-3 rounded-xl bg-slate-950 text-[11px] font-mono text-emerald-400">
-                Commerce-backed cashflow
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* INTERACTIVE EARNINGS SIMULATOR */}
+        {/* SECTION: COMPENSATION SIMULATOR */}
         <section id="simulator" className="py-20 px-4 max-w-5xl mx-auto border-t border-slate-800/80">
-          <div className="bg-gradient-to-tr from-slate-900 via-[#0B0F19] to-indigo-950 p-8 sm:p-12 rounded-3xl border border-indigo-500/30 shadow-2xl space-y-8">
+          <div className="bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 p-8 sm:p-12 rounded-3xl border border-indigo-500/30 shadow-2xl space-y-8">
             <div className="text-center space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold">
-                <Calculator className="w-3.5 h-3.5" />
-                <span>Interactive Earnings Simulator</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
+                <Calculator className="w-4 h-4" />
+                <span>Pure Binary Math (Book 4)</span>
               </div>
-              <h3 className="text-2xl sm:text-4xl font-extrabold text-white">
-                Project Your Monthly Residual Cashflow
-              </h3>
-              <p className="text-xs text-slate-400">
-                Adjust team size and Business Volume to simulate potential monthly earnings.
-              </p>
+              <h3 className="text-2xl sm:text-4xl font-extrabold text-white">Interactive Earnings Simulator</h3>
+              <p className="text-xs text-slate-400">Calculate projected monthly income based on direct referrals and weaker-leg volume.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Sliders (7 cols) */}
-              <div className="lg:col-span-7 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-6 text-xs">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-slate-300">Monthly Direct Referrals</span>
+                  <div className="flex justify-between font-bold text-white">
+                    <span>Direct Active Referrals</span>
                     <span className="text-indigo-400 font-mono text-sm">{directReferralsCount} Partners</span>
                   </div>
                   <input
                     type="range"
-                    min="1"
-                    max="30"
+                    min="2"
+                    max="50"
                     value={directReferralsCount}
                     onChange={(e) => setDirectReferralsCount(Number(e.target.value))}
                     className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>1</span>
-                    <span>15</span>
-                    <span>30</span>
+                    <span>2 Partners</span>
+                    <span>50 Partners</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-slate-300">Monthly Weaker-Leg Business Volume (BV)</span>
-                    <span className="text-emerald-400 font-mono text-sm">{teamMonthlyBV.toLocaleString()} BV</span>
+                  <div className="flex justify-between font-bold text-white">
+                    <span>Monthly Weaker-Leg Volume (BV)</span>
+                    <span className="text-indigo-400 font-mono text-sm">{teamMonthlyBV.toLocaleString()} BV</span>
                   </div>
                   <input
                     type="range"
-                    min="2000"
-                    max="150000"
+                    min="1000"
+                    max="100000"
                     step="1000"
                     value={teamMonthlyBV}
                     onChange={(e) => setTeamMonthlyBV(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>2,000 BV</span>
-                    <span>75,000 BV</span>
-                    <span>150,000 BV</span>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Direct Bonuses ($75 avg):</span>
-                    <span className="font-bold text-white">${estimatedDirectBonus.toLocaleString()} DEOS</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">10% Binary Commissions:</span>
-                    <span className="font-bold text-indigo-400">${estimatedBinaryBonus.toLocaleString()} DEOS</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Generation 2 & 3 Cascade:</span>
-                    <span className="font-bold text-purple-400">${estimatedGenBonus.toLocaleString()} DEOS</span>
+                    <span>1,000 BV</span>
+                    <span>100,000 BV</span>
                   </div>
                 </div>
               </div>
 
-              {/* Total Output Card (5 cols) */}
-              <div className="lg:col-span-5 bg-slate-950 p-6 rounded-3xl border border-indigo-500/40 text-center space-y-4">
-                <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">Projected Monthly Earnings</p>
-                <div className="space-y-1">
-                  <h4 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-300 font-mono">
-                    ${totalProjectedMonthly.toLocaleString()}
-                  </h4>
-                  <p className="text-[11px] text-slate-400 font-medium">USD / DEOS Coin per Month</p>
-                </div>
+              {/* Earnings Result Card */}
+              <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl space-y-4 shadow-xl">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Projected Monthly Earnings</span>
+                <h4 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+                  ${totalProjectedMonthly.toLocaleString()} / mo
+                </h4>
 
-                <button
-                  onClick={() => onEnterApp('onboarding')}
-                  className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Start Building Today</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Direct Referral Bonuses:</span>
+                    <span className="font-bold text-white">${estimatedDirectBonus.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>10% Binary Commissions:</span>
+                    <span className="font-bold text-white">${estimatedBinaryBonus.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Generation Waterfall Bonus:</span>
+                    <span className="font-bold text-white">${estimatedGenBonus.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* SOCIAL PROOF & VERIFIED USER TESTIMONIALS */}
-        <section id="social-proof" className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
+        {/* SECTION: MEMBERSHIP PRICING */}
+        <section id="pricing" className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
+          <div className="text-center space-y-3 mb-16">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400">Membership Tiers</h2>
+            <h3 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+              One Membership. Unlimited Business Potential.
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto">
+              All plans include 1 Active Business Landing Page, 3 Curated Demo Templates, CRM, and Marketplace access.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                name: 'Launch Tier',
+                price: '$100',
+                coins: '100 DEOS Coin',
+                desc: 'Perfect for new entrepreneurs getting started online.',
+                features: [
+                  '1 Active Landing Page + 3 Demo Templates',
+                  'Free Subdomain + Custom Domain DNS',
+                  '500 CRM Contacts + 1 Pipeline',
+                  '1,000 Email Sends / Month',
+                  '50 AI Business Credits / Month',
+                  '$25 Direct Bonus / $1,000 Wkly Cap',
+                ],
+                popular: false,
+              },
+              {
+                name: 'Growth Tier',
+                price: '$300',
+                coins: '300 DEOS Coin',
+                desc: 'The complete scaling system for serious business builders.',
+                features: [
+                  '1 Active Landing Page + 3 Demo Templates',
+                  'Subdomain + 1 Free Custom Domain Voucher',
+                  '5,000 CRM Contacts + 3 Pipelines',
+                  '10,000 Email Sends / Month (Sequences)',
+                  '250 AI Business Credits / Month',
+                  '$75 Direct Bonus / $5,000 Wkly Cap',
+                ],
+                popular: true,
+              },
+              {
+                name: 'Legacy Tier',
+                price: '$500',
+                coins: '500 DEOS Coin',
+                desc: 'Maximum infrastructure, highest limits, and VIP support.',
+                features: [
+                  '1 Active Landing Page + 3 Demo Templates',
+                  'Subdomain + 3 Connected Custom Domains',
+                  'Unlimited CRM Contacts & Pipelines',
+                  '50,000 Email Sends / Month (Custom Domain)',
+                  '1,000 AI Business Credits / Month',
+                  '$125 Direct Bonus / $25,000 Wkly Cap',
+                ],
+                popular: false,
+              },
+            ].map((plan, i) => (
+              <div
+                key={i}
+                className={`rounded-3xl p-8 space-y-6 flex flex-col justify-between transition-all ${
+                  plan.popular
+                    ? 'bg-gradient-to-b from-indigo-950/80 via-slate-900 to-slate-900 border-2 border-indigo-500 shadow-2xl shadow-indigo-500/20 scale-105'
+                    : 'bg-slate-900/60 border border-slate-800 shadow-card'
+                }`}
+              >
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-lg font-bold text-white">{plan.name}</h4>
+                    {plan.popular && (
+                      <Badge variant="purple" size="sm">Most Popular</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-4xl font-black text-white">{plan.price}</span>
+                    <span className="text-xs text-slate-400 ml-1.5 font-medium">one-time</span>
+                    <p className="text-xs text-indigo-400 font-semibold mt-0.5">{plan.coins}</p>
+                  </div>
+                  <p className="text-xs text-slate-400">{plan.desc}</p>
+
+                  <div className="space-y-2.5 pt-4 border-t border-slate-800 text-xs">
+                    {plan.features.map((feat, fidx) => (
+                      <div key={fidx} className="flex items-center gap-2 text-slate-300">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => openAuth('register')}
+                  className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-lg transition-all ${
+                    plan.popular
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white shadow-indigo-600/30'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white'
+                  }`}
+                >
+                  Activate {plan.name}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* SECTION: TESTIMONIALS */}
+        <section id="about" className="py-20 px-4 max-w-7xl mx-auto border-t border-slate-800/80">
           <div className="text-center space-y-3 mb-16">
             <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400">Proven Results</h2>
             <h3 className="text-3xl sm:text-4xl font-extrabold text-white">
@@ -749,12 +860,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             <p className="text-xs sm:text-sm text-indigo-200 max-w-xl mx-auto leading-relaxed">
               Join thousands of digital entrepreneurs scaling their brand, team, and income on the DEOS global operating system.
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
-                onClick={() => onEnterApp('onboarding')}
+                onClick={() => openAuth('register')}
                 className="px-10 py-4 rounded-2xl bg-white hover:bg-slate-100 text-indigo-950 font-black text-sm shadow-2xl hover:scale-105 transition-all"
               >
                 Claim Your Free System Now
+              </button>
+              <button
+                onClick={() => setIsCorporateContactOpen(true)}
+                className="px-8 py-4 rounded-2xl bg-indigo-900/60 hover:bg-indigo-900 text-indigo-200 font-bold text-sm border border-indigo-500/30 transition-all"
+              >
+                Contact Corporate Sales
               </button>
             </div>
           </div>
@@ -770,9 +887,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         </div>
         <div className="flex gap-6">
           <button onClick={() => onEnterApp('marketplace')} className="hover:text-slate-400">Marketplace</button>
+          <button onClick={() => setIsCorporateContactOpen(true)} className="hover:text-slate-400">Enterprise Contact</button>
           <a href="#" className="hover:text-slate-400">Terms of Service</a>
           <a href="#" className="hover:text-slate-400">Privacy Policy</a>
-          <a href="#" className="hover:text-slate-400">Compliance & Law</a>
         </div>
       </footer>
     </div>

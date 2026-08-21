@@ -209,7 +209,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <button
-              onClick={() => onNavigate('landing')}
+              onClick={async () => {
+                onNavigate('landing');
+              }}
               title="Logout / Public Site"
               className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-[#1F2937] rounded-lg transition-colors"
             >

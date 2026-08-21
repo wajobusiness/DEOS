@@ -216,22 +216,35 @@ model MemberSite {
 // ----------------------------------------------------
 model Lead {
   id              String         @id @default(cuid())
-  memberId        String
-  member          Member         @relation(fields: [memberId], references: [id])
+  
+  // Ownership & Source Classification (Corporate Lead Architecture)
+  leadSource      String         @default("member_landing_page") // company_website, member_landing_page, marketplace, ad_campaign
+  ownerType       String         @default("member") // "company" or "member"
+  ownerId         String?        // Null for company-owned leads; memberId for member leads
+  member          Member?        @relation(fields: [ownerId], references: [id])
+  assignedTo      String?        // Staff / Admin ID for sales follow-up
+  
+  // Contact Details
   name            String
   email           String
   phone           String?
   company         String?
-  source          String         // IMMUTABLE (e.g. website_form, shared_link)
-  status          String         @default("New")
-  stage           String         @default("Qualified")
+  source          String         // IMMUTABLE source label (e.g. "personal_website", "contact_sales_modal")
+  
+  // Pipeline & Conversion Tracking
+  status          String         @default("new") // new, contacted, qualified, converted, closed
+  stage           String         @default("Qualified") // New, Qualified, Proposal, Negotiation, Won, Lost
   dealValue       Decimal?       @db.Decimal(10, 2)
+  campaignId      String?
+  referralCode    String?
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  @@index([memberId])
-  @@index([source])
+  @@index([ownerType])
+  @@index([ownerId])
+  @@index([assignedTo])
+  @@index([leadSource])
 }
 
 // ----------------------------------------------------
