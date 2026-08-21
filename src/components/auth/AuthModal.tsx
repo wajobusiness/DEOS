@@ -44,27 +44,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         if (!res.success) {
           setErrorMsg(res.error || 'Invalid login credentials. Please check your email and password.');
         } else {
-          setSuccessMsg('Authenticated successfully! Loading your workspace...');
+          setSuccessMsg('Authenticated! Entering your dashboard...');
           setTimeout(() => {
             onClose();
             if (onSuccess) onSuccess();
-          }, 600);
+          }, 300);
         }
       } else if (mode === 'register') {
         const res = await signUp(name, email, password, country, sponsorCode);
         if (!res.success) {
           setErrorMsg(res.error || 'Registration failed on Supabase backend.');
-        } else if (res.requiresEmailConfirmation) {
-          setSuccessMsg('Account created! A confirmation email has been sent. Please verify your email, then sign in.');
-          setTimeout(() => {
-            setMode('login');
-          }, 3000);
         } else {
-          setSuccessMsg('Account created and workspace provisioned! Redirecting...');
+          setSuccessMsg('Account created! Entering your workspace...');
           setTimeout(() => {
             onClose();
             if (onSuccess) onSuccess();
-          }, 800);
+          }, 300);
         }
       } else {
         // Real Supabase Password Reset

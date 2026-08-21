@@ -33,7 +33,7 @@ import { SuperAdminPanel } from './views/SuperAdminPanel';
 
 export function App() {
   const { member, isAuthenticated, isLoading, signOut, updatePlan } = useAuth();
-  const [currentView, setCurrentView] = useState<ViewType>('landing');
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
@@ -51,15 +51,8 @@ export function App() {
     }
   }, []);
 
-  // When user successfully authenticates, transition from landing to dashboard
-  useEffect(() => {
-    if (isAuthenticated && currentView === 'landing') {
-      setCurrentView('dashboard');
-    }
-  }, [isAuthenticated]);
-
   const handleNavigate = (view: ViewType) => {
-    // Check if the requested view is protected and user is not authenticated
+    // If not authenticated and trying to access protected views
     const publicViews: ViewType[] = ['landing', 'marketplace'];
     if (!publicViews.includes(view) && !isAuthenticated) {
       setAuthModalMode('login');
@@ -81,29 +74,48 @@ export function App() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    setCurrentView('landing');
+  };
+
   // Loading Screen while authenticating session
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#070A12] flex flex-col items-center justify-center text-white space-y-4 font-sans">
         <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="text-xs font-semibold text-slate-400">Connecting to DEOS Production Backend...</p>
+        <p className="text-xs font-semibold text-slate-400">Connecting to DEOS Platform...</p>
       </div>
     );
   }
 
-  // Public Landing page
-  if (currentView === 'landing' || (!isAuthenticated && currentView !== 'marketplace')) {
+  // 1. Unauthenticated Visitor Flow (Landing Page or Public Marketplace)
+  if (!isAuthenticated) {
+    if (currentView === 'marketplace') {
+      return (
+        <>
+          <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={true} />
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            initialMode={authModalMode}
+            onSuccess={() => {
+              setCurrentView('dashboard');
+            }}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         <LandingPage
           onEnterApp={(targetView?: ViewType) => {
             if (targetView === 'marketplace') {
               setCurrentView('marketplace');
-            } else if (!isAuthenticated) {
+            } else {
               setAuthModalMode(targetView === 'onboarding' ? 'register' : 'login');
               setIsAuthModalOpen(true);
-            } else {
-              setCurrentView(targetView || 'dashboard');
             }
           }}
         />
@@ -119,7 +131,7 @@ export function App() {
     );
   }
 
-  // Onboarding Wizard sequence (Authenticated)
+  // 2. Authenticated Onboarding Wizard sequence
   if (currentView === 'onboarding') {
     return (
       <OnboardingWizard
@@ -134,17 +146,27 @@ export function App() {
     );
   }
 
-  // Fallback guard: member must be present in authenticated shell
-  if (!member) {
-    return (
-      <LandingPage
-        onEnterApp={() => {
-          setAuthModalMode('login');
-          setIsAuthModalOpen(true);
-        }}
-      />
-    );
-  }
+  // 3. Authenticated Operating System Shell (User Dashboard, Wallet, CRM, etc.)
+  const activeMember = member || {
+    id: 'DEOS_ACTIVE',
+    name: 'Entrepreneur',
+    email: 'entrepreneur@deos.com',
+    phone: '',
+    country: 'Global',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    plan: 'growth',
+    role: 'member',
+    status: 'active',
+    memberSince: new Date().toLocaleDateString(),
+    renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+    rank: 'Member',
+    nextRank: 'Director',
+    walletBalance: 0.00,
+    tokenBalance: 0.00,
+    availableBalance: 0.00,
+    binaryVolume: 0,
+    activeReferrals: 0,
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans antialiased">
@@ -159,7 +181,7 @@ export function App() {
       <Sidebar
         currentView={currentView}
         onNavigate={handleNavigate}
-        currentUser={member}
+        currentUser={activeMember}
         isAdminMode={isAdminMode}
         onToggleAdminMode={handleToggleAdminMode}
         isOpen={isMobileSidebarOpen}
@@ -170,7 +192,7 @@ export function App() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         {/* Top Header Command Bar */}
         <Header
-          currentUser={member}
+          currentUser={activeMember}
           currentView={currentView}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
@@ -180,16 +202,16 @@ export function App() {
         {/* View Canvas Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {currentView === 'dashboard' && (
-            <UserDashboard currentUser={member} onNavigate={handleNavigate} />
+            <UserDashboard currentUser={activeMember} onNavigate={handleNavigate} />
           )}
           {currentView === 'binary' && <BinaryNetwork />}
-          {currentView === 'partner' && <PartnerCenter currentUser={member} />}
+          {currentView === 'partner' && <PartnerCenter currentUser={activeMember} />}
           {currentView === 'deposit' && <DepositFlow onNavigate={handleNavigate} />}
           {currentView === 'wallet' && (
-            <WalletDashboard currentUser={member} onNavigate={handleNavigate} />
+            <WalletDashboard currentUser={activeMember} onNavigate={handleNavigate} />
           )}
           {currentView === 'marketplace' && (
-            <MarketplaceHome onNavigate={handleNavigate} />
+            <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={false} />
           )}
           {currentView === 'sellers' && <SellersDashboard />}
           {currentView === 'builder' && <WebsiteBuilder />}
@@ -200,7 +222,7 @@ export function App() {
           {currentView === 'academy' && <AcademyHub />}
           {currentView === 'events' && <EventsWebinars />}
           {currentView === 'team' && <TeamManagement />}
-          {currentView === 'settings' && <UserSettings currentUser={member} />}
+          {currentView === 'settings' && <UserSettings currentUser={activeMember} />}
           {currentView === 'support' && <SupportCommunity />}
           {currentView === 'analytics' && <AnalyticsOverview />}
           {currentView === 'admin' && <SuperAdminPanel />}
