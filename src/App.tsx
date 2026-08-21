@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ViewType, PlanTier } from './types';
 import { useAuth } from './context/AuthContext';
 
@@ -40,6 +40,24 @@ export function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
+  // Handle Supabase Email Verification Callback in URL
+  useEffect(() => {
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('code=')) {
+      console.log('[DEOS Auth] Email verification / signup callback detected.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setCurrentView('dashboard');
+    }
+  }, []);
+
+  // When user successfully authenticates, transition from landing to dashboard
+  useEffect(() => {
+    if (isAuthenticated && currentView === 'landing') {
+      setCurrentView('dashboard');
+    }
+  }, [isAuthenticated]);
+
   const handleNavigate = (view: ViewType) => {
     // Check if the requested view is protected and user is not authenticated
     const publicViews: ViewType[] = ['landing', 'marketplace'];
@@ -61,11 +79,6 @@ export function App() {
       setIsAdminMode(false);
       setCurrentView('dashboard');
     }
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-    setCurrentView('landing');
   };
 
   // Loading Screen while authenticating session

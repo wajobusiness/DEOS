@@ -49,44 +49,57 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         onNavigate={onNavigate}
       />
 
-      {/* Plan Status & Launch Progress Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white font-black text-xl">
-            D
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Good morning, {currentUser.name}! 👋
+      {/* Progressive Onboarding Hero for New Unfunded Members */}
+      {currentUser.walletBalance === 0 && (
+        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 rounded-3xl p-6 sm:p-8 text-white border border-indigo-500/30 shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span>Account Verified</span>
+                </span>
+                <span className="text-xs text-indigo-300 font-semibold">Welcome to DEOS</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">
+                Let's Launch Your Digital Business, {currentUser.name}! 🚀
               </h2>
-              <Badge variant="purple" size="sm">
-                GROWTH PLAN
-              </Badge>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Your entrepreneur workspace is ready. Complete the 3 quick launch steps below to fund your wallet, choose your business plan, and publish your personal landing page.
+              </p>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Member since {currentUser.memberSince} • Annual renewal due {currentUser.renewalDate}
-            </p>
+
+            <button
+              onClick={() => onNavigate('deposit')}
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 shrink-0"
+            >
+              <span>Fund Wallet & Activate</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 3 Step Quick Setup Pipeline */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <span className="text-xs font-mono font-bold text-indigo-400">Step 01</span>
+              <h4 className="text-sm font-bold text-white">Fund DEOS Wallet</h4>
+              <p className="text-[11px] text-slate-400">Deposit using Credit Card, Bank Transfer, or USDT TRC20 ($100–$500).</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <span className="text-xs font-mono font-bold text-purple-400">Step 02</span>
+              <h4 className="text-sm font-bold text-white">Choose Membership Plan</h4>
+              <p className="text-[11px] text-slate-400">Select Launch ($100), Growth ($300), or Legacy ($500) with 1 click.</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <span className="text-xs font-mono font-bold text-pink-400">Step 03</span>
+              <h4 className="text-sm font-bold text-white">Publish Landing Page & CRM</h4>
+              <p className="text-[11px] text-slate-400">Your personal subdomain and 10% binary network position go live instantly.</p>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={() => setShowWizard(true)}
-            className="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Launch Wizard (10/15)</span>
-          </button>
-          <button
-            onClick={() => onNavigate('deposit')}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/30 transition-all flex items-center gap-1.5 ml-auto md:ml-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Deposit</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* 5 KPI Metric Cards Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
