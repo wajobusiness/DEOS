@@ -128,7 +128,7 @@ Instead of forcing new members to build complex, multi-page websites before laun
 |---|---|---|---|
 | **One-Time Membership Fee** | 100 DEOS ($100 USD) | 300 DEOS ($300 USD) | 500 DEOS ($500 USD) |
 | **Annual Renewal** | $50 / 50 DEOS per year | $50 / 50 DEOS per year | $50 / 50 DEOS per year |
-| **Landing Pages & Sites** | 1 Active Landing Page | 3 Landing Pages + Site Builder | Unlimited Pages + Multi-Site |
+| **Landing Page & Templates** | 1 Active Landing Page + 3 Demo Templates | 1 Active Landing Page + 3 Demo Templates | 1 Active Landing Page + 3 Demo Templates |
 | **Domain Connections** | Free Subdomain + Custom DNS | Subdomain + 1 Free Domain Voucher | Subdomain + 3 Custom Domains |
 | **CRM Contact Capacity** | Up to 500 Contacts | Up to 5,000 Contacts | Unlimited Contacts |
 | **CRM Deal Pipelines** | 1 Pipeline (5 Stages) | 3 Custom Pipelines | Unlimited Custom Pipelines |

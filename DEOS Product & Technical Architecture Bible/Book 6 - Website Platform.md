@@ -54,7 +54,25 @@ Each entrepreneur's default digital asset includes:
 
 ---
 
-## 4. Visual Section Editor
+## 4. Curated Demo Templates (Included Across All Plans)
+
+Every membership tier (Launch, Growth, Legacy) includes **1 Active Landing Page**, equipped with access to **3 Curated Demo Templates** plus a "Start Blank" option:
+
+1. **Demo 1: Business Coach & Consultant Template:**
+   * Optimized for high-ticket consulting, strategy sessions, and lead generation.
+   * Includes video masterclass embed, calendar booking widget, and authority client testimonials.
+2. **Demo 2: Digital Agency & Freelance Services Template:**
+   * Optimized for creative agencies, developers, and digital marketing services.
+   * Includes portfolio grid, service packages, client logo reel, and project quote inquiry form.
+3. **Demo 3: Digital Product Creator & Storefront Template:**
+   * Optimized for course sellers, ebook authors, and software promoters.
+   * Includes live marketplace product cards, instant Guest Checkout links, countdown timers, and bonus breakdown sections.
+
+Members can switch between demo templates with 1 click, preserving their core business profile, branding, and connected custom domain.
+
+---
+
+## 5. Visual Section Editor
 
 - Section-based visual editor: Hero, Value Proposition, Services, Testimonials, Video Player, Contact Form, Marketplace Showcase, and Custom HTML.
 - Global Theme Controls: Primary brand colors, font families, dark/light theme presets.
