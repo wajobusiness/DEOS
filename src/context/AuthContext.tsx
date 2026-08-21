@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured, supabaseUrl } from '../lib/supabaseClient';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 import { Member, PlanTier } from '../types';
 
 interface AuthContextType {
@@ -9,217 +9,293 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  isSupabaseLive: boolean;
-  signUp: (name: string, email: string, password: string, country?: string, sponsorCode?: string) => Promise<{ success: boolean; error?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (
+    name: string,
+    email: string,
+    password: string,
+    country?: string,
+    sponsorCode?: string
+  ) => Promise<{ success: boolean; requiresEmailConfirmation?: boolean; error?: string }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  updatePlan: (plan: PlanTier) => void;
+  updatePlan: (plan: PlanTier) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_MEMBER_KEY = 'deos_active_member_profile';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [member, setMember] = useState<Member | null>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Helper to construct a Member profile from user session/signup
-  const createMemberProfile = (userId: string, email: string, name?: string, country?: string, sponsorId?: string): Member => {
-    const memberCode = `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
-    return {
-      id: userId || memberCode,
-      name: name || email.split('@')[0] || 'Entrepreneur',
-      email: email,
-      phone: '',
-      country: country || 'Global',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      plan: 'growth',
-      role: email.includes('admin') ? 'super_admin' : 'member',
-      status: 'active',
-      memberSince: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      rank: 'Member',
-      nextRank: 'Director',
-      walletBalance: 0.00,
-      tokenBalance: 0.00,
-      availableBalance: 0.00,
-      binaryVolume: 0,
-      activeReferrals: 0,
-    };
-  };
-
-  // Synchronize member profile from Supabase Database or fallback session
-  const fetchMemberProfile = async (currentUser: User) => {
+  // Fetch Member profile directly from Supabase public.Member table
+  const fetchMemberProfile = async (authUser: User): Promise<Member | null> => {
     try {
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase
-          .from('Member')
-          .select('*')
-          .eq('email', currentUser.email)
-          .single();
+      const { data, error } = await supabase
+        .from('Member')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
 
-        if (data && !error) {
-          const profile: Member = {
-            id: data.id || data.memberCode,
-            name: data.name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0],
-            email: data.email || currentUser.email!,
-            phone: data.phone || '',
-            country: data.country || 'Global',
-            avatar: data.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            plan: (data.plan as PlanTier) || 'growth',
-            role: data.role || 'member',
-            status: data.status || 'active',
-            memberSince: new Date(data.createdAt || Date.now()).toLocaleDateString(),
-            renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-            rank: data.rank || 'Member',
-            nextRank: 'Director',
-            walletBalance: Number(data.walletBalance || 0),
-            tokenBalance: Number(data.tokenBalance || 0),
-            availableBalance: Number(data.walletBalance || 0),
-            binaryVolume: Number(data.binaryLeftVolume || 0) + Number(data.binaryRightVolume || 0),
-            activeReferrals: 0,
-          };
-          setMember(profile);
-          localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(profile));
-          return;
-        }
+      if (error) {
+        console.error('Error fetching member profile from Supabase:', error);
       }
 
-      // Fallback from User Metadata
-      const fallback = createMemberProfile(
-        currentUser.id,
-        currentUser.email!,
-        currentUser.user_metadata?.name,
-        currentUser.user_metadata?.country,
-        currentUser.user_metadata?.sponsorCode
-      );
-      setMember(fallback);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(fallback));
+      if (data) {
+        const profile: Member = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone || '',
+          country: data.country || 'Global',
+          avatar: data.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          plan: (data.plan as PlanTier) || 'growth',
+          role: data.role || 'member',
+          status: data.status || 'active',
+          memberSince: new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          renewalDate: data.renewalDate
+            ? new Date(data.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          rank: data.rank || 'Member',
+          nextRank: 'Director',
+          walletBalance: Number(data.walletBalance || 0),
+          tokenBalance: Number(data.walletBalance || 0), // Model A: 1 DEOS Coin = $1.00 USD
+          availableBalance: Number(data.walletBalance || 0),
+          binaryVolume: Number(data.binaryLeftVolume || 0) + Number(data.binaryRightVolume || 0),
+          activeReferrals: 0,
+        };
+        setMember(profile);
+        return profile;
+      }
+
+      // If user exists in auth.users but Member record is pending, construct profile from user_metadata
+      const metaName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Entrepreneur';
+      const metaCountry = authUser.user_metadata?.country || 'Global';
+      const metaMemberCode = `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // Attempt to upsert the Member profile into Supabase
+      const newMemberRow = {
+        id: authUser.id,
+        memberCode: metaMemberCode,
+        name: metaName,
+        email: authUser.email!,
+        passwordHash: 'supabase_auth_managed',
+        country: metaCountry,
+        plan: 'growth',
+        role: authUser.email?.includes('admin') ? 'super_admin' : 'member',
+        status: 'active',
+        rank: 'Member',
+        walletBalance: 0.00,
+        usdtBalance: 0.00,
+        binaryLeftVolume: 0.00,
+        binaryRightVolume: 0.00,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('Member')
+        .upsert(newMemberRow)
+        .select()
+        .single();
+
+      if (inserted && !insertErr) {
+        const profile: Member = {
+          id: inserted.id,
+          name: inserted.name,
+          email: inserted.email,
+          phone: '',
+          country: inserted.country || 'Global',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          plan: (inserted.plan as PlanTier) || 'growth',
+          role: inserted.role || 'member',
+          status: inserted.status || 'active',
+          memberSince: new Date(inserted.createdAt).toLocaleDateString(),
+          renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          rank: inserted.rank || 'Member',
+          nextRank: 'Director',
+          walletBalance: Number(inserted.walletBalance || 0),
+          tokenBalance: Number(inserted.walletBalance || 0),
+          availableBalance: Number(inserted.walletBalance || 0),
+          binaryVolume: 0,
+          activeReferrals: 0,
+        };
+        setMember(profile);
+        return profile;
+      }
     } catch (err) {
-      console.warn('Error fetching member profile:', err);
+      console.error('Error synchronizing member profile with Supabase:', err);
     }
+    return null;
   };
 
+  // Initial session hydration & onAuthStateChange listener
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    async function initAuth() {
+    async function initializeAuth() {
       try {
-        if (isSupabaseConfigured) {
-          const { data: { session: initialSession } } = await supabase.auth.getSession();
-          if (mounted) {
-            setSession(initialSession);
-            setUser(initialSession?.user || null);
-            if (initialSession?.user) {
-              await fetchMemberProfile(initialSession.user);
-            }
+        const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Supabase getSession error:', error);
+        }
+
+        if (isMounted) {
+          setSession(activeSession);
+          setUser(activeSession?.user || null);
+          if (activeSession?.user) {
+            await fetchMemberProfile(activeSession.user);
           }
         }
       } catch (err) {
-        console.warn('Supabase session initialization note:', err);
+        console.error('Unexpected auth initialization error:', err);
       } finally {
-        if (mounted) setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     }
 
-    initAuth();
+    initializeAuth();
 
-    // Listen for real-time auth changes if Supabase is configured
-    if (isSupabaseConfigured) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
-        if (!mounted) return;
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
+    // Subscribe to live auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!isMounted) return;
+      console.log(`[DEOS Supabase Auth Event] ${event}`, newSession?.user?.email || 'No user');
+      
+      setSession(newSession);
+      setUser(newSession?.user || null);
 
-        if (currentSession?.user) {
-          await fetchMemberProfile(currentSession.user);
-        } else {
-          setMember(null);
-          localStorage.removeItem(LOCAL_STORAGE_MEMBER_KEY);
-        }
-        setIsLoading(false);
-      });
-
-      return () => {
-        mounted = false;
-        subscription?.unsubscribe();
-      };
-    } else {
+      if (newSession?.user) {
+        await fetchMemberProfile(newSession.user);
+      } else {
+        setMember(null);
+      }
       setIsLoading(false);
-    }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
+  // Production Sign Up
   const signUp = async (
     name: string,
     email: string,
     password: string,
     country?: string,
     sponsorCode?: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; requiresEmailConfirmation?: boolean; error?: string }> => {
     try {
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
+      const code = `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // If Supabase has a valid live API key, attempt real Supabase Auth
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              name,
-              country: country || 'Global',
-              sponsorCode: sponsorCode || 'DEOS100245',
-            },
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            name,
+            country: country || 'Global',
+            sponsorCode: sponsorCode || 'DEOS100245',
+            memberCode: code,
           },
-        });
+        },
+      });
 
-        if (error) {
-          // If error is specifically Invalid API Key, fall back gracefully to local session creation
-          if (error.message.toLowerCase().includes('api key') || error.message.toLowerCase().includes('invalid')) {
-            console.warn('Supabase Anon Key was rejected by the server. Falling back to local workspace session.', error.message);
-          } else {
-            return { success: false, error: error.message };
-          }
-        } else if (data.user) {
-          setUser(data.user);
-          setSession(data.session);
-          const newProfile = createMemberProfile(data.user.id, cleanEmail, name, country, sponsorCode);
-          setMember(newProfile);
-          localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
-          return { success: true };
-        }
+      if (error) {
+        console.error('Supabase Auth signUp failed:', error);
+        return { success: false, error: error.message };
       }
 
-      // Seamless fallback profile creation (enables instant onboarding while key is being updated)
-      const mockUserId = `USR_${Date.now()}`;
-      const newProfile = createMemberProfile(mockUserId, cleanEmail, name, country, sponsorCode);
-      setMember(newProfile);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
-      return { success: true };
+      if (data.user) {
+        // Create Member Record in Supabase public.Member table
+        const memberPayload = {
+          id: data.user.id,
+          memberCode: code,
+          name: name,
+          email: cleanEmail,
+          passwordHash: 'supabase_auth_managed',
+          country: country || 'Global',
+          plan: 'growth',
+          role: cleanEmail.includes('admin') ? 'super_admin' : 'member',
+          status: 'active',
+          rank: 'Member',
+          sponsorId: sponsorCode || null,
+          walletBalance: 0.00,
+          usdtBalance: 0.00,
+          binaryLeftVolume: 0.00,
+          binaryRightVolume: 0.00,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const { error: memberInsertError } = await supabase
+          .from('Member')
+          .upsert(memberPayload);
+
+        if (memberInsertError) {
+          console.warn('Member table record creation notice:', memberInsertError);
+        }
+
+        // Create MemberSite Record (Dynamic Subdomain)
+        try {
+          await supabase.from('MemberSite').upsert({
+            id: `site_${data.user.id}`,
+            memberId: data.user.id,
+            subdomain: code.toLowerCase(),
+            dnsStatus: 'active',
+            sslStatus: 'active',
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('MemberSite insert notice:', e);
+        }
+
+        // Create Initial Ledger Audit Row
+        try {
+          await supabase.from('LedgerTransaction').insert({
+            id: `txn_${Date.now()}`,
+            memberId: data.user.id,
+            type: 'coin_deposit',
+            amount: 0.00,
+            currency: 'DEOS',
+            description: 'Wallet initialized on account registration',
+            status: 'Completed',
+            referenceId: code,
+          });
+        } catch (e) {
+          console.warn('LedgerTransaction insert notice:', e);
+        }
+
+        // Check if email confirmation is required
+        if (!data.session) {
+          return {
+            success: true,
+            requiresEmailConfirmation: true,
+          };
+        }
+
+        setUser(data.user);
+        setSession(data.session);
+        await fetchMemberProfile(data.user);
+        return { success: true, requiresEmailConfirmation: false };
+      }
+
+      return { success: false, error: 'User creation failed on Supabase backend.' };
     } catch (err: any) {
-      // Graceful fallback on unexpected network/auth issues
-      const mockUserId = `USR_${Date.now()}`;
-      const newProfile = createMemberProfile(mockUserId, email, name, country, sponsorCode);
-      setMember(newProfile);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
-      return { success: true };
+      console.error('Unexpected error during signUp:', err);
+      return { success: false, error: err.message || 'Registration failed' };
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Production Sign In
   const signIn = async (
     email: string,
     password: string
@@ -228,65 +304,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
 
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-        if (error) {
-          if (error.message.toLowerCase().includes('api key') || error.message.toLowerCase().includes('invalid')) {
-            console.warn('Supabase Anon Key was rejected. Falling back to local workspace login.', error.message);
-          } else {
-            return { success: false, error: error.message };
-          }
-        } else if (data.user) {
-          setUser(data.user);
-          setSession(data.session);
-          await fetchMemberProfile(data.user);
-          return { success: true };
-        }
+      if (error) {
+        console.error('Supabase Auth signIn failed:', error);
+        return { success: false, error: error.message };
       }
 
-      // Seamless fallback login
-      const mockUserId = `USR_${Date.now()}`;
-      const newProfile = createMemberProfile(mockUserId, cleanEmail);
-      setMember(newProfile);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
-      return { success: true };
+      if (data.user && data.session) {
+        setUser(data.user);
+        setSession(data.session);
+        await fetchMemberProfile(data.user);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Login failed: no active session returned from Supabase.' };
     } catch (err: any) {
-      const mockUserId = `USR_${Date.now()}`;
-      const newProfile = createMemberProfile(mockUserId, email);
-      setMember(newProfile);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
-      return { success: true };
+      console.error('Unexpected error during signIn:', err);
+      return { success: false, error: err.message || 'Login failed' };
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Production Sign Out
   const signOut = async () => {
     try {
       setIsLoading(true);
-      if (isSupabaseConfigured) {
-        await supabase.auth.signOut().catch(() => {});
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Supabase signOut error:', error);
       }
       setUser(null);
       setSession(null);
       setMember(null);
-      localStorage.removeItem(LOCAL_STORAGE_MEMBER_KEY);
     } catch (err) {
-      console.warn('SignOut error:', err);
+      console.error('Unexpected error during signOut:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updatePlan = (plan: PlanTier) => {
-    if (member) {
-      const updated = { ...member, plan };
-      setMember(updated);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
+  // Update Plan Tier
+  const updatePlan = async (plan: PlanTier) => {
+    if (user && member) {
+      try {
+        await supabase
+          .from('Member')
+          .update({ plan, updatedAt: new Date().toISOString() })
+          .eq('id', user.id);
+        
+        setMember((prev) => (prev ? { ...prev, plan } : null));
+      } catch (err) {
+        console.error('Error updating member plan:', err);
+      }
     }
   };
 
@@ -303,8 +377,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         member,
         session,
         isLoading,
-        isAuthenticated: Boolean(user || member),
-        isSupabaseLive: isSupabaseConfigured,
+        isAuthenticated: Boolean(session && user && member),
         signUp,
         signIn,
         signOut,

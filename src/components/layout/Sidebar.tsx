@@ -22,6 +22,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { ViewType, Member } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onCloseMobile,
 }) => {
+  const { signOut } = useAuth();
   const mainNavItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'wallet' as ViewType, label: 'Wallet', icon: Wallet, badge: 'USDT' },
@@ -210,9 +212,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={async () => {
+                await signOut();
                 onNavigate('landing');
               }}
-              title="Logout / Public Site"
+              title="Logout from DEOS"
               className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-[#1F2937] rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />

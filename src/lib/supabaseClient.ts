@@ -1,32 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase project connection parameters
-const SUPABASE_PROJECT_ID = 'tqjccyivhbddwaftgzzb';
-const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+// Live Supabase Production Configuration
+export const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || 'https://tqjccyivhbddwaftgzzb.supabase.co';
 
-const metaEnv = (import.meta as any)?.env || {};
+export const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_3mOjihZxqenneD_8cNZnFA_bN40WRK_';
 
-// Vite environment variables (prefixed with VITE_)
-export const supabaseUrl: string = metaEnv.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-export const supabaseAnonKey: string =
-  metaEnv.VITE_SUPABASE_ANON_KEY || 'sb_publishable_3mOjihZxqenneD_8cNZnFA_bN40WRK_';
-
-export const isSupabaseConfigured: boolean = Boolean(
-  supabaseAnonKey &&
-  !supabaseAnonKey.includes('placeholder') &&
-  supabaseAnonKey.length > 10
-);
-
-// Create Supabase client with live credentials
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: 'deos_auth_session',
-    },
-  }
-);
+// Production Supabase Client with Persistent Session Storage & Auto Refresh
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'deos_auth_session',
+  },
+});

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User, Globe, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -41,39 +42,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (mode === 'login') {
         const res = await signIn(email, password);
         if (!res.success) {
-          setErrorMsg(res.error || 'Invalid email or password');
+          setErrorMsg(res.error || 'Invalid login credentials. Please check your email and password.');
         } else {
-          setSuccessMsg('Login successful! Redirecting...');
+          setSuccessMsg('Authenticated successfully! Loading your workspace...');
           setTimeout(() => {
             onClose();
             if (onSuccess) onSuccess();
-          }, 800);
+          }, 600);
         }
       } else if (mode === 'register') {
         const res = await signUp(name, email, password, country, sponsorCode);
         if (!res.success) {
-          setErrorMsg(res.error || 'Registration failed');
+          setErrorMsg(res.error || 'Registration failed on Supabase backend.');
+        } else if (res.requiresEmailConfirmation) {
+          setSuccessMsg('Account created! A confirmation email has been sent. Please verify your email, then sign in.');
+          setTimeout(() => {
+            setMode('login');
+          }, 3000);
         } else {
-          setSuccessMsg('Account created successfully! Redirecting...');
+          setSuccessMsg('Account created and workspace provisioned! Redirecting...');
           setTimeout(() => {
             onClose();
             if (onSuccess) onSuccess();
           }, 800);
         }
       } else {
-        // Forgot password simulation/request
-        setSuccessMsg('Password reset link sent to your email address.');
-        setTimeout(() => setMode('login'), 2000);
+        // Real Supabase Password Reset
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+          redirectTo: `${window.location.origin}/#reset-password`,
+        });
+        if (error) {
+          setErrorMsg(error.message);
+        } else {
+          setSuccessMsg('Password reset link sent to your email address. Please check your inbox.');
+          setTimeout(() => setMode('login'), 3000);
+        }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'An unexpected error occurred');
+      setErrorMsg(err.message || 'An unexpected error occurred during authentication.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-white space-y-6">
         {/* Close Button */}
         <button
@@ -215,11 +228,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           >
             <span>
               {isSubmitting
-                ? 'Processing...'
+                ? 'Connecting to Supabase...'
                 : mode === 'login'
-                ? 'Sign In to Dashboard'
+                ? 'Sign In to Workspace'
                 : mode === 'register'
-                ? 'Create Account & Continue'
+                ? 'Create Production Account'
                 : 'Send Reset Link'}
             </span>
             <ArrowRight className="w-4 h-4" />
