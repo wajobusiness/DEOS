@@ -21,15 +21,31 @@ import {
   Globe,
   ExternalLink,
   ChevronLeft,
+  ChevronRight,
+  ChevronDown,
   SlidersHorizontal,
   Copy,
   Check,
-  Tag
+  Tag,
+  Heart,
+  Zap,
+  BookOpen,
+  Layout,
+  Cpu,
+  Send,
+  Palette,
+  BarChart3,
+  Music,
+  Headphones,
+  Lock,
+  DollarSign,
+  Store,
+  ShieldAlert
 } from 'lucide-react';
 import { initialProducts } from '../store/mockData';
 import { Product, ViewType } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
-import { Badge } from '../components/common/Badge';
+import { AuthModal } from '../components/auth/AuthModal';
 
 interface MarketplaceHomeProps {
   onNavigate: (view: ViewType) => void;
@@ -38,67 +54,159 @@ interface MarketplaceHomeProps {
 
 export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   onNavigate,
-  isPublicGuest = false,
+  isPublicGuest = true,
 }) => {
+  // Navigation & Category Filters
+  const [activeNavTab, setActiveNavTab] = useState<string>('Marketplace');
+  const [activeSubTab, setActiveSubTab] = useState<'Featured' | 'Best Sellers' | 'Top Rated' | 'New Arrivals'>('Featured');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('Popular');
+
+  // Interactive States
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Guest Checkout & Attribution State
+  // Auth Modal State for Guest Actions
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+
+  // Guest Checkout State
   const [isGuestCheckoutModalOpen, setIsGuestCheckoutModalOpen] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPaymentMethod, setGuestPaymentMethod] = useState<'card' | 'usdt' | 'bank' | 'momo'>('card');
-  const [referringAffiliateId, setReferringAffiliateId] = useState<string>('DEOS100245 (John Doe)');
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
 
-  // Affiliate Promote Modal
+  // Affiliate Promotion Modal
   const [promotingProduct, setPromotingProduct] = useState<Product | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const categories = [
-    'All',
-    'Courses',
-    'Software',
-    'Templates',
-    'Services',
-    'AI Tools',
-    'Digital Products'
+  // Category Definitions per Figma / UI Spec
+  const categoriesList = [
+    { id: 'Digital Courses', label: 'Digital Courses', count: '1,250+ Products', icon: BookOpen, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
+    { id: 'eBooks', label: 'eBooks & Guides', count: '2,350+ Products', icon: BookOpen, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
+    { id: 'Templates', label: 'Templates', count: '1,890+ Products', icon: Layout, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+    { id: 'Software', label: 'Software & Tools', count: '1,670+ Products', icon: Cpu, bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200' },
+    { id: 'Marketing', label: 'Marketing & SEO', count: '1,320+ Products', icon: Send, bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
+    { id: 'Graphics', label: 'Graphics & Design', count: '2,860+ Products', icon: Palette, bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200' },
+    { id: 'Business', label: 'Business', count: '2,100+ Products', icon: BarChart3, bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-200' },
+    { id: 'Music', label: 'Music & Audio', count: '980+ Products', icon: Music, bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
   ];
 
-  const filteredProducts = initialProducts.filter(p => {
-    const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
-    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.sellerName.toLowerCase().includes(searchQuery.toLowerCase());
+  // Rich Product Catalog formatted to match the screenshot
+  const marketplaceProducts = [
+    {
+      id: 'PRD-01',
+      title: 'AI Business Mastery Complete Course',
+      category: 'Digital Courses',
+      badge: 'BEST SELLER',
+      badgeColor: 'bg-emerald-600 text-white',
+      sellerName: 'TechGuru',
+      sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+      rating: 4.9,
+      reviewsCount: '2.1k',
+      price: 197.00,
+      discountBadge: '50% OFF',
+      salesCount: '1,250+ Sales',
+      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+      affiliateCommissionRate: 0.50,
+    },
+    {
+      id: 'PRD-02',
+      title: 'Website Builder Pro Template',
+      category: 'Templates',
+      badge: 'TOP RATED',
+      badgeColor: 'bg-teal-600 text-white',
+      sellerName: 'WebSolutions',
+      sellerAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+      rating: 4.8,
+      reviewsCount: '980',
+      price: 97.00,
+      discountBadge: '40% OFF',
+      salesCount: '980+ Sales',
+      image: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=600&auto=format&fit=crop&q=80',
+      affiliateCommissionRate: 0.40,
+    },
+    {
+      id: 'PRD-03',
+      title: 'Digital Marketing Mastery Kit',
+      category: 'Marketing',
+      badge: 'NEW',
+      badgeColor: 'bg-blue-600 text-white',
+      sellerName: 'MarketPro',
+      sellerAvatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100&auto=format&fit=crop&q=80',
+      rating: 4.7,
+      reviewsCount: '1.3k',
+      price: 147.00,
+      discountBadge: '40% OFF',
+      salesCount: '750+ Sales',
+      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80',
+      affiliateCommissionRate: 0.45,
+    },
+    {
+      id: 'PRD-04',
+      title: 'E-commerce Blueprint',
+      category: 'Digital Courses',
+      badge: 'BEST SELLER',
+      badgeColor: 'bg-emerald-600 text-white',
+      sellerName: 'SuccessLabs',
+      sellerAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80',
+      rating: 4.9,
+      reviewsCount: '2.7k',
+      price: 197.00,
+      discountBadge: '50% OFF',
+      salesCount: '1,130+ Sales',
+      image: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=600&auto=format&fit=crop&q=80',
+      affiliateCommissionRate: 0.50,
+    },
+    {
+      id: 'PRD-05',
+      title: 'Social Media Growth Kit',
+      category: 'Marketing',
+      badge: 'HOT',
+      badgeColor: 'bg-rose-600 text-white',
+      sellerName: 'SocialBoost',
+      sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      rating: 4.8,
+      reviewsCount: '1.5k',
+      price: 57.00,
+      discountBadge: '40% OFF',
+      salesCount: '620+ Sales',
+      image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&auto=format&fit=crop&q=80',
+      affiliateCommissionRate: 0.40,
+    }
+  ];
+
+  // Filtering products
+  const filteredProducts = marketplaceProducts.filter((p) => {
+    const matchesCat = selectedCategory === 'All' || p.category.toLowerCase().includes(selectedCategory.toLowerCase());
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
 
-  const addToCart = (p: Product) => {
-    setCart(prev => [...prev, p]);
+  const toggleFavorite = (id: string) => {
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const addToCart = (product: any) => {
+    setCart((prev) => [...prev, product as Product]);
     setIsCartOpen(true);
   };
 
   const removeFromCart = (index: number) => {
-    setCart(prev => prev.filter((_, i) => i !== index));
+    setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
 
-  // Guest Checkout Submission & Split Processing
-  const handleProcessGuestCheckout = (e: React.FormEvent) => {
+  const handleProcessCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestEmail || cart.length === 0) return;
-
-    const splits = cart.map(item => ({
-      item: item.title,
-      price: item.price,
-      split: calculateMarketplaceFeeSplit(item.price, item.affiliateCommissionRate),
-    }));
-
-    const totalPromoterEarned = splits.reduce((acc, curr) => acc + curr.split.promoterCommissionNet, 0);
-    const totalUplineOverride = splits.reduce((acc, curr) => acc + curr.split.uplineOverride, 0);
 
     setCompletedOrder({
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
@@ -106,193 +214,599 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
       buyerEmail: guestEmail,
       items: cart,
       totalAmount: cartTotal,
-      licenseKey: `DEOS-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      splits,
-      totalPromoterEarned,
-      totalUplineOverride,
-      paymentMethod: guestPaymentMethod,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      licenseKey: `DEOS-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     });
 
     setCart([]);
     setIsCartOpen(false);
   };
 
-  const handleCopyPromoteLink = (p: Product) => {
-    const link = `https://deos.com/marketplace/p/${p.id}?ref=DEOS100245`;
-    navigator.clipboard.writeText(link);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
   return (
-    <div className="space-y-8 pb-16 animate-fadeIn">
-      {/* Top Banner: Standalone E-Commerce Hero */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 border border-slate-800 p-8 sm:p-12 text-white shadow-2xl overflow-hidden">
-        <div className="max-w-2xl space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-300 text-xs font-bold backdrop-blur-md">
-            <ShoppingBag className="w-3.5 h-3.5 text-indigo-400" />
-            <span>DEOS Global Digital Marketplace</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-            Discover, Buy & Sell <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300">
-              World-Class Digital Assets
-            </span>
-          </h1>
-
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Instant digital delivery with secure checkout. Explore top-rated masterclasses, developer boilerplates, UI kits, AI tools, and growth services.
-          </p>
-
-          {/* Search Bar in Hero */}
-          <div className="pt-2 flex flex-col sm:flex-row gap-2 max-w-xl">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-3.5" />
-              <input
-                type="text"
-                placeholder="Search products, courses, templates, software..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-xs font-medium text-white placeholder-slate-400 outline-none backdrop-blur-md focus:bg-white/15 focus:border-indigo-400 transition-all"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Cart Trigger */}
-        <div className="absolute top-6 right-6 z-10">
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold backdrop-blur-md transition-all flex items-center gap-2 shadow-lg"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Cart</span>
-            {cart.length > 0 && (
-              <span className="w-5 h-5 rounded-full bg-indigo-500 text-white font-black text-[10px] flex items-center justify-center">
-                {cart.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${
-              selectedCategory === cat
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => {
-          const split = calculateMarketplaceFeeSplit(product.price, product.affiliateCommissionRate);
-          return (
-            <div
-              key={product.id}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-card overflow-hidden flex flex-col justify-between hover:shadow-xl hover:border-slate-300 transition-all group"
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased">
+      {/* 1. Top Navigation Bar (Header) */}
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-6 shrink-0">
+            <button
+              onClick={() => onNavigate('landing')}
+              className="flex items-center gap-2.5 group"
             >
-              <div>
-                {/* Product Thumbnail */}
-                <div className="relative aspect-video overflow-hidden bg-slate-100">
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-1.5">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold">
-                      {product.category}
-                    </span>
-                    {product.badge && (
-                      <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-extrabold shadow-sm">
-                        {product.badge}
-                      </span>
-                    )}
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">
+                <ShoppingBag className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">DEOS</span>
+                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block -mt-0.5">Marketplace</span>
+              </div>
+            </button>
+
+            {/* Desktop Navigation Links */}
+            <nav className="hidden xl:flex items-center gap-1 pl-2">
+              <button
+                onClick={() => {
+                  setActiveNavTab('Marketplace');
+                  setSelectedCategory('All');
+                }}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
+                  activeNavTab === 'Marketplace'
+                    ? 'text-indigo-600 bg-indigo-50/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <span>Marketplace</span>
+                {activeNavTab === 'Marketplace' && (
+                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-indigo-600 rounded-full" />
+                )}
+              </button>
+
+              <div className="relative group">
+                <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-1">
+                  <span>Digital Products</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedCategory('Digital Courses')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              >
+                Courses
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('Templates')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              >
+                Templates
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('eBooks')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              >
+                eBooks
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory('Software')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              >
+                Tools
+              </button>
+
+              <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-1">
+                <span>More</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            </nav>
+          </div>
+
+          {/* Header Search Bar */}
+          <div className="flex-1 max-w-md hidden md:flex items-center relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search for products, courses, templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-12 py-2 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+            />
+            <button
+              onClick={() => {}}
+              className="absolute right-1.5 p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Right Header CTAs */}
+          <div className="flex items-center gap-3">
+            {/* Cart Trigger */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 relative transition-colors"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
+            </button>
+
+            {/* Sign In Button */}
+            <button
+              onClick={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-800 text-xs font-bold shadow-xs hover:bg-slate-50 transition-all"
+            >
+              Sign In
+            </button>
+
+            {/* Get Started Button */}
+            <button
+              onClick={() => {
+                setAuthModalMode('register');
+                setIsAuthModalOpen(true);
+              }}
+              className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/30 transition-all"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. Main Content Canvas (2-Column Architecture) */}
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* ========================================================================= */}
+          {/* LEFT COLUMN: Main Marketplace Feed (~75% Width: col-span-9)              */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-9 space-y-8">
+            {/* A. Hero Banner */}
+            <div className="relative rounded-3xl bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-blue-50/80 border border-indigo-100/80 p-8 sm:p-10 overflow-hidden shadow-xs">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10">
+                <div className="md:col-span-7 space-y-4">
+                  {/* Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-indigo-200/80 text-indigo-700 text-[11px] font-bold shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Welcome to DEOS Marketplace</span>
+                  </div>
+
+                  {/* Hero Headline */}
+                  <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                    Buy. Discover. Succeed. <br />
+                    <span className="text-indigo-600">All in One Place.</span>
+                  </h1>
+
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg">
+                    Explore high-quality digital products, courses, templates, and tools from trusted creators.
+                  </p>
+
+                  {/* Hero Search Bar */}
+                  <div className="pt-2 flex items-center max-w-lg relative shadow-sm">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search for digital products, courses, templates..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-24 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 transition-all"
+                    />
+                    <button
+                      onClick={() => {}}
+                      className="absolute right-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs"
+                    >
+                      Search
+                    </button>
+                  </div>
+
+                  {/* Popular Tags */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
+                    <span className="text-slate-500 font-medium text-[11px]">Popular:</span>
+                    {['Courses', 'Templates', 'eBooks', 'Software', 'Marketing'].map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setSearchQuery(tag)}
+                        className="px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 text-[11px] font-semibold transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Card Body */}
-                <div className="p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={product.sellerAvatar}
-                        alt={product.sellerName}
-                        className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200"
-                      />
-                      <span className="text-xs font-semibold text-slate-700">{product.sellerName}</span>
+                {/* Hero 3D Graphic & Trust Badge */}
+                <div className="md:col-span-5 relative flex items-center justify-center">
+                  <div className="relative w-full max-w-[280px] aspect-square bg-gradient-to-tr from-indigo-600/10 to-purple-600/20 rounded-3xl border border-indigo-200/50 flex flex-col items-center justify-center p-6 shadow-inner">
+                    {/* Illustration Elements */}
+                    <div className="w-20 h-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 mb-3 animate-pulse">
+                      <ShoppingBag className="w-10 h-10" />
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs text-amber-500 font-bold">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{product.rating}</span>
-                      <span className="text-slate-400 font-normal">({product.reviewsCount})</span>
+                    <div className="flex gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md">
+                        <Tag className="w-4 h-4" />
+                      </div>
+                      <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center shadow-md font-black text-xs">
+                        $
+                      </div>
+                    </div>
+
+                    {/* Floating 50K+ Badge */}
+                    <div className="absolute top-2 right-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-md flex items-center gap-1.5 text-slate-900">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold block leading-none">Trusted by</span>
+                        <span className="text-xs font-black text-indigo-600 leading-none">50K+ Users</span>
+                      </div>
                     </div>
                   </div>
-
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
-                    {product.title}
-                  </h3>
                 </div>
               </div>
 
-              {/* Card Footer: Pricing & Action Buttons */}
-              <div className="p-5 pt-0 space-y-3 border-t border-slate-100 mt-2">
-                <div className="flex items-center justify-between pt-3">
-                  <div>
-                    <span className="text-lg font-black text-slate-900">${product.price.toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-400 ml-1 font-mono">({product.price} DEOS)</span>
-                  </div>
+              {/* Slider Dots */}
+              <div className="flex items-center justify-center gap-1.5 pt-4">
+                <span className="w-6 h-1.5 rounded-full bg-indigo-600" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200" />
+              </div>
+            </div>
 
+            {/* B. Browse by Category */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Browse by Category</h3>
+                <button
+                  onClick={() => setSelectedCategory('All')}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <span>View All Categories</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Category Cards Carousel / Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+                {categoriesList.map((cat) => (
                   <button
-                    onClick={() => setPromotingProduct(product)}
-                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`p-3.5 rounded-2xl border text-center flex flex-col items-center justify-between gap-2 transition-all hover:shadow-md ${
+                      selectedCategory === cat.id
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
+                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
+                    }`}
                   >
-                    <Share2 className="w-3 h-3" />
-                    <span>Earn ${(split.promoterCommissionNet).toFixed(2)}</span>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        selectedCategory === cat.id ? 'bg-white/20 text-white' : `${cat.bg} ${cat.text}`
+                      }`}
+                    >
+                      <cat.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-[11px] font-bold leading-tight truncate">{cat.label}</h5>
+                      <span
+                        className={`text-[9px] mt-0.5 block ${
+                          selectedCategory === cat.id ? 'text-indigo-100' : 'text-slate-400 font-medium'
+                        }`}
+                      >
+                        {cat.count}
+                      </span>
+                    </div>
                   </button>
+                ))}
+              </div>
+            </div>
+
+            {/* C. Featured Products Section */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">Featured Products</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add to Cart</span>
-                  </button>
+                <div className="flex items-center gap-3">
+                  {/* Filter Sub-Tabs */}
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+                    {(['Featured', 'Best Sellers', 'Top Rated', 'New Arrivals'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveSubTab(tab)}
+                        className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                          activeSubTab === tab
+                            ? 'bg-white text-indigo-600 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
 
-                  <button
-                    onClick={() => {
-                      setCart([product]);
-                      setIsGuestCheckoutModalOpen(true);
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1"
+                  {/* Sort Dropdown */}
+                  <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                    <span>Sort by: <b>{sortBy}</b></span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 5 High-Conversion Product Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                {filteredProducts.map((prod) => (
+                  <div
+                    key={prod.id}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-lg hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group"
                   >
-                    <span>Buy Now</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                    <div>
+                      {/* Product Thumbnail */}
+                      <div className="relative aspect-[4/3] bg-slate-900 overflow-hidden">
+                        <img
+                          src={prod.image}
+                          alt={prod.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
+                        />
+                        {/* Badges */}
+                        <div className="absolute top-2.5 left-2.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide shadow-xs ${prod.badgeColor}`}
+                          >
+                            {prod.badge}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Content */}
+                      <div className="p-3.5 space-y-2">
+                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                          {prod.title}
+                        </h4>
+
+                        <div className="flex items-center justify-between text-[11px]">
+                          <div className="flex items-center gap-1.5">
+                            <img
+                              src={prod.sellerAvatar}
+                              alt={prod.sellerName}
+                              className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-slate-200"
+                            />
+                            <span className="font-semibold text-slate-600 truncate max-w-[80px]">
+                              {prod.sellerName}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-0.5 text-amber-500 font-bold">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{prod.rating}</span>
+                            <span className="text-slate-400 font-normal">({prod.reviewsCount})</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="p-3.5 pt-0 space-y-2.5 border-t border-slate-100 mt-2">
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-sm font-black text-slate-900">${prod.price.toFixed(2)}</span>
+                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                            {prod.discountBadge}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                        <span>{prod.salesCount}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => toggleFavorite(prod.id)}
+                            className={`p-1.5 rounded-lg border transition-colors ${
+                              favorites.includes(prod.id)
+                                ? 'bg-rose-50 border-rose-200 text-rose-500'
+                                : 'border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <Heart className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => addToCart(prod)}
+                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 hover:border-indigo-600 transition-all shadow-xs"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* D. Bottom Trust & Value Strip (5 Items) */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-slate-200/80">
+              <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h6 className="text-xs font-bold text-slate-900">Secure Payments</h6>
+                  <p className="text-[10px] text-slate-500">Your transactions are 100% safe</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h6 className="text-xs font-bold text-slate-900">Instant Access</h6>
+                  <p className="text-[10px] text-slate-500">Get your products instantly</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Tag className="w-4 h-4" />
+                </div>
+                <div>
+                  <h6 className="text-xs font-bold text-slate-900">Money Back Guarantee</h6>
+                  <p className="text-[10px] text-slate-500">7-day money back guarantee</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Headphones className="w-4 h-4" />
+                </div>
+                <div>
+                  <h6 className="text-xs font-bold text-slate-900">Support 24/7</h6>
+                  <p className="text-[10px] text-slate-500">We're here to help</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5 col-span-2 sm:col-span-1">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Star className="w-4 h-4" />
+                </div>
+                <div>
+                  <h6 className="text-xs font-bold text-slate-900">Trusted Platform</h6>
+                  <p className="text-[10px] text-slate-500">50K+ happy customers</p>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
 
-      {/* Sliding Cart Drawer */}
+          {/* ========================================================================= */}
+          {/* RIGHT COLUMN: Promotion, Seller CTA & Value Props (col-span-3)           */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* 1. Exclusive Offer Banner Card */}
+            <div className="rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden space-y-4">
+              <div className="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
+                Exclusive Offer
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-xl font-black tracking-tight text-white leading-tight">
+                  Supercharge <br />Your Skills
+                </h3>
+                <p className="text-xs text-indigo-100 font-medium">
+                  Get up to <b>50% off</b> on top-rated masterclasses & boilerplates.
+                </p>
+              </div>
+
+              {/* Graphic Icon */}
+              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner">
+                <Zap className="w-6 h-6 fill-amber-300" />
+              </div>
+
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-indigo-700 font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>Explore Deals</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* 2. Become a Seller Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
+                <Store className="w-7 h-7" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900">Become a Seller</h3>
+                <p className="text-xs text-slate-500">
+                  Start selling your digital products, courses, and tools to thousands of buyers.
+                </p>
+              </div>
+
+              <div className="space-y-2 text-xs font-semibold text-slate-700 text-left pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Instant Payouts via USDT / Stripe</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Low 10% Platform Fee</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Global Multi-Currency Reach</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setAuthModalMode('register');
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>Start Selling Now</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* 3. Why Choose DEOS Marketplace? Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+              <h4 className="text-sm font-bold text-slate-900">Why Choose DEOS Marketplace?</h4>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0 mt-0.5">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h6 className="font-bold text-slate-900">High-Quality Products</h6>
+                    <p className="text-[11px] text-slate-500">Handpicked and verified by our engineering team</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0 mt-0.5">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h6 className="font-bold text-slate-900">Secure & Safe</h6>
+                    <p className="text-[11px] text-slate-500">100% secure payments and transactions</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0 mt-0.5">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h6 className="font-bold text-slate-900">24/7 Support</h6>
+                    <p className="text-[11px] text-slate-500">We're here to help you succeed</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600 shrink-0 mt-0.5">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h6 className="font-bold text-slate-900">Money Back Guarantee</h6>
+                    <p className="text-[11px] text-slate-500">7-day money back guarantee</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* 3. Sliding Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between p-6 overflow-y-auto">
@@ -364,14 +878,14 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* Guest Checkout Modal */}
+      {/* 4. Guest Checkout Modal */}
       {isGuestCheckoutModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-slate-900">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Guest Checkout</h3>
-                <p className="text-xs text-slate-500">Instant digital delivery to your email</p>
+                <h3 className="text-lg font-bold text-slate-900">Instant Checkout</h3>
+                <p className="text-xs text-slate-500">Secure payment with immediate digital delivery</p>
               </div>
               <button
                 onClick={() => setIsGuestCheckoutModalOpen(false)}
@@ -381,7 +895,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleProcessGuestCheckout} className="space-y-4 text-xs">
+            <form onSubmit={handleProcessCheckout} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Your Full Name</label>
                 <input
@@ -395,7 +909,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Email for Digital License Delivery</label>
+                <label className="block font-bold text-slate-700 mb-1">Email for License & File Delivery</label>
                 <input
                   type="email"
                   required
@@ -410,7 +924,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 <label className="block font-bold text-slate-700 mb-1">Payment Method</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { id: 'card', label: 'Credit Card (Stripe)', icon: CreditCard },
+                    { id: 'card', label: 'Credit Card', icon: CreditCard },
                     { id: 'bank', label: 'Bank / Paystack', icon: Building2 },
                     { id: 'usdt', label: 'USDT (TRC20)', icon: Coins },
                     { id: 'momo', label: 'Mobile Money', icon: Smartphone },
@@ -433,15 +947,15 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-700">Total Due:</span>
+                <span className="font-bold text-slate-700">Total Amount:</span>
                 <span className="text-base font-black text-indigo-600">${cartTotal.toFixed(2)} USD</span>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
               >
-                <span>Complete Purchase (${cartTotal.toFixed(2)})</span>
+                <span>Pay & Download License</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -449,7 +963,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* Completed Order Digital Receipt Modal */}
+      {/* 5. Digital Receipt Modal */}
       {completedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-slate-900">
@@ -470,14 +984,14 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 {completedOrder.licenseKey}
               </div>
               <p className="text-[11px] text-slate-500 text-center">
-                Digital files & receipt sent to <b>{completedOrder.buyerEmail}</b>
+                Receipt and download links sent to <b>{completedOrder.buyerEmail}</b>
               </p>
             </div>
 
             <div className="flex gap-2">
               <button
-                onClick={() => alert('Downloading digital package zip...')}
-                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2"
+                onClick={() => alert('Downloading your digital package...')}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Assets</span>
@@ -493,61 +1007,15 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* Affiliate Promote Modal */}
-      {promotingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-slate-900">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">Promote & Earn</h3>
-              </div>
-              <button
-                onClick={() => setPromotingProduct(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <p className="text-slate-600">
-                Promote <b>{promotingProduct.title}</b> and earn a net commission on every sale made through your link:
-              </p>
-
-              <div className="p-3.5 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-1.5">
-                <div className="flex justify-between font-bold text-slate-800">
-                  <span>Product Price:</span>
-                  <span>${promotingProduct.price.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-emerald-600 text-sm">
-                  <span>Your Net Commission:</span>
-                  <span>+${(calculateMarketplaceFeeSplit(promotingProduct.price, promotingProduct.affiliateCommissionRate).promoterCommissionNet).toFixed(2)} USD</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Your Unique Affiliate Link</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`https://deos.com/marketplace/p/${promotingProduct.id}?ref=DEOS100245`}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-700 outline-none"
-                  />
-                  <button
-                    onClick={() => handleCopyPromoteLink(promotingProduct)}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0 flex items-center gap-1"
-                  >
-                    {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedLink ? 'Copied' : 'Copy'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 6. Auth Modal (Sign In / Register) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+        onSuccess={() => {
+          onNavigate('dashboard');
+        }}
+      />
     </div>
   );
 };
