@@ -211,7 +211,7 @@ export function App() {
             <WalletDashboard currentUser={activeMember} onNavigate={handleNavigate} />
           )}
           {currentView === 'marketplace' && (
-            <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={false} />
+            <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={false} currentUser={activeMember} />
           )}
           {currentView === 'sellers' && <SellersDashboard />}
           {currentView === 'builder' && <WebsiteBuilder />}

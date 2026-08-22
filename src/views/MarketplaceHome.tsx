@@ -40,21 +40,26 @@ import {
   Lock,
   DollarSign,
   Store,
-  ShieldAlert
+  Wallet,
+  TrendingUp,
+  Package
 } from 'lucide-react';
 import { initialProducts } from '../store/mockData';
-import { Product, ViewType } from '../types';
+import { Product, ViewType, Member } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
 import { AuthModal } from '../components/auth/AuthModal';
+import { Badge } from '../components/common/Badge';
 
 interface MarketplaceHomeProps {
   onNavigate: (view: ViewType) => void;
   isPublicGuest?: boolean;
+  currentUser?: Member;
 }
 
 export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   onNavigate,
-  isPublicGuest = true,
+  isPublicGuest = false,
+  currentUser,
 }) => {
   // Navigation & Category Filters
   const [activeNavTab, setActiveNavTab] = useState<string>('Marketplace');
@@ -72,30 +77,33 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
-  // Guest Checkout State
-  const [isGuestCheckoutModalOpen, setIsGuestCheckoutModalOpen] = useState(false);
-  const [guestName, setGuestName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [guestPaymentMethod, setGuestPaymentMethod] = useState<'card' | 'usdt' | 'bank' | 'momo'>('card');
+  // Checkout State
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [checkoutName, setCheckoutName] = useState(currentUser?.name || '');
+  const [checkoutEmail, setCheckoutEmail] = useState(currentUser?.email || '');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card' | 'usdt' | 'bank'>('wallet');
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
 
   // Affiliate Promotion Modal
   const [promotingProduct, setPromotingProduct] = useState<Product | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedStorefront, setCopiedStorefront] = useState(false);
 
-  // Category Definitions per Figma / UI Spec
+  const memberCode = currentUser?.id || 'DEOS100245';
+
+  // Category Definitions
   const categoriesList = [
-    { id: 'Digital Courses', label: 'Digital Courses', count: '1,250+ Products', icon: BookOpen, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
-    { id: 'eBooks', label: 'eBooks & Guides', count: '2,350+ Products', icon: BookOpen, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
-    { id: 'Templates', label: 'Templates', count: '1,890+ Products', icon: Layout, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
-    { id: 'Software', label: 'Software & Tools', count: '1,670+ Products', icon: Cpu, bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200' },
-    { id: 'Marketing', label: 'Marketing & SEO', count: '1,320+ Products', icon: Send, bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
-    { id: 'Graphics', label: 'Graphics & Design', count: '2,860+ Products', icon: Palette, bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200' },
-    { id: 'Business', label: 'Business', count: '2,100+ Products', icon: BarChart3, bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-200' },
-    { id: 'Music', label: 'Music & Audio', count: '980+ Products', icon: Music, bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
+    { id: 'Digital Courses', label: 'Digital Courses', count: '1,250+ Products', icon: BookOpen, bg: 'bg-purple-50', text: 'text-purple-600' },
+    { id: 'eBooks', label: 'eBooks & Guides', count: '2,350+ Products', icon: BookOpen, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { id: 'Templates', label: 'Templates', count: '1,890+ Products', icon: Layout, bg: 'bg-blue-50', text: 'text-blue-600' },
+    { id: 'Software', label: 'Software & Tools', count: '1,670+ Products', icon: Cpu, bg: 'bg-indigo-50', text: 'text-indigo-600' },
+    { id: 'Marketing', label: 'Marketing & SEO', count: '1,320+ Products', icon: Send, bg: 'bg-amber-50', text: 'text-amber-600' },
+    { id: 'Graphics', label: 'Graphics & Design', count: '2,860+ Products', icon: Palette, bg: 'bg-teal-50', text: 'text-teal-600' },
+    { id: 'Business', label: 'Business', count: '2,100+ Products', icon: BarChart3, bg: 'bg-violet-50', text: 'text-violet-600' },
+    { id: 'Music', label: 'Music & Audio', count: '980+ Products', icon: Music, bg: 'bg-pink-50', text: 'text-pink-600' },
   ];
 
-  // Rich Product Catalog formatted to match the screenshot
+  // Rich Product Catalog
   const marketplaceProducts = [
     {
       id: 'PRD-01',
@@ -179,7 +187,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
     }
   ];
 
-  // Filtering products
+  // Filter products
   const filteredProducts = marketplaceProducts.filter((p) => {
     const matchesCat = selectedCategory === 'All' || p.category.toLowerCase().includes(selectedCategory.toLowerCase());
     const matchesSearch =
@@ -206,12 +214,12 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
   const handleProcessCheckout = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestEmail || cart.length === 0) return;
+    if (!checkoutEmail || cart.length === 0) return;
 
     setCompletedOrder({
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
-      buyerName: guestName || 'Customer',
-      buyerEmail: guestEmail,
+      buyerName: checkoutName || 'Entrepreneur',
+      buyerEmail: checkoutEmail,
       items: cart,
       totalAmount: cartTotal,
       licenseKey: `DEOS-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
@@ -220,245 +228,272 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
     setCart([]);
     setIsCartOpen(false);
+    setIsCheckoutModalOpen(false);
+  };
+
+  const handleCopyStorefront = () => {
+    navigator.clipboard.writeText(`https://deos.com/m/@${memberCode}`);
+    setCopiedStorefront(true);
+    setTimeout(() => setCopiedStorefront(false), 2000);
+  };
+
+  const handleCopyPromoteLink = (p: any) => {
+    navigator.clipboard.writeText(`https://deos.com/marketplace/p/${p.id}?ref=${memberCode}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased">
-      {/* 1. Top Navigation Bar (Header) */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-6 shrink-0">
-            <button
-              onClick={() => onNavigate('landing')}
-              className="flex items-center gap-2.5 group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">DEOS</span>
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block -mt-0.5">Marketplace</span>
-              </div>
-            </button>
+    <div className="min-h-screen text-slate-900 font-sans antialiased">
+      {/* ========================================================================= */}
+      {/* 1. PUBLIC NON-REGISTERED GUEST HEADER (ONLY SHOWN FOR PUBLIC VISITORS)    */}
+      {/* ========================================================================= */}
+      {isPublicGuest && (
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs mb-6">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+            {/* Logo */}
+            <div className="flex items-center gap-6 shrink-0">
+              <button onClick={() => onNavigate('landing')} className="flex items-center gap-2.5 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">DEOS</span>
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block -mt-0.5">Marketplace</span>
+                </div>
+              </button>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden xl:flex items-center gap-1 pl-2">
+              {/* Desktop Nav Links */}
+              <nav className="hidden xl:flex items-center gap-1 pl-2">
+                <button
+                  onClick={() => {
+                    setActiveNavTab('Marketplace');
+                    setSelectedCategory('All');
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-indigo-600 bg-indigo-50/80"
+                >
+                  Marketplace
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Digital Courses')}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  Courses
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Templates')}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  Templates
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('eBooks')}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  eBooks
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Software')}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  Tools
+                </button>
+              </nav>
+            </div>
+
+            {/* Header Search Input */}
+            <div className="flex-1 max-w-md hidden md:flex items-center relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search for products, courses, templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-12 py-2 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-indigo-500 transition-all"
+              />
+              <button className="absolute right-1.5 p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                <Search className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Guest Action CTAs */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  setActiveNavTab('Marketplace');
-                  setSelectedCategory('All');
-                }}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
-                  activeNavTab === 'Marketplace'
-                    ? 'text-indigo-600 bg-indigo-50/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+                onClick={() => setIsCartOpen(true)}
+                className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 relative transition-colors"
               >
-                <span>Marketplace</span>
-                {activeNavTab === 'Marketplace' && (
-                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-indigo-600 rounded-full" />
+                <ShoppingBag className="w-4 h-4" />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
+                    {cart.length}
+                  </span>
                 )}
               </button>
 
-              <div className="relative group">
-                <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-1">
-                  <span>Digital Products</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
               <button
-                onClick={() => setSelectedCategory('Digital Courses')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                onClick={() => {
+                  setAuthModalMode('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-800 text-xs font-bold shadow-xs hover:bg-slate-50 transition-all"
               >
-                Courses
+                Sign In
               </button>
 
               <button
-                onClick={() => setSelectedCategory('Templates')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                onClick={() => {
+                  setAuthModalMode('register');
+                  setIsAuthModalOpen(true);
+                }}
+                className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/30 transition-all"
               >
-                Templates
+                Get Started
               </button>
+            </div>
+          </div>
+        </header>
+      )}
 
-              <button
-                onClick={() => setSelectedCategory('eBooks')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              >
-                eBooks
-              </button>
+      {/* ========================================================================= */}
+      {/* 2. REGISTERED MEMBER PROMOTER BANNER (ONLY SHOWN FOR LOGGED-IN MEMBERS)   */}
+      {/* ========================================================================= */}
+      {!isPublicGuest && (
+        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 rounded-3xl p-6 sm:p-8 text-white border border-indigo-500/30 shadow-card mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                <Store className="w-3 h-3" />
+                <span>Entrepreneur Marketplace Portal</span>
+              </span>
+              <span className="text-xs text-slate-400">Promoter ID: <b className="text-indigo-400 font-mono">{memberCode}</b></span>
+            </div>
 
-              <button
-                onClick={() => setSelectedCategory('Software')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              >
-                Tools
-              </button>
+            <h2 className="text-2xl sm:text-3xl font-black text-white">
+              Promote Digital Products & Earn 40%–50% Commissions
+            </h2>
 
-              <button className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-1">
-                <span>More</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-            </nav>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Every digital asset purchased through your link earns you instant net promoter payouts, with 3% upline overrides distributed automatically through the DEOS compensation engine.
+            </p>
           </div>
 
-          {/* Header Search Bar */}
-          <div className="flex-1 max-w-md hidden md:flex items-center relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search for products, courses, templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-12 py-2 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             <button
-              onClick={() => {}}
-              className="absolute right-1.5 p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+              onClick={handleCopyStorefront}
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-indigo-900 font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
             >
-              <Search className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Right Header CTAs */}
-          <div className="flex items-center gap-3">
-            {/* Cart Trigger */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 relative transition-colors"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
-                  {cart.length}
-                </span>
-              )}
+              {copiedStorefront ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
+              <span>{copiedStorefront ? 'Storefront Copied!' : 'Copy My Storefront Link'}</span>
             </button>
 
-            {/* Sign In Button */}
             <button
-              onClick={() => {
-                setAuthModalMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              className="px-4 py-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-800 text-xs font-bold shadow-xs hover:bg-slate-50 transition-all"
+              onClick={() => onNavigate('sellers')}
+              className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
             >
-              Sign In
-            </button>
-
-            {/* Get Started Button */}
-            <button
-              onClick={() => {
-                setAuthModalMode('register');
-                setIsAuthModalOpen(true);
-              }}
-              className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/30 transition-all"
-            >
-              Get Started
+              <Plus className="w-4 h-4" />
+              <span>List My Product</span>
             </button>
           </div>
         </div>
-      </header>
+      )}
 
-      {/* 2. Main Content Canvas (2-Column Architecture) */}
-      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      {/* ========================================================================= */}
+      {/* 3. MAIN MARKETPLACE CONTENT CANVAS                                        */}
+      {/* ========================================================================= */}
+      <div className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* ========================================================================= */}
-          {/* LEFT COLUMN: Main Marketplace Feed (~75% Width: col-span-9)              */}
-          {/* ========================================================================= */}
+          {/* LEFT COLUMN: Main Marketplace Feed */}
           <div className="lg:col-span-9 space-y-8">
-            {/* A. Hero Banner */}
-            <div className="relative rounded-3xl bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-blue-50/80 border border-indigo-100/80 p-8 sm:p-10 overflow-hidden shadow-xs">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10">
-                <div className="md:col-span-7 space-y-4">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-indigo-200/80 text-indigo-700 text-[11px] font-bold shadow-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Welcome to DEOS Marketplace</span>
-                  </div>
+            {/* Hero Search Banner (For Public Guest) */}
+            {isPublicGuest && (
+              <div className="relative rounded-3xl bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-blue-50/80 border border-indigo-100/80 p-8 sm:p-10 overflow-hidden shadow-xs">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10">
+                  <div className="md:col-span-7 space-y-4">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-indigo-200/80 text-indigo-700 text-[11px] font-bold shadow-xs">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Welcome to DEOS Marketplace</span>
+                    </div>
 
-                  {/* Hero Headline */}
-                  <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-                    Buy. Discover. Succeed. <br />
-                    <span className="text-indigo-600">All in One Place.</span>
-                  </h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                      Buy. Discover. Succeed. <br />
+                      <span className="text-indigo-600">All in One Place.</span>
+                    </h1>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg">
-                    Explore high-quality digital products, courses, templates, and tools from trusted creators.
-                  </p>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg">
+                      Explore high-quality digital products, courses, templates, and tools from trusted creators.
+                    </p>
 
-                  {/* Hero Search Bar */}
-                  <div className="pt-2 flex items-center max-w-lg relative shadow-sm">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Search for digital products, courses, templates..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-24 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 transition-all"
-                    />
-                    <button
-                      onClick={() => {}}
-                      className="absolute right-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs"
-                    >
-                      Search
-                    </button>
-                  </div>
-
-                  {/* Popular Tags */}
-                  <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
-                    <span className="text-slate-500 font-medium text-[11px]">Popular:</span>
-                    {['Courses', 'Templates', 'eBooks', 'Software', 'Marketing'].map((tag) => (
-                      <button
-                        key={tag}
-                        onClick={() => setSearchQuery(tag)}
-                        className="px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 text-[11px] font-semibold transition-colors"
-                      >
-                        {tag}
+                    <div className="pt-2 flex items-center max-w-lg relative shadow-sm">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search for digital products, courses, templates..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-24 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 transition-all"
+                      />
+                      <button className="absolute right-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs">
+                        Search
                       </button>
-                    ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
+                      <span className="text-slate-500 font-medium text-[11px]">Popular:</span>
+                      {['Courses', 'Templates', 'eBooks', 'Software', 'Marketing'].map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => setSearchQuery(tag)}
+                          className="px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 text-[11px] font-semibold"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Hero 3D Graphic & Trust Badge */}
-                <div className="md:col-span-5 relative flex items-center justify-center">
-                  <div className="relative w-full max-w-[280px] aspect-square bg-gradient-to-tr from-indigo-600/10 to-purple-600/20 rounded-3xl border border-indigo-200/50 flex flex-col items-center justify-center p-6 shadow-inner">
-                    {/* Illustration Elements */}
-                    <div className="w-20 h-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 mb-3 animate-pulse">
-                      <ShoppingBag className="w-10 h-10" />
-                    </div>
-
-                    <div className="flex gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md">
-                        <Tag className="w-4 h-4" />
+                  <div className="md:col-span-5 relative flex items-center justify-center">
+                    <div className="relative w-full max-w-[280px] aspect-square bg-gradient-to-tr from-indigo-600/10 to-purple-600/20 rounded-3xl border border-indigo-200/50 flex flex-col items-center justify-center p-6 shadow-inner">
+                      <div className="w-20 h-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 mb-3 animate-pulse">
+                        <ShoppingBag className="w-10 h-10" />
                       </div>
-                      <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center shadow-md font-black text-xs">
-                        $
+                      <div className="flex gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md">
+                          <Tag className="w-4 h-4" />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center shadow-md font-black text-xs">
+                          $
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Floating 50K+ Badge */}
-                    <div className="absolute top-2 right-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-md flex items-center gap-1.5 text-slate-900">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <div>
-                        <span className="text-[10px] text-slate-500 font-bold block leading-none">Trusted by</span>
-                        <span className="text-xs font-black text-indigo-600 leading-none">50K+ Users</span>
+                      <div className="absolute top-2 right-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-md flex items-center gap-1.5 text-slate-900">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        <div>
+                          <span className="text-[10px] text-slate-500 font-bold block leading-none">Trusted by</span>
+                          <span className="text-xs font-black text-indigo-600 leading-none">50K+ Users</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Slider Dots */}
-              <div className="flex items-center justify-center gap-1.5 pt-4">
-                <span className="w-6 h-1.5 rounded-full bg-indigo-600" />
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200" />
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-200" />
+            {/* Search Bar (For Logged-in Members) */}
+            {!isPublicGuest && (
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                  <input
+                    type="text"
+                    placeholder="Search catalog by title, creator, or keyword..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* B. Browse by Category */}
+            {/* Browse by Category */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-900 tracking-tight">Browse by Category</h3>
@@ -471,7 +506,6 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </button>
               </div>
 
-              {/* Category Cards Carousel / Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
                 {categoriesList.map((cat) => (
                   <button
@@ -492,11 +526,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     </div>
                     <div>
                       <h5 className="text-[11px] font-bold leading-tight truncate">{cat.label}</h5>
-                      <span
-                        className={`text-[9px] mt-0.5 block ${
-                          selectedCategory === cat.id ? 'text-indigo-100' : 'text-slate-400 font-medium'
-                        }`}
-                      >
+                      <span className={`text-[9px] mt-0.5 block ${selectedCategory === cat.id ? 'text-indigo-100' : 'text-slate-400 font-medium'}`}>
                         {cat.count}
                       </span>
                     </div>
@@ -505,24 +535,19 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </div>
             </div>
 
-            {/* C. Featured Products Section */}
+            {/* Featured Products Grid */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">Featured Products</h3>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Featured Products</h3>
 
                 <div className="flex items-center gap-3">
-                  {/* Filter Sub-Tabs */}
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
                     {(['Featured', 'Best Sellers', 'Top Rated', 'New Arrivals'] as const).map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveSubTab(tab)}
                         className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                          activeSubTab === tab
-                            ? 'bg-white text-indigo-600 shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
+                          activeSubTab === tab ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         {tab}
@@ -530,7 +555,6 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     ))}
                   </div>
 
-                  {/* Sort Dropdown */}
                   <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700">
                     <span>Sort by: <b>{sortBy}</b></span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -538,98 +562,104 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </div>
               </div>
 
-              {/* 5 High-Conversion Product Cards Grid */}
+              {/* 5 Product Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-                {filteredProducts.map((prod) => (
-                  <div
-                    key={prod.id}
-                    className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-lg hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group"
-                  >
-                    <div>
-                      {/* Product Thumbnail */}
-                      <div className="relative aspect-[4/3] bg-slate-900 overflow-hidden">
-                        <img
-                          src={prod.image}
-                          alt={prod.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
-                        />
-                        {/* Badges */}
-                        <div className="absolute top-2.5 left-2.5">
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide shadow-xs ${prod.badgeColor}`}
-                          >
-                            {prod.badge}
-                          </span>
+                {filteredProducts.map((prod) => {
+                  const split = calculateMarketplaceFeeSplit(prod.price, prod.affiliateCommissionRate);
+                  return (
+                    <div
+                      key={prod.id}
+                      className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-lg hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group"
+                    >
+                      <div>
+                        {/* Thumbnail */}
+                        <div className="relative aspect-[4/3] bg-slate-900 overflow-hidden">
+                          <img
+                            src={prod.image}
+                            alt={prod.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
+                          />
+                          <div className="absolute top-2.5 left-2.5">
+                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide shadow-xs ${prod.badgeColor}`}>
+                              {prod.badge}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-3.5 space-y-2">
+                          <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                            {prod.title}
+                          </h4>
+
+                          <div className="flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              <img src={prod.sellerAvatar} alt={prod.sellerName} className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-slate-200" />
+                              <span className="font-semibold text-slate-600 truncate max-w-[80px]">{prod.sellerName}</span>
+                            </div>
+
+                            <div className="flex items-center gap-0.5 text-amber-500 font-bold">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              <span>{prod.rating}</span>
+                              <span className="text-slate-400 font-normal">({prod.reviewsCount})</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Card Content */}
-                      <div className="p-3.5 space-y-2">
-                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
-                          {prod.title}
-                        </h4>
-
-                        <div className="flex items-center justify-between text-[11px]">
-                          <div className="flex items-center gap-1.5">
-                            <img
-                              src={prod.sellerAvatar}
-                              alt={prod.sellerName}
-                              className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-slate-200"
-                            />
-                            <span className="font-semibold text-slate-600 truncate max-w-[80px]">
-                              {prod.sellerName}
+                      {/* Footer */}
+                      <div className="p-3.5 pt-0 space-y-2.5 border-t border-slate-100 mt-2">
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm font-black text-slate-900">${prod.price.toFixed(2)}</span>
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                              {prod.discountBadge}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-0.5 text-amber-500 font-bold">
-                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            <span>{prod.rating}</span>
-                            <span className="text-slate-400 font-normal">({prod.reviewsCount})</span>
+                          {/* Member Affiliate Badge / Promo Link */}
+                          {!isPublicGuest && (
+                            <button
+                              onClick={() => handleCopyPromoteLink(prod)}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md flex items-center gap-1"
+                              title="Copy your affiliate promo link"
+                            >
+                              <Share2 className="w-2.5 h-2.5" />
+                              <span>Earn +${split.promoterCommissionNet.toFixed(0)}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                          <span>{prod.salesCount}</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => toggleFavorite(prod.id)}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                favorites.includes(prod.id)
+                                  ? 'bg-rose-50 border-rose-200 text-rose-500'
+                                  : 'border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <Heart className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => addToCart(prod)}
+                              className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 hover:border-indigo-600 transition-all shadow-xs"
+                            >
+                              <ShoppingBag className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Card Footer */}
-                    <div className="p-3.5 pt-0 space-y-2.5 border-t border-slate-100 mt-2">
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-sm font-black text-slate-900">${prod.price.toFixed(2)}</span>
-                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
-                            {prod.discountBadge}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                        <span>{prod.salesCount}</span>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => toggleFavorite(prod.id)}
-                            className={`p-1.5 rounded-lg border transition-colors ${
-                              favorites.includes(prod.id)
-                                ? 'bg-rose-50 border-rose-200 text-rose-500'
-                                : 'border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            <Heart className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => addToCart(prod)}
-                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 hover:border-indigo-600 transition-all shadow-xs"
-                          >
-                            <ShoppingBag className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            {/* D. Bottom Trust & Value Strip (5 Items) */}
+            {/* Bottom Trust Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-slate-200/80">
               <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -637,7 +667,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </div>
                 <div>
                   <h6 className="text-xs font-bold text-slate-900">Secure Payments</h6>
-                  <p className="text-[10px] text-slate-500">Your transactions are 100% safe</p>
+                  <p className="text-[10px] text-slate-500">100% safe transactions</p>
                 </div>
               </div>
 
@@ -647,7 +677,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </div>
                 <div>
                   <h6 className="text-xs font-bold text-slate-900">Instant Access</h6>
-                  <p className="text-[10px] text-slate-500">Get your products instantly</p>
+                  <p className="text-[10px] text-slate-500">Immediate digital delivery</p>
                 </div>
               </div>
 
@@ -656,8 +686,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                   <Tag className="w-4 h-4" />
                 </div>
                 <div>
-                  <h6 className="text-xs font-bold text-slate-900">Money Back Guarantee</h6>
-                  <p className="text-[10px] text-slate-500">7-day money back guarantee</p>
+                  <h6 className="text-xs font-bold text-slate-900">Money Back</h6>
+                  <p className="text-[10px] text-slate-500">7-day guarantee</p>
                 </div>
               </div>
 
@@ -666,8 +696,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                   <Headphones className="w-4 h-4" />
                 </div>
                 <div>
-                  <h6 className="text-xs font-bold text-slate-900">Support 24/7</h6>
-                  <p className="text-[10px] text-slate-500">We're here to help</p>
+                  <h6 className="text-xs font-bold text-slate-900">24/7 Support</h6>
+                  <p className="text-[10px] text-slate-500">Always here to help</p>
                 </div>
               </div>
 
@@ -677,17 +707,15 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </div>
                 <div>
                   <h6 className="text-xs font-bold text-slate-900">Trusted Platform</h6>
-                  <p className="text-[10px] text-slate-500">50K+ happy customers</p>
+                  <p className="text-[10px] text-slate-500">50K+ happy users</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* RIGHT COLUMN: Promotion, Seller CTA & Value Props (col-span-3)           */}
-          {/* ========================================================================= */}
+          {/* RIGHT COLUMN: Sidebar */}
           <div className="lg:col-span-3 space-y-6">
-            {/* 1. Exclusive Offer Banner Card */}
+            {/* Exclusive Offer Card */}
             <div className="rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden space-y-4">
               <div className="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
                 Exclusive Offer
@@ -702,7 +730,6 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 </p>
               </div>
 
-              {/* Graphic Icon */}
               <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner">
                 <Zap className="w-6 h-6 fill-amber-300" />
               </div>
@@ -716,16 +743,20 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </button>
             </div>
 
-            {/* 2. Become a Seller Card */}
+            {/* Become a Seller Card (Public) or Seller Center (Member) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4 text-center">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
                 <Store className="w-7 h-7" />
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-900">Become a Seller</h3>
+                <h3 className="text-base font-bold text-slate-900">
+                  {isPublicGuest ? 'Become a Seller' : 'Seller Management Portal'}
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Start selling your digital products, courses, and tools to thousands of buyers.
+                  {isPublicGuest
+                    ? 'Start selling your digital products, courses, and tools to thousands of buyers.'
+                    : 'List your digital products, manage orders, and track automated earnings.'}
                 </p>
               </div>
 
@@ -746,17 +777,21 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
               <button
                 onClick={() => {
-                  setAuthModalMode('register');
-                  setIsAuthModalOpen(true);
+                  if (isPublicGuest) {
+                    setAuthModalMode('register');
+                    setIsAuthModalOpen(true);
+                  } else {
+                    onNavigate('sellers');
+                  }
                 }}
                 className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5"
               >
-                <span>Start Selling Now</span>
+                <span>{isPublicGuest ? 'Start Selling Now' : 'Open Seller Dashboard'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* 3. Why Choose DEOS Marketplace? Card */}
+            {/* Why Choose DEOS Marketplace? */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
               <h4 className="text-sm font-bold text-slate-900">Why Choose DEOS Marketplace?</h4>
 
@@ -790,23 +825,13 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     <p className="text-[11px] text-slate-500">We're here to help you succeed</p>
                   </div>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600 shrink-0 mt-0.5">
-                    <Tag className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h6 className="font-bold text-slate-900">Money Back Guarantee</h6>
-                    <p className="text-[11px] text-slate-500">7-day money back guarantee</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* 3. Sliding Cart Drawer */}
+      {/* Sliding Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between p-6 overflow-y-auto">
@@ -814,12 +839,9 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-indigo-600" />
-                  <h3 className="text-base font-bold text-slate-900">Your Shopping Cart</h3>
+                  <h3 className="text-base font-bold text-slate-900">Shopping Cart</h3>
                 </div>
-                <button
-                  onClick={() => setIsCartOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                >
+                <button onClick={() => setIsCartOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -834,19 +856,13 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               ) : (
                 <div className="space-y-3">
                   {cart.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3"
-                    >
+                    <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
                       <img src={item.image} alt={item.title} className="w-12 h-12 rounded-xl object-cover" />
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-bold text-slate-900 truncate">{item.title}</h5>
                         <p className="text-xs font-bold text-indigo-600 mt-0.5">${item.price.toFixed(2)}</p>
                       </div>
-                      <button
-                        onClick={() => removeFromCart(idx)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
-                      >
+                      <button onClick={() => removeFromCart(idx)} className="p-1.5 text-slate-400 hover:text-rose-600">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -858,16 +874,16 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
             {cart.length > 0 && (
               <div className="pt-4 border-t border-slate-100 space-y-4">
                 <div className="flex justify-between items-center text-sm font-bold text-slate-900">
-                  <span>Total Amount:</span>
+                  <span>Total Due:</span>
                   <span className="text-lg font-black text-indigo-600">${cartTotal.toFixed(2)} USD</span>
                 </div>
 
                 <button
                   onClick={() => {
                     setIsCartOpen(false);
-                    setIsGuestCheckoutModalOpen(true);
+                    setIsCheckoutModalOpen(true);
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4" />
@@ -878,19 +894,16 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* 4. Guest Checkout Modal */}
-      {isGuestCheckoutModalOpen && (
+      {/* Checkout Modal */}
+      {isCheckoutModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-slate-900">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Instant Checkout</h3>
-                <p className="text-xs text-slate-500">Secure payment with immediate digital delivery</p>
+                <h3 className="text-lg font-bold text-slate-900">Checkout</h3>
+                <p className="text-xs text-slate-500">Immediate digital license delivery</p>
               </div>
-              <button
-                onClick={() => setIsGuestCheckoutModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              >
+              <button onClick={() => setIsCheckoutModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -901,21 +914,21 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Alex Morgan"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Alex Morgan"
+                  value={checkoutName}
+                  onChange={(e) => setCheckoutName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Email for License & File Delivery</label>
+                <label className="block font-bold text-slate-700 mb-1">Email Address for License Delivery</label>
                 <input
                   type="email"
                   required
                   placeholder="alex@example.com"
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
+                  value={checkoutEmail}
+                  onChange={(e) => setCheckoutEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
@@ -923,31 +936,56 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Payment Method</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: 'card', label: 'Credit Card', icon: CreditCard },
-                    { id: 'bank', label: 'Bank / Paystack', icon: Building2 },
-                    { id: 'usdt', label: 'USDT (TRC20)', icon: Coins },
-                    { id: 'momo', label: 'Mobile Money', icon: Smartphone },
-                  ].map((m) => (
+                  {!isPublicGuest && (
                     <button
-                      key={m.id}
                       type="button"
-                      onClick={() => setGuestPaymentMethod(m.id as any)}
+                      onClick={() => setPaymentMethod('wallet')}
                       className={`p-3 rounded-xl border text-center flex flex-col items-center gap-1.5 transition-all ${
-                        guestPaymentMethod === m.id
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold shadow-xs'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        paymentMethod === 'wallet' ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <m.icon className="w-4 h-4" />
-                      <span className="text-[10px]">{m.label}</span>
+                      <Wallet className="w-4 h-4 text-indigo-600" />
+                      <span className="text-[10px]">DEOS Wallet</span>
                     </button>
-                  ))}
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center gap-1.5 transition-all ${
+                      paymentMethod === 'card' ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span className="text-[10px]">Credit Card</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('usdt')}
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center gap-1.5 transition-all ${
+                      paymentMethod === 'usdt' ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Coins className="w-4 h-4" />
+                    <span className="text-[10px]">USDT (TRC20)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('bank')}
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center gap-1.5 transition-all ${
+                      paymentMethod === 'bank' ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span className="text-[10px]">Bank / Paystack</span>
+                  </button>
                 </div>
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-700">Total Amount:</span>
+                <span className="font-bold text-slate-700">Total Due:</span>
                 <span className="text-base font-black text-indigo-600">${cartTotal.toFixed(2)} USD</span>
               </div>
 
@@ -955,7 +993,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 type="submit"
                 className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
               >
-                <span>Pay & Download License</span>
+                <span>Complete Purchase (${cartTotal.toFixed(2)})</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -963,7 +1001,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* 5. Digital Receipt Modal */}
+      {/* Digital Receipt Modal */}
       {completedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-slate-900">
@@ -971,20 +1009,20 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Purchase Successful!</h3>
+              <h3 className="text-xl font-bold text-slate-900">Order Confirmed!</h3>
               <p className="text-xs text-slate-500">Order #{completedOrder.orderNumber} • {completedOrder.date}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 space-y-2 text-xs">
               <div className="flex items-center gap-2 text-indigo-900 font-bold">
                 <Key className="w-4 h-4 text-indigo-600" />
-                <span>Your Digital License Key:</span>
+                <span>Digital License Key:</span>
               </div>
               <div className="p-2.5 bg-white rounded-xl border border-indigo-200 font-mono font-black text-xs text-indigo-700 select-all text-center">
                 {completedOrder.licenseKey}
               </div>
               <p className="text-[11px] text-slate-500 text-center">
-                Receipt and download links sent to <b>{completedOrder.buyerEmail}</b>
+                Files and confirmation receipt sent to <b>{completedOrder.buyerEmail}</b>
               </p>
             </div>
 
@@ -1007,15 +1045,17 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
         </div>
       )}
 
-      {/* 6. Auth Modal (Sign In / Register) */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authModalMode}
-        onSuccess={() => {
-          onNavigate('dashboard');
-        }}
-      />
+      {/* Auth Modal (Only for Guest mode) */}
+      {isPublicGuest && (
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode={authModalMode}
+          onSuccess={() => {
+            onNavigate('dashboard');
+          }}
+        />
+      )}
     </div>
   );
 };
