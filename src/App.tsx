@@ -29,7 +29,7 @@ import { TeamManagement } from './views/TeamManagement';
 import { UserSettings } from './views/UserSettings';
 import { SupportCommunity } from './views/SupportCommunity';
 import { AnalyticsOverview } from './views/AnalyticsOverview';
-import { SuperAdminPanel } from './views/SuperAdminPanel';
+import { BackofficePortal } from './views/BackofficePortal';
 
 export function App() {
   const { member, isAuthenticated, isLoading, signOut, updatePlan } = useAuth();
@@ -40,18 +40,48 @@ export function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
-  // Handle Supabase Email Verification Callback in URL
+  // Handle URL Routing (/backoffice and Email Verification Callbacks)
   useEffect(() => {
-    const hash = window.location.hash;
-    const search = window.location.search;
-    if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('code=')) {
-      console.log('[DEOS Auth] Email verification / signup callback detected.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setCurrentView('dashboard');
-    }
+    const handleUrlRouting = () => {
+      const pathname = window.location.pathname;
+      const hash = window.location.hash;
+      const search = window.location.search;
+
+      // Handle Backoffice Route
+      if (pathname.startsWith('/backoffice') || hash.startsWith('#/backoffice')) {
+        console.log('[DEOS Router] /backoffice administrative route accessed.');
+        setCurrentView('admin');
+        setIsAdminMode(true);
+        return;
+      }
+
+      // Handle Supabase Auth Callbacks
+      if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('code=')) {
+        console.log('[DEOS Auth] Email verification / signup callback detected.');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setCurrentView('dashboard');
+      }
+    };
+
+    handleUrlRouting();
+    window.addEventListener('popstate', handleUrlRouting);
+    return () => window.removeEventListener('popstate', handleUrlRouting);
   }, []);
 
   const handleNavigate = (view: ViewType) => {
+    if (view === 'admin') {
+      window.history.pushState(null, '', '/backoffice');
+      setIsAdminMode(true);
+      setCurrentView('admin');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (currentView === 'admin') {
+      window.history.pushState(null, '', '/');
+      setIsAdminMode(false);
+    }
+
     const publicViews: ViewType[] = ['landing', 'marketplace'];
     if (!publicViews.includes(view) && !isAuthenticated) {
       setAuthModalMode('login');
@@ -65,16 +95,15 @@ export function App() {
 
   const handleToggleAdminMode = () => {
     if (!isAdminMode) {
-      setIsAdminMode(true);
-      setCurrentView('admin');
+      handleNavigate('admin');
     } else {
-      setIsAdminMode(false);
-      setCurrentView('dashboard');
+      handleNavigate('dashboard');
     }
   };
 
   const handleLogout = async () => {
     await signOut();
+    window.history.pushState(null, '', '/');
     setCurrentView('landing');
   };
 
@@ -88,7 +117,17 @@ export function App() {
     );
   }
 
-  // 1. Unauthenticated Visitor Flow (Public Landing Page or Public Marketplace)
+  // 1. Dedicated Super Admin & Staff Portal at /backoffice
+  if (currentView === 'admin') {
+    return (
+      <BackofficePortal
+        currentUser={member}
+        onNavigateToMemberOS={() => handleNavigate('dashboard')}
+      />
+    );
+  }
+
+  // 2. Unauthenticated Visitor Flow (Public Landing Page or Public Marketplace)
   if (!isAuthenticated) {
     if (currentView === 'marketplace') {
       return (
@@ -130,14 +169,14 @@ export function App() {
     );
   }
 
-  // 2. Authenticated New User: Must Complete Onboarding (Plan Selection -> Wallet Payment -> Video Tour)
+  // 3. Authenticated New User: Must Complete Onboarding (Plan Selection -> Wallet Payment -> Video Tour)
   // At this point, the user does not have access to the full user dashboard
   if (member && member.hasCompletedOnboarding === false) {
     return (
       <OnboardingWizard
         currentUser={member}
-        onComplete={(purchasedPlan: PlanTier) => {
-          updatePlan(purchasedPlan);
+        onComplete={async (purchasedPlan: PlanTier) => {
+          await updatePlan(purchasedPlan);
           setCurrentView('dashboard');
         }}
         onCancel={handleLogout}
@@ -145,7 +184,7 @@ export function App() {
     );
   }
 
-  // 3. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
+  // 4. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
   const activeMember = member || {
     id: 'DEOS_ACTIVE',
     name: 'Entrepreneur',
@@ -225,7 +264,6 @@ export function App() {
           {currentView === 'settings' && <UserSettings currentUser={activeMember} />}
           {currentView === 'support' && <SupportCommunity />}
           {currentView === 'analytics' && <AnalyticsOverview />}
-          {currentView === 'admin' && <SuperAdminPanel />}
         </main>
       </div>
     </div>

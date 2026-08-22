@@ -186,9 +186,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <button
               onClick={onToggleAdminMode}
-              className="text-[10px] font-bold px-2 py-1 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white transition-colors"
+              className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white transition-colors flex items-center gap-1"
             >
-              {isAdminMode ? 'Exit' : 'Admin'}
+              <ShieldCheck className="w-3 h-3" />
+              <span>Backoffice</span>
             </button>
           </div>
 
