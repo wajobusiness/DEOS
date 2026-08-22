@@ -466,26 +466,38 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             {/* Video Player Card */}
             <div className="relative aspect-video rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl flex items-center justify-center group">
-              <img
-                src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1000&auto=format&fit=crop&q=80"
-                alt="Quickstart Masterclass"
-                className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
-              />
+              {isPlaying ? (
+                <iframe
+                  className="w-full h-full absolute inset-0 rounded-3xl"
+                  src="https://www.youtube-nocookie.com/embed/Td8gmK7HrS4?autoplay=1&rel=0&modestbranding=1"
+                  title="DEOS Platform Quickstart Masterclass"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <>
+                  <img
+                    src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1000&auto=format&fit=crop&q=80"
+                    alt="Quickstart Masterclass"
+                    className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500"
+                  />
 
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="absolute w-16 h-16 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 backdrop-blur-md transition-all hover:scale-110"
-              >
-                {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
-              </button>
+                  <button
+                    onClick={() => setIsPlaying(true)}
+                    className="absolute w-16 h-16 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 backdrop-blur-md transition-all hover:scale-110"
+                  >
+                    <Play className="w-7 h-7 ml-1 fill-white" />
+                  </button>
 
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>DEOS Platform Quickstart (3:15)</span>
-                </div>
-                <span className="text-emerald-400 font-bold">1080p HD</span>
-              </div>
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>DEOS Platform Quickstart (3:15)</span>
+                    </div>
+                    <span className="text-emerald-400 font-bold">1080p HD</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Final Launch Button */}

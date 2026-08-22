@@ -466,33 +466,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
           {/* VIDEO EXPLAINER */}
           <div id="video-explainer" className="pt-6 max-w-4xl mx-auto">
-            <div className="relative rounded-3xl bg-slate-950 border-2 border-indigo-500/40 overflow-hidden shadow-2xl shadow-indigo-500/10 aspect-video flex flex-col justify-between p-6 group">
-              <div className="flex justify-between items-center text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                  <span className="font-bold text-white uppercase tracking-wider text-[10px] bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-800">
-                    DEOS Platform Master Tour (03:45)
-                  </span>
-                </div>
-                <span className="text-slate-400 text-xs font-mono">4K Ultra HD</span>
-              </div>
+            <div className="relative rounded-3xl bg-slate-950 border-2 border-indigo-500/40 overflow-hidden shadow-2xl shadow-indigo-500/20 aspect-video flex flex-col justify-between p-6 group">
+              {isPlaying ? (
+                <>
+                  <iframe
+                    className="w-full h-full absolute inset-0 rounded-3xl"
+                    src="https://www.youtube-nocookie.com/embed/Td8gmK7HrS4?autoplay=1&rel=0&modestbranding=1"
+                    title="DEOS Platform Master Tour"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                  <button
+                    onClick={() => setIsPlaying(false)}
+                    className="absolute top-4 right-4 z-20 px-3 py-1 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Close Player</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Video Thumbnail Background */}
+                  <img
+                    src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1200&auto=format&fit=crop&q=80"
+                    alt="DEOS Platform Master Tour"
+                    className="w-full h-full absolute inset-0 object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent pointer-events-none" />
 
-              <div
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-20 h-20 rounded-full bg-indigo-600/90 hover:bg-indigo-500 text-white flex items-center justify-center mx-auto cursor-pointer shadow-2xl shadow-indigo-600/60 group-hover:scale-110 transition-all border border-indigo-400/40"
-              >
-                {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 fill-white ml-1" />}
-              </div>
+                  {/* Top Bar Overlay */}
+                  <div className="relative z-10 flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="font-bold text-white uppercase tracking-wider text-[10px] bg-slate-900/90 px-3 py-1 rounded-full border border-slate-700 backdrop-blur-md">
+                        DEOS Platform Master Tour (03:45)
+                      </span>
+                    </div>
+                    <span className="text-indigo-300 bg-indigo-950/80 px-2.5 py-1 rounded-lg border border-indigo-500/30 text-[11px] font-mono font-bold backdrop-blur-md">
+                      4K Ultra HD
+                    </span>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-[11px] text-slate-400 font-semibold">
-                  <span>Chapter: 02. Personal Landing Page & Domain Automation</span>
-                  <span>01:18 / 03:45</span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${videoProgress}%` }} />
-                </div>
-              </div>
+                  {/* Center Glowing Play Button */}
+                  <div
+                    onClick={() => setIsPlaying(true)}
+                    className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white flex items-center justify-center mx-auto cursor-pointer shadow-2xl shadow-indigo-600/60 group-hover:scale-115 transition-all border-2 border-white/30"
+                  >
+                    <Play className="w-8 h-8 fill-white ml-1" />
+                  </div>
+
+                  {/* Bottom Timeline Overlay */}
+                  <div className="relative z-10 space-y-2">
+                    <div className="flex justify-between text-[11px] text-slate-300 font-semibold">
+                      <span>Chapter: 02. Personal Landing Page & Domain Automation</span>
+                      <span>01:18 / 03:45</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-800/80 overflow-hidden backdrop-blur-md">
+                      <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full" style={{ width: `${videoProgress}%` }} />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
