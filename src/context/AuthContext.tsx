@@ -59,7 +59,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const metaCountry = authUser.user_metadata?.country || 'Global';
     const metaSponsor = authUser.user_metadata?.sponsorCode || 'DEOS100245';
     const memberCode = authUser.user_metadata?.memberCode || `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
-    const hasCompleted = authUser.user_metadata?.hasCompletedOnboarding === true;
+
+    // Check if onboarding was already completed in localStorage or metadata
+    let hasCompleted = false;
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.hasCompletedOnboarding === true) {
+          hasCompleted = true;
+        }
+      }
+    } catch {}
+
+    if (authUser.user_metadata?.hasCompletedOnboarding === true) {
+      hasCompleted = true;
+    }
 
     return {
       id: authUser.id,
@@ -86,6 +101,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Fetch Member profile directly from Supabase public.Member table or hydrate
   const fetchMemberProfile = async (authUser: User): Promise<Member> => {
+    // Check if localStorage already marked onboarding as completed
+    let isAlreadyCompleted = false;
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.hasCompletedOnboarding === true) {
+          isAlreadyCompleted = true;
+        }
+      }
+    } catch {}
+
     try {
       const { data, error } = await supabase
         .from('Member')
@@ -115,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           availableBalance: Number(data.walletBalance || 0),
           binaryVolume: Number(data.binaryLeftVolume || 0) + Number(data.binaryRightVolume || 0),
           activeReferrals: 0,
-          hasCompletedOnboarding: true,
+          hasCompletedOnboarding: isAlreadyCompleted || authUser.user_metadata?.hasCompletedOnboarding === true,
         };
 
         setMember(profile);
@@ -128,6 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Resilient hydration from authenticated user metadata
     const fallbackProfile = buildProfileFromUser(authUser);
+    if (isAlreadyCompleted) {
+      fallbackProfile.hasCompletedOnboarding = true;
+    }
     setMember(fallbackProfile);
     localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(fallbackProfile));
     return fallbackProfile;
@@ -297,7 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(data.session);
         localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(data.user));
         const prof = await fetchMemberProfile(data.user);
-        // If user is returning/existing, onboarding is marked completed
+        // Returning/existing users enter full dashboard
         const updated = { ...prof, hasCompletedOnboarding: true };
         setMember(updated);
         localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
@@ -330,21 +360,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update Plan Tier & Mark Onboarding Complete
+  // Update Plan Tier & Permanently Mark Onboarding Complete
   const updatePlan = async (plan: PlanTier) => {
-    if (member) {
-      const updated: Member = { ...member, plan, hasCompletedOnboarding: true };
+    const current = member || (user ? buildProfileFromUser(user) : null);
+    if (current) {
+      const updated: Member = { ...current, plan, hasCompletedOnboarding: true };
       setMember(updated);
       localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
 
       if (user) {
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              plan,
+              hasCompletedOnboarding: true,
+            },
+          });
+        } catch (e) {
+          console.warn('Auth updateUser metadata notice:', e);
+        }
+
         try {
           await supabase
             .from('Member')
             .update({ plan, updatedAt: new Date().toISOString() })
             .eq('id', user.id);
         } catch (e) {
-          console.warn('updatePlan notice:', e);
+          console.warn('updatePlan database notice:', e);
         }
       }
     }
