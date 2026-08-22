@@ -20,7 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialMode = 'login',
   onSuccess,
-  defaultSponsorCode = 'DEOS100245',
+  defaultSponsorCode = 'EVO100245',
   initialName = '',
   initialEmail = '',
   initialPhone = '',

@@ -49,7 +49,7 @@ export function App() {
 
       // Handle Backoffice Route
       if (pathname.startsWith('/backoffice') || hash.startsWith('#/backoffice')) {
-        console.log('[DEOS Router] /backoffice administrative route accessed.');
+        console.log('[Eviona Router] /backoffice administrative route accessed.');
         setCurrentView('admin');
         setIsAdminMode(true);
         return;
@@ -57,7 +57,7 @@ export function App() {
 
       // Handle Supabase Auth Callbacks
       if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('code=')) {
-        console.log('[DEOS Auth] Email verification / signup callback detected.');
+        console.log('[Eviona Auth] Email verification / signup callback detected.');
         window.history.replaceState({}, document.title, window.location.pathname);
         setCurrentView('dashboard');
       }
@@ -112,7 +112,7 @@ export function App() {
     return (
       <div className="min-h-screen bg-[#070A12] flex flex-col items-center justify-center text-white space-y-4 font-sans">
         <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="text-xs font-semibold text-slate-400">Connecting to DEOS Platform...</p>
+        <p className="text-xs font-semibold text-slate-400">Connecting to Eviona Ecosystem...</p>
       </div>
     );
   }
@@ -186,9 +186,9 @@ export function App() {
 
   // 4. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
   const activeMember = member || {
-    id: 'DEOS_ACTIVE',
+    id: 'EVO_ACTIVE',
     name: 'Entrepreneur',
-    email: 'entrepreneur@deos.com',
+    email: 'entrepreneur@eviona.com',
     phone: '',
     country: 'Global',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',

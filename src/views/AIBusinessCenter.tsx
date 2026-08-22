@@ -53,7 +53,7 @@ export const AIBusinessCenter: React.FC = () => {
     if (!prompt) return;
     setIsGenerating(true);
     setTimeout(() => {
-      setOutput(`### AI Generated Business Strategy\n\n**Campaign Objective:** High-ticket client conversion\n\n**Core Value Proposition:** Scale your agency from zero to $50k/mo using automated funnels and AI lead intelligence.\n\n**Action Steps:**\n1. Target warm leads using DEOS CRM pipeline\n2. Deploy email sequence #1 within 2 hours of form submission\n3. Offer 10% referral incentive to community partners.`);
+      setOutput(`### AI Generated Business Strategy\n\n**Campaign Objective:** High-ticket client conversion\n\n**Core Value Proposition:** Scale your agency from zero to $50k/mo using automated funnels and AI lead intelligence.\n\n**Action Steps:**\n1. Target warm leads using Eviona CRM pipeline\n2. Deploy email sequence #1 within 2 hours of form submission\n3. Offer 10% referral incentive to community partners.`);
       setIsGenerating(false);
       setCreditsUsed(prev => prev + 150);
     }, 1200);

@@ -52,7 +52,7 @@ export interface AuditLogEntry {
 export const initialKYCList: KYCSubmission[] = [
   {
     id: 'KYC-801',
-    memberId: 'DEOS100246',
+    memberId: 'EVO100246',
     name: 'Sarah Johnson',
     documentType: 'Passport',
     documentNumber: 'A9283741',
@@ -62,7 +62,7 @@ export const initialKYCList: KYCSubmission[] = [
   },
   {
     id: 'KYC-802',
-    memberId: 'DEOS100247',
+    memberId: 'EVO100247',
     name: 'Michael Brown',
     documentType: 'National ID',
     documentNumber: 'NIN-99210291',
@@ -75,7 +75,7 @@ export const initialKYCList: KYCSubmission[] = [
 export const initialPayoutQueue: PayoutRequest[] = [
   {
     id: 'PAY-401',
-    memberId: 'DEOS100245',
+    memberId: 'EVO100245',
     memberName: 'John Doe',
     amount: 3250.00,
     currency: 'USDT',
@@ -86,7 +86,7 @@ export const initialPayoutQueue: PayoutRequest[] = [
   },
   {
     id: 'PAY-402',
-    memberId: 'DEOS100248',
+    memberId: 'EVO100248',
     memberName: 'Grace John',
     amount: 1420.00,
     currency: 'USDT',
@@ -104,7 +104,7 @@ export const initialAuditLogs: AuditLogEntry[] = [
     actor: 'Super Admin',
     actorRole: 'super_admin',
     timestamp: 'Today, 11:20 AM',
-    details: 'Locked Binary Rate verified at 10% flat per Book 4 v1.1 invariant.',
+    details: 'Locked Binary Rate verified at 10% flat per binary compensation invariant.',
     impactCategory: 'Financial',
   },
   {
@@ -128,15 +128,15 @@ export const initialAuditLogs: AuditLogEntry[] = [
 ];
 
 export const defaultDomainConfig: DomainConfig = {
-  subdomain: 'johndoe.deos.com',
+  subdomain: 'johndoe.eviona.com',
   customDomain: 'johnsonagency.com',
   dnsStatus: 'active',
   sslStatus: 'active',
   domainCreditVoucher: true,
   dnsRecords: [
     { type: 'A', name: '@', value: '76.76.21.21', status: 'configured' },
-    { type: 'CNAME', name: 'www', value: 'cname.deos.com', status: 'configured' },
-    { type: 'TXT', name: '@', value: 'deos-site-verification=9a8d7f6e5c4b', status: 'configured' },
+    { type: 'CNAME', name: 'www', value: 'cname.eviona.com', status: 'configured' },
+    { type: 'TXT', name: '@', value: 'eviona-site-verification=9a8d7f6e5c4b', status: 'configured' },
   ],
 };
 

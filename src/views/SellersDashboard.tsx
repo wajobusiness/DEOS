@@ -194,8 +194,8 @@ export const SellersDashboard: React.FC = () => {
       {showAddProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">List New Product on DEOS Marketplace</h3>
-            <p className="text-xs text-slate-500 mb-4">Set your pricing and offer affiliate commission to DEOS members.</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">List New Product on Eviona Marketplace</h3>
+            <p className="text-xs text-slate-500 mb-4">Set your pricing and offer affiliate commission to Eviona members.</p>
 
             <div className="space-y-4">
               <div>
@@ -236,7 +236,7 @@ export const SellersDashboard: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    alert('Product published to DEOS Marketplace.');
+                    alert('Product published to Eviona Marketplace.');
                     setShowAddProductModal(false);
                   }}
                   className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-md"

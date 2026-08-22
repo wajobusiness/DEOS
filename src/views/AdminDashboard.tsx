@@ -28,10 +28,10 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   const adminUsersList = [
-    { id: 'DEOS100245', name: 'John Doe', email: 'john@deos.com', plan: 'Growth', status: 'Active', joined: 'May 12, 2024' },
-    { id: 'DEOS100246', name: 'Sarah Johnson', email: 'sarah@agency.com', plan: 'Legacy', status: 'Active', joined: 'May 14, 2024' },
-    { id: 'DEOS100247', name: 'Michael Brown', email: 'michael@bright.com', plan: 'Launch', status: 'Suspended', joined: 'May 15, 2024' },
-    { id: 'DEOS100248', name: 'Emily Davis', email: 'emily@consulting.com', plan: 'Growth', status: 'Active', joined: 'May 18, 2024' },
+    { id: 'EVO100245', name: 'John Doe', email: 'john@eviona.com', plan: 'Growth', status: 'Active', joined: 'May 12, 2024' },
+    { id: 'EVO100246', name: 'Sarah Johnson', email: 'sarah@agency.com', plan: 'Legacy', status: 'Active', joined: 'May 14, 2024' },
+    { id: 'EVO100247', name: 'Michael Brown', email: 'michael@bright.com', plan: 'Launch', status: 'Suspended', joined: 'May 15, 2024' },
+    { id: 'EVO100248', name: 'Emily Davis', email: 'emily@consulting.com', plan: 'Growth', status: 'Active', joined: 'May 18, 2024' },
   ];
 
   return (
@@ -44,11 +44,11 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">DEOS Platform Executive Admin</h2>
+              <h2 className="text-lg font-bold text-white">Eviona Ecosystem Executive Admin</h2>
               <Badge variant="purple" size="sm">SUPER ADMIN</Badge>
             </div>
             <p className="text-xs text-slate-400">
-              Governed by Book 0 & Book 3 • Single Canonical Financial Ledger
+              Single Canonical Financial Ledger & Governance Engine
             </p>
           </div>
         </div>
@@ -232,23 +232,23 @@ export const AdminDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-6">
           <div>
             <h4 className="text-base font-bold text-slate-900">Global Platform Configuration</h4>
-            <p className="text-xs text-slate-500">Core parameters governing DEOS Business OS</p>
+            <p className="text-xs text-slate-500">Core parameters governing Eviona Ecosystem</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Platform Name</label>
-              <input type="text" defaultValue="DEOS Business OS" className="w-full p-2.5 rounded-xl border border-slate-200" />
+              <input type="text" defaultValue="Eviona Ecosystem" className="w-full p-2.5 rounded-xl border border-slate-200" />
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Default Binary Bonus Rate</label>
-              <input type="text" defaultValue="10% Flat (Immutable Book 0 Rule)" readOnly className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-indigo-600" />
+              <input type="text" defaultValue="10% Flat Comp Rule" readOnly className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-indigo-600" />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">DEOS Coin Launch Rate (USD)</label>
-              <input type="text" defaultValue="$1.25 USD" className="w-full p-2.5 rounded-xl border border-slate-200 font-bold" />
+              <label className="block font-bold text-slate-700 mb-1">EVO Token Launch Rate (USD)</label>
+              <input type="text" defaultValue="$1.00 USD" className="w-full p-2.5 rounded-xl border border-slate-200 font-bold" />
             </div>
 
             <div>

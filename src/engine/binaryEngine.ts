@@ -1,4 +1,4 @@
-// DEOS MLM Binary & Financial Compensation Engine (Book 4 & Book 5 Pure Logic)
+// Eviona Ecosystem Binary & Financial Compensation Engine
 import { PlanTier, TreeNode, LedgerEventType } from '../types';
 
 export interface MarketplaceSplitResult {

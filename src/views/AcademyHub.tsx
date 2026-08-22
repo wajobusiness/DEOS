@@ -28,7 +28,7 @@ export const AcademyHub: React.FC = () => {
   const [showCertificateModal, setShowCertificateModal] = useState(false);
 
   const lessons = [
-    { id: 1, title: 'Introduction to the DEOS Architecture & Ecosystem', duration: '12:40', completed: true },
+    { id: 1, title: 'Introduction to the Eviona Architecture & Ecosystem', duration: '12:40', completed: true },
     { id: 2, title: 'Setting Up Your Multi-Tenant Digital Storefront', duration: '18:15', completed: true },
     { id: 3, title: 'CRM Lead Capture & Form Attribution Mastery', duration: '15:20', completed: true },
     { id: 4, title: 'High-Yield Market Positioning & Brand Strategy', duration: '22:10', completed: false },
@@ -285,7 +285,7 @@ export const AcademyHub: React.FC = () => {
 
             <div>
               <h3 className="text-lg font-bold text-slate-900">Certificate of Completion</h3>
-              <p className="text-xs text-slate-500">Verified Blockchain Verification ID: <code>DEOS-CERT-99824</code></p>
+              <p className="text-xs text-slate-500">Verified Blockchain Verification ID: <code>EVO-CERT-99824</code></p>
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 text-slate-900 space-y-2">

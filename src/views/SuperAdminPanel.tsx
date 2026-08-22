@@ -128,9 +128,9 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
 
       if (data && data.length > 0 && !error) {
         const mapped = data.map((m: any) => ({
-          id: m.id || m.member_code || `DEOS-${Math.floor(1000 + Math.random() * 9000)}`,
+          id: m.id || m.member_code || `EVO-${Math.floor(1000 + Math.random() * 9000)}`,
           name: m.name || m.full_name || 'Registered Entrepreneur',
-          email: m.email || 'user@deos.com',
+          email: m.email || 'user@eviona.com',
           role: m.role || (m.email?.includes('admin') ? 'super_admin' : 'member'),
           plan: m.plan || 'launch',
           status: m.status || 'active',
@@ -142,7 +142,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
         setUsersList(mapped);
       } else {
         // 2. If table is empty or newly connected, populate from current active session cache
-        const activeUserCached = localStorage.getItem('deos_active_member_profile');
+        const activeUserCached = localStorage.getItem('eviona_active_member_profile');
         if (activeUserCached) {
           try {
             const parsed = JSON.parse(activeUserCached);
@@ -514,7 +514,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 </div>
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
                   <span className="text-slate-400">Internal Coin Rate:</span>
-                  <b className="text-emerald-400 font-mono">$1.00 USD = {features.defaultCoinRateUsd} DEOS Coin</b>
+                  <b className="text-emerald-400 font-mono">$1.00 USD = {features.defaultCoinRateUsd} EVO Token</b>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between">
                   <span className="text-slate-400">Maintenance Mode:</span>
@@ -572,7 +572,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 value={brandingForm.platformName}
                 onChange={(e) => setBrandingForm({ ...brandingForm, platformName: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
-                placeholder="DEOS"
+                placeholder="Eviona Ecosystem"
               />
             </div>
 
@@ -1027,7 +1027,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {[
               { id: 'dashboard', label: 'Dashboard' },
-              { id: 'wallet', label: 'Wallet & DEOS Coin' },
+              { id: 'wallet', label: 'Wallet & EVO Token' },
               { id: 'binary', label: 'Binary MLM Network' },
               { id: 'partner', label: 'Partner Center' },
               { id: 'marketplace', label: 'Marketplace' },
@@ -1213,13 +1213,13 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
           <div className="space-y-1">
             <h3 className="text-xl font-bold text-white">System Feature Flags & Monetary Parameters</h3>
             <p className="text-xs text-slate-400">
-              Manage platform operational switches, maintenance mode, and DEOS Coin conversion rate.
+              Manage platform operational switches, maintenance mode, and EVO Token conversion rate.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-              <span className="font-bold text-slate-300">Internal DEOS Coin Rate ($1.00 USD =)</span>
+              <span className="font-bold text-slate-300">Internal EVO Token Rate ($1.00 USD =)</span>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -1228,7 +1228,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                   onChange={(e) => setFeaturesForm({ ...featuresForm, defaultCoinRateUsd: parseFloat(e.target.value) || 1.0 })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-sm"
                 />
-                <span className="font-bold text-emerald-400 font-mono">DEOS Coin</span>
+                <span className="font-bold text-emerald-400 font-mono">EVO</span>
               </div>
             </div>
 

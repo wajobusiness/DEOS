@@ -1,9 +1,9 @@
 import { Member, TreeNode, WalletTransaction, Product, Lead, Deal, Course, EventItem, TeamMember, SystemStatus } from '../types';
 
 export const currentUser: Member = {
-  id: 'DEOS100245',
+  id: 'EVO100245',
   name: 'John Doe',
-  email: 'john.doe@deos.com',
+  email: 'john.doe@eviona.com',
   phone: '+234 801 234 5678',
   country: 'Nigeria',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -22,7 +22,7 @@ export const currentUser: Member = {
 };
 
 export const initialBinaryTree: TreeNode = {
-  id: 'DEOS100245',
+  id: 'EVO100245',
   name: 'John Doe',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   role: 'You (Director)',
@@ -31,7 +31,7 @@ export const initialBinaryTree: TreeNode = {
   bv: 24560,
   children: [
     {
-      id: 'DEOS-L1',
+      id: 'EVO-L1',
       name: 'Lisa Brown',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
       role: 'Left Leg (128)',
@@ -40,7 +40,7 @@ export const initialBinaryTree: TreeNode = {
       bv: 12280,
       children: [
         {
-          id: 'DEOS-L2A',
+          id: 'EVO-L2A',
           name: 'Samuel K.',
           avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
           role: 'Active Member',
@@ -49,7 +49,7 @@ export const initialBinaryTree: TreeNode = {
           bv: 6140
         },
         {
-          id: 'DEOS-L2B',
+          id: 'EVO-L2B',
           name: 'Ruth A.',
           avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
           role: 'Active Member',
@@ -60,7 +60,7 @@ export const initialBinaryTree: TreeNode = {
       ]
     },
     {
-      id: 'DEOS-R1',
+      id: 'EVO-R1',
       name: 'Grace John',
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
       role: 'Right Leg (128)',
@@ -69,7 +69,7 @@ export const initialBinaryTree: TreeNode = {
       bv: 12280,
       children: [
         {
-          id: 'DEOS-R2A',
+          id: 'EVO-R2A',
           name: 'Emeka O.',
           avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
           role: 'Active Member',
@@ -78,7 +78,7 @@ export const initialBinaryTree: TreeNode = {
           bv: 6140
         },
         {
-          id: 'DEOS-R2B',
+          id: 'EVO-R2B',
           name: 'Joy C.',
           avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
           role: 'Active Member',
@@ -105,9 +105,9 @@ export const initialTransactions: WalletTransaction[] = [
   {
     id: 'TXN-9020',
     type: 'promoter_commission',
-    description: 'Partner Commission - E-Commerce Blueprint',
+    description: 'Partner Commission - E-Commerce Blueprint (EVO Token)',
     amount: 120.00,
-    currency: 'DEOS',
+    currency: 'EVO',
     status: 'Completed',
     date: 'May 16, 2025',
     time: '09:15 AM'
@@ -241,7 +241,7 @@ export const initialLeads: Lead[] = [
     company: 'TechFlow Inc.',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'DEOS100245',
+    ownerId: 'EVO100245',
     ownerName: 'John Doe',
     source: 'Website Form (johnsonagency.com)',
     status: 'New',
@@ -258,7 +258,7 @@ export const initialLeads: Lead[] = [
     company: 'Bright Solutions',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'DEOS100245',
+    ownerId: 'EVO100245',
     ownerName: 'John Doe',
     source: 'Facebook Ad Campaign',
     status: 'Contacted',
@@ -275,7 +275,7 @@ export const initialLeads: Lead[] = [
     company: 'Davis Consulting',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'DEOS100245',
+    ownerId: 'EVO100245',
     ownerName: 'John Doe',
     source: 'LinkedIn Direct',
     status: 'Qualified',
@@ -501,11 +501,11 @@ export const initialTeamMembers: TeamMember[] = [
 ];
 
 export const systemStatuses: SystemStatus[] = [
-  { service: 'DEOS Platform Core', status: 'Operational', latency: '42ms' },
-  { service: 'Website Builder & CDN', status: 'Operational', latency: '28ms' },
-  { service: 'AI Business Center', status: 'Operational', latency: '120ms' },
-  { service: 'CRM & Lead Delivery', status: 'Operational', latency: '35ms' },
-  { service: 'Marketing & SMS Relay', status: 'Operational', latency: '65ms' },
-  { service: 'Payment Gateway & TRC20', status: 'Operational', latency: '88ms' },
-  { service: 'Blockchain Ledger', status: 'Operational', latency: '95ms' },
+  { service: 'Eviona Platform Core', status: 'Operational', latency: '42ms' },
+  { service: 'Eviona Website Builder & CDN', status: 'Operational', latency: '28ms' },
+  { service: 'Eviona AI Business Center', status: 'Operational', latency: '120ms' },
+  { service: 'Eviona CRM & Lead Delivery', status: 'Operational', latency: '35ms' },
+  { service: 'Eviona Marketing & Relay', status: 'Operational', latency: '65ms' },
+  { service: 'Eviona Payment Gateway & TRC20', status: 'Operational', latency: '88ms' },
+  { service: 'Eviona Blockchain Ledger', status: 'Operational', latency: '95ms' },
 ];

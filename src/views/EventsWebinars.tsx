@@ -194,7 +194,7 @@ export const EventsWebinars: React.FC = () => {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 mt-6">
-            <b>DEOS Studio:</b> Integrated WebRTC streaming with automatic recording and course publishing.
+            <b>Eviona Studio:</b> Integrated WebRTC streaming with automatic recording and course publishing.
           </div>
         </div>
       </div>

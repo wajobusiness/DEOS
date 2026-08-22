@@ -49,18 +49,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const allNavItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'wallet' as ViewType, label: 'Wallet', icon: Wallet, badge: 'USDT' },
-    { id: 'binary' as ViewType, label: 'Binary Network', icon: Network },
+    { id: 'wallet' as ViewType, label: 'Eviona Wallet', icon: Wallet, badge: 'EVO' },
+    { id: 'binary' as ViewType, label: 'Eviona Network', icon: Network },
     { id: 'partner' as ViewType, label: 'Partner Center', icon: Users },
-    { id: 'marketplace' as ViewType, label: 'Marketplace', icon: ShoppingBag },
+    { id: 'marketplace' as ViewType, label: 'Eviona Marketplace', icon: ShoppingBag },
     { id: 'sellers' as ViewType, label: 'Sellers Dashboard', icon: Store },
-    { id: 'academy' as ViewType, label: 'Academy', icon: GraduationCap },
-    { id: 'builder' as ViewType, label: 'Website Builder', icon: Globe, highlight: true },
+    { id: 'academy' as ViewType, label: 'Eviona Academy', icon: GraduationCap },
+    { id: 'builder' as ViewType, label: 'Eviona Business Center', icon: Globe, highlight: true },
     { id: 'domains' as ViewType, label: 'Domains & DNS', icon: Globe },
-    { id: 'crm' as ViewType, label: 'CRM', icon: Contact2, badge: '36' },
-    { id: 'ai-center' as ViewType, label: 'AI Business Center', icon: Bot, badge: 'AI' },
+    { id: 'crm' as ViewType, label: 'Eviona CRM', icon: Contact2, badge: '36' },
+    { id: 'ai-center' as ViewType, label: 'Eviona AI', icon: Bot, badge: 'AI' },
     { id: 'marketing' as ViewType, label: 'Marketing Tools', icon: Megaphone },
-    { id: 'analytics' as ViewType, label: 'Analytics', icon: BarChart3 },
+    { id: 'analytics' as ViewType, label: 'Eviona Analytics', icon: BarChart3 },
     { id: 'events' as ViewType, label: 'Events & Webinars', icon: Calendar },
     { id: 'team' as ViewType, label: 'My Team', icon: Users },
     { id: 'settings' as ViewType, label: 'Settings', icon: Settings },
@@ -245,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 await signOut();
                 onNavigate('landing');
               }}
-              title="Logout from DEOS"
+              title="Logout from Eviona"
               className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-[#1F2937] rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />

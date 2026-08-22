@@ -73,7 +73,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const [leadName, setLeadName] = useState('');
   const [leadEmail, setLeadEmail] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
-  const [sponsorCode, setSponsorCode] = useState('DEOS100245');
+  const [sponsorCode, setSponsorCode] = useState('EVO100245');
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
   const [isLeadCaptured, setIsLeadCaptured] = useState(false);
 
@@ -97,9 +97,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
       const ref = params.get('ref') || params.get('sponsor') || params.get('aff');
       if (ref) {
         setSponsorCode(ref);
-        localStorage.setItem('deos_sponsor_code', ref);
+        localStorage.setItem('eviona_sponsor_code', ref);
       } else {
-        const cached = localStorage.getItem('deos_sponsor_code');
+        const cached = localStorage.getItem('eviona_sponsor_code');
         if (cached) {
           setSponsorCode(cached);
         }
@@ -114,7 +114,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
     setIsSubmittingLead(true);
     try {
       if (sponsorCode) {
-        localStorage.setItem('deos_sponsor_code', sponsorCode);
+        localStorage.setItem('eviona_sponsor_code', sponsorCode);
       }
 
       // Save lead to Supabase database
@@ -566,7 +566,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     <iframe
                       className="w-full h-full absolute inset-0 rounded-3xl"
                       src={videoEmbedUrl()}
-                      title="DEOS Platform Master Tour"
+                      title="Eviona Ecosystem Master Tour"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
                     />
@@ -583,7 +583,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     {/* Video Thumbnail Background */}
                     <img
                       src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1200&auto=format&fit=crop&q=80"
-                      alt="DEOS Platform Master Tour"
+                      alt="Eviona Ecosystem Master Tour"
                       className="w-full h-full absolute inset-0 object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent pointer-events-none" />
@@ -597,7 +597,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                         </span>
                       </div>
                       <span className="text-indigo-300 bg-indigo-950/80 px-2.5 py-1 rounded-lg border border-indigo-500/30 text-[11px] font-mono font-bold backdrop-blur-md">
-                        DEOS 4K Tour
+                        Eviona 4K Tour
                       </span>
                     </div>
 
@@ -611,7 +611,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                     {/* Bottom Indicator */}
                     <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-300 font-semibold">
-                      <span>DEOS Operating System Master Tour</span>
+                      <span>Eviona Ecosystem Master Tour</span>
                       <span className="text-indigo-400 font-mono">02:15</span>
                     </div>
                   </>
@@ -636,7 +636,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               </div>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-                Watch this short video to see how DEOS gives you the tools, training, and opportunities to build a successful digital business from anywhere in the world.
+                Watch this short video to see how Eviona gives you the tools, training, and opportunities to build a successful digital business from anywhere in the world.
               </p>
 
               {/* 2-Column Checkmark Grid */}
@@ -876,7 +876,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 name: 'Daniel O.',
                 role: 'Digital Marketer',
                 avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-                quote: 'DEOS changed my life! I now earn consistently from my business and referrals.',
+                quote: 'Eviona changed my life! I now earn consistently from my business and referrals.',
               },
               {
                 name: 'Sarah A.',
@@ -894,7 +894,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 name: 'Mercy T.',
                 role: 'Student',
                 avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-                quote: 'DEOS helped me build my brand and income from scratch.',
+                quote: 'Eviona helped me build my brand and income from scratch.',
               },
             ].map((story, i) => (
               <div
@@ -1010,7 +1010,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               {
                 name: 'Launch Tier',
                 price: '$100',
-                coins: '100 DEOS Coin',
+                coins: '100 EVO Token',
                 desc: 'Perfect for new entrepreneurs getting started online.',
                 features: [
                   '1 Active Landing Page + 3 Demo Templates',
@@ -1025,7 +1025,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               {
                 name: 'Growth Tier',
                 price: '$300',
-                coins: '300 DEOS Coin',
+                coins: '300 EVO Token',
                 desc: 'The complete scaling system for serious business builders.',
                 features: [
                   '1 Active Landing Page + 3 Demo Templates',
@@ -1040,13 +1040,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               {
                 name: 'Legacy Tier',
                 price: '$500',
-                coins: '500 DEOS Coin',
+                coins: '500 EVO Token',
                 desc: 'Maximum infrastructure, highest limits, and VIP support.',
                 features: [
                   '1 Active Landing Page + 3 Demo Templates',
                   'Subdomain + 3 Connected Custom Domains',
                   'Unlimited CRM Contacts & Pipelines',
-                  '50,000 Email Sends / Month (Custom Domain)',
+                  '50000 Email Sends / Month (Custom Domain)',
                   '1,000 AI Business Credits / Month',
                   '$125 Direct Bonus / $25,000 Wkly Cap',
                 ],
@@ -1104,7 +1104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             <div className="text-center space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
                 <Calculator className="w-4 h-4" />
-                <span>Pure Binary Math (Book 4 Compensation Engine)</span>
+                <span>Pure Binary Math (Compensation Engine)</span>
               </div>
               <h3 className="text-2xl sm:text-4xl font-black text-white uppercase">Interactive Earnings Simulator</h3>
               <p className="text-xs text-slate-400">Calculate projected monthly income based on direct referrals and weaker-leg volume.</p>
@@ -1196,12 +1196,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               ? homepage.faqList
               : [
                   {
-                    q: 'What is the DEOS Platform?',
-                    a: 'DEOS (Digital Entrepreneurship Operating System) is the complete all-in-one infrastructure uniting multi-tenant personal websites, CRM funnels, a digital marketplace, AI business tools, academy masterclasses, and an immutable 10% binary compensation network.',
+                    q: 'What is the Eviona Ecosystem?',
+                    a: 'Eviona Ecosystem is the complete all-in-one infrastructure uniting multi-tenant personal websites, CRM funnels, a digital marketplace, AI business tools, academy masterclasses, and an immutable 10% binary compensation network.',
                   },
                   {
                     q: 'How does the 10% Flat Binary Commission work?',
-                    a: 'Under Book 4 §7, you earn a flat 10% commission on your weaker-leg Business Volume (BV) every weekly settlement cycle, with all un-matched volume carried forward indefinitely.',
+                    a: 'Under the compensation engine, you earn a flat 10% commission on your weaker-leg Business Volume (BV) every weekly settlement cycle, with all un-matched volume carried forward indefinitely.',
                   },
                 ]
             ).map((faq, index) => {
@@ -1241,7 +1241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-indigo-500" />
           <span className="font-bold text-white">{branding.platformName}</span>
-          <span>{branding.copyrightText || '© 2026 DEOS Operating System. All Rights Reserved.'}</span>
+          <span>{branding.copyrightText || '© 2026 Eviona Ecosystem. All Rights Reserved.'}</span>
         </div>
         <div className="flex flex-wrap gap-6 items-center">
           <button onClick={() => onEnterApp('marketplace')} className="hover:text-white transition-colors">

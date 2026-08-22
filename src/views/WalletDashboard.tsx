@@ -51,19 +51,19 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <h3 className="text-3xl font-extrabold tracking-tight">${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
             <p className="text-[10px] text-emerald-400 font-semibold mt-1">↑ +8.4% this month</p>
           </div>
-          <span className="text-[10px] text-slate-400">Combined USDT + DEOS Valuation</span>
+          <span className="text-[10px] text-slate-400">Combined USDT + EVO Valuation</span>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">DEOS Token / Coin</span>
+            <span className="text-xs font-bold text-slate-500 uppercase">EVO Token</span>
             <Coins className="w-5 h-5 text-purple-600" />
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-bold text-slate-900">{currentUser.tokenBalance.toLocaleString()} <span className="text-xs text-purple-600">DEOS</span></h3>
-            <p className="text-[10px] text-slate-400 mt-1">Model A: 1.00 DEOS = $1.00 USD (Fixed Value)</p>
+            <h3 className="text-2xl font-bold text-slate-900">{currentUser.tokenBalance.toLocaleString()} <span className="text-xs text-purple-600">EVO</span></h3>
+            <p className="text-[10px] text-slate-400 mt-1">EVO is the utility token powering the Eviona Ecosystem.</p>
           </div>
-          <span className="text-[10px] text-indigo-600 font-bold">Utility Credit Unit</span>
+          <span className="text-[10px] text-indigo-600 font-bold">Utility Token Unit</span>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
@@ -176,7 +176,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <div className="relative w-28 h-28 shrink-0">
               <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                 <circle cx="18" cy="18" r="14" fill="transparent" stroke="#EEF2FF" strokeWidth="5" />
-                {/* DEOS Token 70% */}
+                {/* EVO Token 70% */}
                 <circle cx="18" cy="18" r="14" fill="transparent" stroke="#8B5CF6" strokeWidth="5" strokeDasharray="62 100" strokeDashoffset="0" />
                 {/* USDT 30% */}
                 <circle cx="18" cy="18" r="14" fill="transparent" stroke="#10B981" strokeWidth="5" strokeDasharray="26 100" strokeDashoffset="-62" />
@@ -187,7 +187,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               <div className="flex justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600">
                   <span className="w-2 h-2 rounded-full bg-purple-500" />
-                  DEOS Coin
+                  EVO Token
                 </span>
                 <span className="font-bold text-slate-900">71.0%</span>
               </div>
@@ -331,14 +331,14 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200">
             <h3 className="text-lg font-bold text-slate-900 mb-1">Internal Member Transfer</h3>
-            <p className="text-xs text-slate-500 mb-4">Send DEOS Coin or USDT instantly to another active member.</p>
+            <p className="text-xs text-slate-500 mb-4">Send EVO Token or USDT instantly to another active member.</p>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Recipient Member ID / Email</label>
                 <input
                   type="text"
-                  placeholder="DEOS100..."
+                  placeholder="EVO100..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500"
                 />
               </div>

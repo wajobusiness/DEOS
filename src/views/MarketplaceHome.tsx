@@ -89,7 +89,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedStorefront, setCopiedStorefront] = useState(false);
 
-  const memberCode = currentUser?.id || 'DEOS100245';
+  const memberCode = currentUser?.id || 'EVO100245';
 
   // Category Definitions
   const categoriesList = [
@@ -222,7 +222,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
       buyerEmail: checkoutEmail,
       items: cart,
       totalAmount: cartTotal,
-      licenseKey: `DEOS-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+      licenseKey: `EVO-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     });
 
@@ -232,13 +232,13 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   };
 
   const handleCopyStorefront = () => {
-    navigator.clipboard.writeText(`https://deos.com/m/@${memberCode}`);
+    navigator.clipboard.writeText(`https://eviona.com/m/@${memberCode}`);
     setCopiedStorefront(true);
     setTimeout(() => setCopiedStorefront(false), 2000);
   };
 
   const handleCopyPromoteLink = (p: any) => {
-    navigator.clipboard.writeText(`https://deos.com/marketplace/p/${p.id}?ref=${memberCode}`);
+    navigator.clipboard.writeText(`https://eviona.com/marketplace/p/${p.id}?ref=${memberCode}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -258,7 +258,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                   <ShoppingBag className="w-5 h-5" />
                 </div>
                 <div className="text-left">
-                  <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">DEOS</span>
+                  <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">Eviona</span>
                   <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block -mt-0.5">Marketplace</span>
                 </div>
               </button>
@@ -373,7 +373,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
             </h2>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Every digital asset purchased through your link earns you instant net promoter payouts, with 3% upline overrides distributed automatically through the DEOS compensation engine.
+              Every digital asset purchased through your link earns you instant net promoter payouts, with 3% upline overrides distributed automatically through the Eviona compensation engine.
             </p>
           </div>
 
@@ -411,7 +411,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                   <div className="md:col-span-7 space-y-4">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-indigo-200/80 text-indigo-700 text-[11px] font-bold shadow-xs">
                       <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Welcome to DEOS Marketplace</span>
+                      <span>Welcome to Eviona Marketplace</span>
                     </div>
 
                     <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
@@ -791,9 +791,9 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </button>
             </div>
 
-            {/* Why Choose DEOS Marketplace? */}
+            {/* Why Choose Eviona Marketplace? */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <h4 className="text-sm font-bold text-slate-900">Why Choose DEOS Marketplace?</h4>
+              <h4 className="text-sm font-bold text-slate-900">Why Choose Eviona Marketplace?</h4>
 
               <div className="space-y-3.5 text-xs">
                 <div className="flex items-start gap-3">
@@ -808,21 +808,21 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0 mt-0.5">
-                    <Lock className="w-4 h-4" />
+                    <Zap className="w-4 h-4" />
                   </div>
                   <div>
-                    <h6 className="font-bold text-slate-900">Secure & Safe</h6>
-                    <p className="text-[11px] text-slate-500">100% secure payments and transactions</p>
+                    <h6 className="font-bold text-slate-900">Instant Digital Delivery</h6>
+                    <p className="text-[11px] text-slate-500">Get lifetime download access immediately after checkout</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0 mt-0.5">
-                    <Headphones className="w-4 h-4" />
+                  <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shrink-0 mt-0.5">
+                    <Coins className="w-4 h-4" />
                   </div>
                   <div>
-                    <h6 className="font-bold text-slate-900">24/7 Support</h6>
-                    <p className="text-[11px] text-slate-500">We're here to help you succeed</p>
+                    <h6 className="font-bold text-slate-900">High Affiliate Overrides</h6>
+                    <p className="text-[11px] text-slate-500">Earn up to 50% on every recommendation you make</p>
                   </div>
                 </div>
               </div>
@@ -945,7 +945,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                       }`}
                     >
                       <Wallet className="w-4 h-4 text-indigo-600" />
-                      <span className="text-[10px]">DEOS Wallet</span>
+                      <span className="text-[10px]">Eviona Wallet</span>
                     </button>
                   )}
 

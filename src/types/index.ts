@@ -1,4 +1,4 @@
-// DEOS Unified TypeScript Contracts
+// Eviona Ecosystem Unified TypeScript Contracts
 
 export type LedgerEventType = 
   | 'direct_referral_bonus'
@@ -9,7 +9,7 @@ export type LedgerEventType =
   | 'platform_transaction_fee'
   | 'promoter_commission'
   | 'product_sale_upline_override'
-  | 'direct_sale_upline_bonus' // Book 5 §8a v1.2/1.3
+  | 'direct_sale_upline_bonus'
   | 'seller_payout'
   | 'academy_instructor_revenue'
   | 'coin_deposit'
@@ -167,7 +167,7 @@ export interface WalletTransaction {
   type: LedgerEventType;
   description: string;
   amount: number;
-  currency: 'USDT' | 'DEOS' | 'USD';
+  currency: 'USDT' | 'EVO' | 'DEOS' | 'USD';
   status: 'Completed' | 'Pending' | 'Failed';
   date: string;
   time: string;

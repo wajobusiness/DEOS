@@ -25,7 +25,7 @@ interface PartnerCenterProps {
 export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
-  const referralLink = `https://deos.com/join?ref=${currentUser.id}`;
+  const referralLink = `https://eviona.com/join?ref=${currentUser.id}`;
   const websiteEmbeddedLink = `https://johnsonagency.com/#join`;
 
   const handleCopy = (text: string, type: string) => {
@@ -37,11 +37,11 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const marketingSwipes = [
     {
       title: 'WhatsApp / Telegram Direct Message',
-      content: `Hey! I just launched my all-in-one digital business system with DEOS. You get a complete business website, CRM, AI marketing tools, and a 10% binary network model. Check it out here: ${referralLink}`,
+      content: `Hey! I just launched my all-in-one digital business system with Eviona. You get a complete business website, CRM, AI marketing tools, and a 10% binary network model. Check it out here: ${referralLink}`,
     },
     {
       title: 'Email Invitation Template',
-      content: `Subject: Launch your automated business with DEOS\n\nHi there,\n\nI wanted to personally invite you to explore DEOS—the default operating system for digital entrepreneurs. Whether you want to sell products, automate your client acquisition, or build a residual network, DEOS provides the complete infrastructure.\n\nLearn more and join my team here: ${referralLink}\n\nBest,\n${currentUser.name}`,
+      content: `Subject: Launch your automated business with Eviona\n\nHi there,\n\nI wanted to personally invite you to explore Eviona Ecosystem—the digital entrepreneurship operating system. Whether you want to sell products, automate your client acquisition, or build a residual network, Eviona provides the complete infrastructure.\n\nLearn more and join my team here: ${referralLink}\n\nBest,\n${currentUser.name}`,
     },
   ];
 
@@ -52,7 +52,7 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
         <div className="space-y-2 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Affiliate & Partner Center (Book 2 Chapter 12)</span>
+            <span>Affiliate & Partner Center</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Share Your Link. Grow Your Residual Team.
@@ -101,7 +101,7 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
             </button>
           </div>
           <p className="text-[11px] text-slate-500">
-            Sends prospects to the official DEOS landing page with your sponsor ID pre-filled.
+            Sends prospects to the official Eviona landing page with your sponsor ID pre-filled.
           </p>
         </div>
 

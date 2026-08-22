@@ -53,7 +53,7 @@ CREATE TABLE "LedgerTransaction" (
     "memberId" TEXT NOT NULL,
     "type" "LedgerEventType" NOT NULL,
     "amount" DECIMAL(12,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'DEOS',
+    "currency" TEXT NOT NULL DEFAULT 'EVO',
     "description" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'Completed',
     "referenceId" TEXT,

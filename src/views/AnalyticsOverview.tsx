@@ -129,7 +129,7 @@ export const AnalyticsOverview: React.FC = () => {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 text-[11px] text-slate-500">
-            Real-time tracking powered by DEOS Unified Analytics Engine.
+            Real-time tracking powered by Eviona Unified Analytics Engine.
           </div>
         </div>
       </div>

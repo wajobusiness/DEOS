@@ -27,24 +27,24 @@ export interface PlatformSettingsState {
 }
 
 const DEFAULT_BRANDING: PlatformBrandingSettings = {
-  platformName: 'DEOS',
-  tagline: 'Digital Entrepreneurship Operating System',
+  platformName: 'Eviona Ecosystem',
+  tagline: 'The Digital Entrepreneurship Operating System',
   logoUrl: '',
   darkLogoUrl: '',
   lightLogoUrl: '',
   faviconUrl: '',
-  companyName: 'DEOS Global Technologies Inc.',
-  supportEmail: 'support@deos.com',
-  supportPhone: '+1 (800) 555-DEOS',
-  copyrightText: '© 2026 DEOS Operating System. All rights reserved.',
+  companyName: 'Eviona Global Technologies Inc.',
+  supportEmail: 'support@eviona.com',
+  supportPhone: '+1 (800) 555-EVIONA',
+  copyrightText: '© 2026 Eviona Ecosystem. All rights reserved.',
   defaultCurrency: 'USD',
   defaultLanguage: 'en',
   timezone: 'UTC',
   socialLinks: {
-    twitter: 'https://twitter.com/deos_os',
-    telegram: 'https://t.me/deos_official',
-    discord: 'https://discord.gg/deos',
-    youtube: 'https://youtube.com/@deos',
+    twitter: 'https://twitter.com/eviona_eco',
+    telegram: 'https://t.me/eviona_official',
+    discord: 'https://discord.gg/eviona',
+    youtube: 'https://youtube.com/@eviona',
   },
 };
 
@@ -59,7 +59,7 @@ const DEFAULT_THEME: PlatformThemeSettings = {
 };
 
 const DEFAULT_HOMEPAGE: HomepageContentSettings = {
-  heroBadge: '⭐ Multi-Tenant Business Infrastructure v2.5',
+  heroBadge: '⭐ Eviona Ecosystem v2.5',
   heroHeadline: 'The All-In-One Digital Entrepreneurship',
   heroHighlightText: 'Operating System',
   heroSubtitle:
@@ -68,7 +68,7 @@ const DEFAULT_HOMEPAGE: HomepageContentSettings = {
   heroVideoUrl: 'https://youtu.be/Td8gmK7HrS4',
   announcementBanner: {
     enabled: true,
-    text: '🚀 DEOS 2.0 Live: Model A Fixed Utility Coin & Instant Stripe / USDT TRC20 Gateway Active.',
+    text: '🚀 Eviona Ecosystem Live: EVO Utility Token & Instant Stripe / USDT TRC20 Gateway Active.',
     link: '#pricing',
   },
   stats: {
@@ -79,24 +79,24 @@ const DEFAULT_HOMEPAGE: HomepageContentSettings = {
   },
   faqList: [
     {
-      q: 'What is the DEOS Platform?',
-      a: 'DEOS (Digital Entrepreneurship Operating System) is the complete all-in-one infrastructure uniting multi-tenant personal websites, CRM funnels, a digital marketplace, AI business tools, academy masterclasses, and an immutable 10% binary compensation network.',
+      q: 'What is the Eviona Ecosystem?',
+      a: 'Eviona Ecosystem is the complete all-in-one infrastructure uniting multi-tenant personal websites, CRM funnels, a digital marketplace, AI business tools, academy masterclasses, and an immutable 10% binary compensation network.',
     },
     {
       q: 'How does the 10% Flat Binary Commission work?',
-      a: 'Under Book 4 §7, you earn a flat 10% commission on your weaker-leg Business Volume (BV) every weekly settlement cycle, with all un-matched volume carried forward indefinitely. No arbitrary flushing or structural penalizations.',
+      a: 'Under the binary compensation engine, you earn a flat 10% commission on your weaker-leg Business Volume (BV) every weekly settlement cycle, with all un-matched volume carried forward indefinitely. No arbitrary flushing or structural penalizations.',
     },
     {
       q: 'Can non-members buy from the Marketplace?',
-      a: 'Yes! The DEOS Marketplace is open to public traffic. Any customer can purchase digital goods or services via guest checkout, with promoter commissions and 3% upline overrides automatically routed to referring members.',
+      a: 'Yes! Eviona Marketplace is open to public traffic. Any customer can purchase digital goods or services via guest checkout, with promoter commissions and 3% upline overrides automatically routed to referring members.',
     },
     {
-      q: 'What is DEOS Coin (Model A)?',
-      a: 'DEOS Coin is an internal fixed-value utility credit ($1.00 USD = 1.00 DEOS Coin) used for seamless internal platform purchases, seller settlements, and instant peer-to-peer transfers with zero gas volatility.',
+      q: 'What is EVO Token?',
+      a: 'EVO is the utility token powering the Eviona Ecosystem, enabling transactions and future digital economy features within the platform.',
     },
     {
       q: 'Do I get a website and domain when I register?',
-      a: 'Yes. Upon account creation, your personalized website (username.deos.com) is provisioned instantly, along with DNS configuration tools to connect your custom domain with free automatic SSL.',
+      a: 'Yes. Upon account creation, your personalized website (username.eviona.com) is provisioned instantly, along with DNS configuration tools to connect your custom domain with free automatic SSL.',
     },
   ],
 };
@@ -143,7 +143,7 @@ const DEFAULT_FEATURES: SystemFeatureSettings = {
   defaultCoinRateUsd: 1.0,
 };
 
-const STORAGE_KEY = 'deos_platform_settings_v2';
+const STORAGE_KEY = 'eviona_platform_settings_v3';
 
 const PlatformSettingsContext = createContext<PlatformSettingsState | undefined>(undefined);
 
@@ -206,6 +206,10 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
   useEffect(() => {
     try {
       const root = document.documentElement;
+      root.style.setProperty('--eviona-primary', theme.primaryColor);
+      root.style.setProperty('--eviona-secondary', theme.secondaryColor);
+      root.style.setProperty('--eviona-accent', theme.accentColor);
+      root.style.setProperty('--eviona-radius', theme.borderRadius);
       root.style.setProperty('--deos-primary', theme.primaryColor);
       root.style.setProperty('--deos-secondary', theme.secondaryColor);
       root.style.setProperty('--deos-accent', theme.accentColor);

@@ -31,24 +31,24 @@ export const Header: React.FC<HeaderProps> = ({
   const getPageTitle = (view: ViewType): string => {
     switch (view) {
       case 'dashboard': return 'Dashboard';
-      case 'wallet': return 'Wallet & Transactions';
-      case 'deposit': return 'Deposit Funds & DEOS Coin';
-      case 'binary': return 'Binary Network Engine';
+      case 'wallet': return 'Eviona Wallet';
+      case 'deposit': return 'Deposit Funds & EVO Token';
+      case 'binary': return 'Eviona Network';
       case 'partner': return 'Partner Center';
-      case 'marketplace': return 'DEOS Marketplace';
+      case 'marketplace': return 'Eviona Marketplace';
       case 'sellers': return 'Sellers Dashboard';
-      case 'academy': return 'Digital Entrepreneur Academy';
-      case 'builder': return 'Website Builder Studio';
-      case 'crm': return 'CRM & Sales Pipeline';
-      case 'ai-center': return 'AI Business Center';
+      case 'academy': return 'Eviona Academy';
+      case 'builder': return 'Eviona Business Center';
+      case 'crm': return 'Eviona CRM';
+      case 'ai-center': return 'Eviona AI';
       case 'marketing': return 'Marketing Tools & Automation';
-      case 'analytics': return 'Performance & Analytics';
+      case 'analytics': return 'Eviona Analytics';
       case 'events': return 'Events & Live Webinars';
       case 'team': return 'Team Management & Roles';
       case 'settings': return 'Settings & Preferences';
       case 'support': return 'Support & Help Desk';
       case 'admin': return 'Admin Control Center';
-      default: return 'DEOS Business OS';
+      default: return 'Eviona Ecosystem';
     }
   };
 

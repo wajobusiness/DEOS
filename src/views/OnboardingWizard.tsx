@@ -55,7 +55,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText('TX9xZgHkM92pqWrtY8dKl9mTRC20AddressDEOS');
+    navigator.clipboard.writeText('TX9xZgHkM92pqWrtY8dKl9mTRC20AddressEVO');
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -79,11 +79,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 font-black text-lg">
-              D
+              E
             </div>
             <div>
               <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Welcome to DEOS, {currentUser.name}! 👋
+                Welcome to Eviona Ecosystem, {currentUser.name}! 👋
               </h1>
               <p className="text-xs text-slate-400">Step-by-step account activation & business launch</p>
             </div>
@@ -410,7 +410,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <input
                       type="text"
                       readOnly
-                      value="TX9xZgHkM92pqWrtY8dKl9mTRC20AddressDEOS"
+                      value="TX9xZgHkM92pqWrtY8dKl9mTRC20AddressEVO"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[10px] text-slate-300 outline-none"
                     />
                     <button
@@ -470,7 +470,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <iframe
                   className="w-full h-full absolute inset-0 rounded-3xl"
                   src="https://www.youtube-nocookie.com/embed/Td8gmK7HrS4?autoplay=1&rel=0&modestbranding=1"
-                  title="DEOS Platform Quickstart Masterclass"
+                  title="Eviona Ecosystem Quickstart Masterclass"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
@@ -492,7 +492,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>DEOS Platform Quickstart (3:15)</span>
+                      <span>Eviona Ecosystem Quickstart (3:15)</span>
                     </div>
                     <span className="text-emerald-400 font-bold">1080p HD</span>
                   </div>
@@ -516,7 +516,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {/* Bottom Footer */}
       <div className="max-w-4xl w-full mx-auto text-center pt-6 border-t border-slate-800 text-xs text-slate-500">
-        DEOS Platform • 100% Encrypted & Authenticated Architecture
+        Eviona Ecosystem • 100% Encrypted & Authenticated Architecture
       </div>
     </div>
   );

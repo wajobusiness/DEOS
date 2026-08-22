@@ -212,13 +212,13 @@ export const SupportCommunity: React.FC = () => {
           <div className="bg-gradient-to-tr from-indigo-950 to-purple-950 text-white rounded-2xl p-6 border border-indigo-500/30 shadow-card space-y-3">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-indigo-300" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">DEOS Global Community</h4>
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Eviona Global Community</h4>
             </div>
             <p className="text-xs text-indigo-200">
               Join 50,000+ entrepreneurs sharing funnels, marketing strategies, and mastermind insights.
             </p>
             <button
-              onClick={() => alert('Redirecting to DEOS Community Discord / Forum...')}
+              onClick={() => alert('Redirecting to Eviona Community Discord / Forum...')}
               className="w-full py-2.5 rounded-xl bg-white text-indigo-950 font-bold text-xs shadow-md"
             >
               Join Discussion Forum

@@ -51,8 +51,8 @@ export const WebsiteBuilder: React.FC = () => {
     },
     {
       id: 'join_block',
-      type: 'Join / Become a Member (DEOS Embedded)',
-      headline: 'Ready to Launch Your Own Business with DEOS?',
+      type: 'Join / Become a Member (Eviona Embedded)',
+      headline: 'Ready to Launch Your Own Business with Eviona Ecosystem?',
       subhead: 'Join our team directly. Get instant access to websites, CRM, marketplace, and 10% binary compensation.',
       cta: 'Register as Member under John Doe',
       bg: '#4F46E5',
@@ -79,7 +79,7 @@ export const WebsiteBuilder: React.FC = () => {
   const addEmbeddedJoinBlock = () => {
     const newBlock: BuilderSection = {
       id: `join_${Date.now()}`,
-      type: 'Join / Become a Member (DEOS Embedded)',
+      type: 'Join / Become a Member (Eviona Embedded)',
       headline: 'Partner With Us Today',
       subhead: 'Start your entrepreneurial journey with our mentorship and tools.',
       cta: 'Join My Network',
@@ -105,7 +105,7 @@ export const WebsiteBuilder: React.FC = () => {
               <Badge variant="success" size="sm">● Published</Badge>
             </div>
             <p className="text-[10px] text-slate-500">
-              Subdomain: <code className="text-indigo-600 font-mono">johndoe.deos.com</code>
+              Subdomain: <code className="text-indigo-600 font-mono">johndoe.eviona.com</code>
             </p>
           </div>
         </div>

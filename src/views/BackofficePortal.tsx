@@ -77,7 +77,7 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-white tracking-tight">DEOS Backoffice</span>
+                <span className="text-sm font-black text-white tracking-tight">Eviona Backoffice</span>
                 <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 text-[10px] font-extrabold uppercase tracking-wider">
                   Super Admin & Staff Mode
                 </span>
@@ -139,12 +139,12 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
           </div>
 
           <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider">
-            <span>Restricted Backoffice Gateway (Book 7 §4)</span>
+            <span>Restricted Backoffice Gateway</span>
           </div>
 
           <h2 className="text-2xl font-black text-white tracking-tight">Staff & Super Admin Sign In</h2>
           <p className="text-xs text-slate-400">
-            Authorized DEOS personnel only. Unauthorized access attempts are monitored and logged.
+            Authorized Eviona personnel only. Unauthorized access attempts are monitored and logged.
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
             <input
               type="email"
               required
-              placeholder="admin@deos.com"
+              placeholder="admin@eviona.com"
               value={staffEmail}
               onChange={(e) => setStaffEmail(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-rose-500 font-mono"

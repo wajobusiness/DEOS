@@ -48,7 +48,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const totalEarnings = currentUser.walletBalance + (currentUser.binaryVolume * 0.10);
   const binaryBV = currentUser.binaryVolume || 0;
   const directReferrals = currentUser.activeReferrals || 0;
-  const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.deos.com`;
+  const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.eviona.com`;
 
   const dynamicWelcome = (dashboard.welcomeHeadline || 'Good morning, {name}! 👋').replace(
     '{name}',
@@ -135,7 +135,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         <MetricCard
           title="Wallet Balance"
           value={`$${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          subtitle="DEOS Available"
+          subtitle="EVO Available"
           icon={Wallet}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
@@ -306,11 +306,11 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                   <Wallet className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">DEOS Wallet</p>
+                  <p className="font-semibold text-slate-800">Eviona Wallet</p>
                   <p className="text-[10px] text-slate-400">Initialized</p>
                 </div>
               </div>
-              <span className="font-bold text-slate-700">0.00 DEOS</span>
+              <span className="font-bold text-slate-700">0.00 EVO</span>
             </div>
 
             <div className="flex items-center justify-between text-xs">

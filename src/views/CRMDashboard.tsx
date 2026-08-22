@@ -65,7 +65,7 @@ export const CRMDashboard: React.FC = () => {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
       leadSource: 'member_landing_page',
       ownerType: 'member',
-      ownerId: 'DEOS100245',
+      ownerId: 'EVO100245',
       ownerName: 'You',
       source: newLeadSource,
       status: 'New',

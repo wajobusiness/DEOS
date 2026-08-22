@@ -27,8 +27,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_MEMBER_KEY = 'deos_active_member_profile';
-const LOCAL_STORAGE_USER_KEY = 'deos_active_user_cache';
+const LOCAL_STORAGE_MEMBER_KEY = 'eviona_active_member_profile';
+const LOCAL_STORAGE_USER_KEY = 'eviona_active_user_cache';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -57,8 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const buildProfileFromUser = (authUser: { id: string; email?: string; user_metadata?: any; created_at?: string }): Member => {
     const metaName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Entrepreneur';
     const metaCountry = authUser.user_metadata?.country || 'Global';
-    const metaSponsor = authUser.user_metadata?.sponsorCode || 'DEOS100245';
-    const memberCode = authUser.user_metadata?.memberCode || `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
+    const metaSponsor = authUser.user_metadata?.sponsorCode || 'EVO100245';
+    const memberCode = authUser.user_metadata?.memberCode || `EVO${Math.floor(100000 + Math.random() * 900000)}`;
 
     // Check if onboarding was already completed in localStorage or metadata
     let hasCompleted = false;
@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       id: authUser.id,
       name: metaName,
-      email: authUser.email || 'entrepreneur@deos.com',
+      email: authUser.email || 'entrepreneur@eviona.com',
       phone: authUser.user_metadata?.phone || '',
       country: metaCountry,
       avatar: authUser.user_metadata?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -194,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Subscribe to live auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMounted) return;
-      console.log(`[DEOS Auth Event] ${event}`, newSession?.user?.email || 'No session');
+      console.log(`[Eviona Auth Event] ${event}`, newSession?.user?.email || 'No session');
 
       setSession(newSession);
       setUser(newSession?.user || null);
@@ -227,7 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
-      const code = `DEOS${Math.floor(100000 + Math.random() * 900000)}`;
+      const code = `EVO${Math.floor(100000 + Math.random() * 900000)}`;
 
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
@@ -236,7 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             name,
             country: country || 'Global',
-            sponsorCode: sponsorCode || 'DEOS100245',
+            sponsorCode: sponsorCode || 'EVO100245',
             memberCode: code,
             hasCompletedOnboarding: false,
           },
