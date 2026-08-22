@@ -476,17 +476,41 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 value={brandingForm.platformName}
                 onChange={(e) => setBrandingForm({ ...brandingForm, platformName: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+                placeholder="DEOS"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Tagline</label>
+              <label className="block font-bold text-slate-300 mb-1">Tagline / Header Writeup</label>
               <input
                 type="text"
                 value={brandingForm.tagline}
                 onChange={(e) => setBrandingForm({ ...brandingForm, tagline: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+                placeholder="Digital Entrepreneurship OS"
               />
+            </div>
+
+            <div className="md:col-span-2 p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <label className="block font-bold text-slate-300">Brand Logo Image URL (Header & Navbar)</label>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <input
+                  type="text"
+                  value={brandingForm.logoUrl || ''}
+                  onChange={(e) => setBrandingForm({ ...brandingForm, logoUrl: e.target.value, lightLogoUrl: e.target.value })}
+                  placeholder="https://your-cdn.com/logo.png (or leave blank for high-tech icon badge)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-indigo-500 font-mono text-xs"
+                />
+                {brandingForm.logoUrl && (
+                  <div className="shrink-0 p-1.5 bg-slate-900 rounded-xl border border-slate-700 flex items-center gap-2">
+                    <img src={brandingForm.logoUrl} alt="Logo Preview" className="h-8 max-w-[120px] object-contain rounded-lg" />
+                    <span className="text-[10px] text-emerald-400 font-bold pr-1">Preview</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-500">
+                When provided, this logo image replaces the default icon badge across the header, sidebar, login modals, and emails.
+              </p>
             </div>
 
             <div>

@@ -42,7 +42,7 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
-  const { branding, homepage } = usePlatformSettings();
+  const { branding, theme, homepage } = usePlatformSettings();
 
   // Auth Modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -254,18 +254,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            {branding.logoUrl || branding.lightLogoUrl ? (
+              <img
+                src={branding.logoUrl || branding.lightLogoUrl}
+                alt={branding.platformName}
+                className="h-10 w-auto rounded-xl object-contain shadow-lg"
+              />
+            ) : (
+              <div
+                className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform text-white"
+                style={{
+                  background: `linear-gradient(135deg, ${theme.primaryColor || '#4F46E5'}, ${theme.secondaryColor || '#9333EA'})`,
+                }}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl text-white tracking-tight">DEOS</span>
+                <span className="font-extrabold text-xl text-white tracking-tight group-hover:text-indigo-400 transition-colors">
+                  {branding.platformName}
+                </span>
                 <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Global
+                  OS
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
-                Digital Entrepreneurship OS
+                {branding.tagline || 'Digital Entrepreneurship OS'}
               </p>
             </div>
           </div>
