@@ -10,6 +10,9 @@ interface AuthModalProps {
   initialMode?: 'login' | 'register';
   onSuccess?: () => void;
   defaultSponsorCode?: string;
+  initialName?: string;
+  initialEmail?: string;
+  initialPhone?: string;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -18,11 +21,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onSuccess,
   defaultSponsorCode = 'DEOS100245',
+  initialName = '',
+  initialEmail = '',
+  initialPhone = '',
 }) => {
   const { branding } = usePlatformSettings();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState('United States');
   const [sponsorCode, setSponsorCode] = useState(defaultSponsorCode);
@@ -35,10 +41,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   React.useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
+      if (initialName) setName(initialName);
+      if (initialEmail) setEmail(initialEmail);
+      if (defaultSponsorCode) setSponsorCode(defaultSponsorCode);
       setErrorMsg(null);
       setSuccessMsg(null);
     }
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, initialName, initialEmail, defaultSponsorCode]);
 
   if (!isOpen) return null;
 
