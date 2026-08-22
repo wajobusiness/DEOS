@@ -28,7 +28,7 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
   currentUser,
   onNavigateToMemberOS,
 }) => {
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
   const [staffEmail, setStaffEmail] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [staffError, setStaffError] = useState<string | null>(null);
@@ -100,6 +100,19 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Switch to Member OS (/)</span>
+            </button>
+
+            <button
+              onClick={async () => {
+                setOverrideStaffAuth(false);
+                await signOut();
+                window.history.pushState(null, '', '/backoffice');
+              }}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/80 border border-slate-700 hover:border-rose-700 text-slate-300 hover:text-rose-400 text-xs font-bold transition-all flex items-center gap-1.5"
+              title="Sign Out of Backoffice"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Staff Sign Out</span>
             </button>
           </div>
         </header>
@@ -203,3 +216,4 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
     </div>
   );
 };
+
