@@ -308,12 +308,12 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn font-sans">
+    <div className="flex flex-col lg:flex-row gap-6 items-start animate-fadeIn font-sans">
       {/* Toast Notification */}
       {saveSuccessMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-between shadow-xl animate-slideDown">
+        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-between shadow-2xl animate-slideDown max-w-md">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>{saveSuccessMsg}</span>
           </div>
           <button onClick={() => setSaveSuccessMsg(null)}>
@@ -322,38 +322,113 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
         </div>
       )}
 
-      {/* Navigation Tab Rail */}
-      <div className="bg-slate-900/90 rounded-2xl p-2 border border-slate-800 flex items-center gap-1.5 overflow-x-auto">
-        {[
-          { id: 'overview', label: 'Overview & BI', icon: TrendingUp },
-          { id: 'branding', label: 'Global Branding', icon: Globe },
-          { id: 'appearance', label: 'Theme Engine', icon: Palette },
-          { id: 'homepage_cms', label: 'Homepage CMS & FAQ', icon: Layout },
-          { id: 'dashboard_config', label: 'Dashboard & Alerts', icon: Megaphone },
-          { id: 'navigation', label: 'Menu Management', icon: Sliders },
-          { id: 'users', label: 'Users & RBAC', icon: Users },
-          { id: 'memberships', label: 'Plans & Pricing', icon: Layers },
-          { id: 'marketplace', label: 'Marketplace', icon: Store },
-          { id: 'corporate_leads', label: 'Corporate Leads (Book 7)', icon: Building2 },
-          { id: 'treasury', label: 'Treasury & Payouts', icon: Wallet },
-          { id: 'binary_rules', label: 'Binary MLM', icon: Network },
-          { id: 'system', label: 'System Flags & Coin', icon: Settings },
-          { id: 'audit_log', label: 'Audit Trail (Book 17)', icon: FileText },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-gradient-to-r from-rose-600 to-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* ADMIN SIDEBAR NAVIGATION (BY THE SIDE) */}
+      <aside className="w-full lg:w-72 shrink-0 bg-slate-900/90 rounded-3xl p-4 border border-slate-800 space-y-6 lg:sticky lg:top-24 shadow-xl backdrop-blur-md">
+        {/* Header Indicator */}
+        <div className="px-3 py-2.5 bg-slate-950/80 rounded-2xl border border-slate-800/80 flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-rose-600/30">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div className="truncate">
+            <h4 className="text-xs font-extrabold text-white leading-tight">Admin Console</h4>
+            <p className="text-[10px] text-slate-400 font-mono">14 Management Modules</p>
+          </div>
+        </div>
+
+        {/* Group 1: Analytics & BI */}
+        <div className="space-y-1">
+          <span className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+            Analytics & BI
+          </span>
+          {[
+            { id: 'overview', label: 'Overview & BI', icon: TrendingUp },
+            { id: 'audit_log', label: 'Audit Trail (Book 17)', icon: FileText, badge: 'Ledger' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-rose-600 to-indigo-600 text-white shadow-md shadow-rose-600/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </div>
+              {tab.badge && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-slate-800 text-slate-300">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Group 2: Configuration & Theming Engine */}
+        <div className="space-y-1">
+          <span className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+            Configuration Engine
+          </span>
+          {[
+            { id: 'branding', label: 'Global Branding', icon: Globe },
+            { id: 'appearance', label: 'Theme Engine (CSS)', icon: Palette },
+            { id: 'homepage_cms', label: 'Homepage CMS & FAQ', icon: Layout },
+            { id: 'dashboard_config', label: 'Dashboard & Alerts', icon: Megaphone },
+            { id: 'navigation', label: 'Menu Management', icon: Sliders },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-rose-600 to-indigo-600 text-white shadow-md shadow-rose-600/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Group 3: Operations & Governance */}
+        <div className="space-y-1">
+          <span className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+            Operations & Rules
+          </span>
+          {[
+            { id: 'users', label: 'Users & RBAC', icon: Users },
+            { id: 'memberships', label: 'Plans & Pricing', icon: Layers },
+            { id: 'marketplace', label: 'Marketplace Moderation', icon: Store },
+            { id: 'corporate_leads', label: 'Corporate Leads (Book 7)', icon: Building2 },
+            { id: 'treasury', label: 'Treasury & Payouts', icon: Wallet },
+            { id: 'binary_rules', label: 'Binary MLM Engine', icon: Network },
+            { id: 'system', label: 'System Flags & Coin', icon: Settings },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-rose-600 to-indigo-600 text-white shadow-md shadow-rose-600/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* MAIN ADMIN WORKSPACE (RIGHT SIDE) */}
+      <main className="flex-1 min-w-0 w-full space-y-6">
 
       {/* ========================================================================= */}
       {/* 1. OVERVIEW & BI                                                          */}
@@ -1223,6 +1298,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 };
