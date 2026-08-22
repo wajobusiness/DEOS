@@ -10,6 +10,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Member, ViewType } from '../../types';
+import { usePlatformSettings } from '../../context/PlatformSettingsContext';
 
 interface HeaderProps {
   currentUser: Member;
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileSidebar,
   onNavigate,
 }) => {
+  const { branding, dashboard } = usePlatformSettings();
   const getPageTitle = (view: ViewType): string => {
     switch (view) {
       case 'dashboard': return 'Dashboard';

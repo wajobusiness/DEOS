@@ -51,11 +51,16 @@ export interface PlatformBrandingSettings {
   platformName: string;
   tagline: string;
   logoUrl: string;
+  darkLogoUrl?: string;
+  lightLogoUrl?: string;
   faviconUrl: string;
   companyName: string;
   supportEmail: string;
   supportPhone: string;
   copyrightText: string;
+  defaultCurrency: string;
+  defaultLanguage: string;
+  timezone: string;
   socialLinks: {
     twitter?: string;
     telegram?: string;
@@ -72,6 +77,7 @@ export interface PlatformThemeSettings {
   fontFamily: string;
   borderRadius: string;
   darkModeDefault: boolean;
+  buttonStyle: 'rounded' | 'pill' | 'square';
 }
 
 export interface HomepageContentSettings {
@@ -86,6 +92,30 @@ export interface HomepageContentSettings {
     text: string;
     link?: string;
   };
+  stats: {
+    activeUsers: string;
+    productsCount: string;
+    totalPaidCommissions: string;
+    uptimePercentage: string;
+  };
+  faqList: {
+    q: string;
+    a: string;
+  }[];
+}
+
+export interface DashboardConfigSettings {
+  welcomeHeadline: string;
+  welcomeSubtitle: string;
+  announcementBar: {
+    enabled: boolean;
+    text: string;
+    severity: 'info' | 'warning' | 'success';
+  };
+}
+
+export interface NavigationMenuConfig {
+  enabledViews: Partial<Record<ViewType, boolean>>;
 }
 
 export interface SystemFeatureSettings {

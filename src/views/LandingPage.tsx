@@ -858,7 +858,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
         </section>
 
-        {/* FAQ SECTION */}
+          {/* FAQ SECTION */}
         <section id="faq" className="py-20 px-4 max-w-4xl mx-auto border-t border-slate-800/80">
           <div className="text-center space-y-3 mb-12">
             <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400">Common Questions</h2>
@@ -866,7 +866,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
 
           <div className="space-y-3">
-            {faqs.map((faq, index) => {
+            {(homepage.faqList && homepage.faqList.length > 0 ? homepage.faqList : [
+              { q: 'What is the DEOS Platform?', a: 'DEOS is the complete all-in-one infrastructure uniting multi-tenant personal websites, CRM funnels, a digital marketplace, AI business tools, academy masterclasses, and an immutable 10% binary compensation network.' },
+              { q: 'How does the 10% Flat Binary Commission work?', a: 'Under Book 4 §7, you earn a flat 10% commission on your weaker-leg Business Volume (BV) every weekly settlement cycle, with all un-matched volume carried forward indefinitely.' }
+            ]).map((faq, index) => {
               const isOpen = activeFaq === index;
               return (
                 <div
@@ -898,7 +901,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               Ready to Launch Your Automated Business?
             </h3>
             <p className="text-xs sm:text-sm text-indigo-200 max-w-xl mx-auto leading-relaxed">
-              Join thousands of digital entrepreneurs scaling their brand, team, and income on the DEOS global operating system.
+              Join thousands of digital entrepreneurs scaling their brand, team, and income on the {branding.platformName} global operating system.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
@@ -922,14 +925,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
       <footer className="border-t border-slate-800/80 py-10 px-4 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4 relative z-10">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-indigo-500" />
-          <span className="font-bold text-slate-400">DEOS Platform</span>
-          <span>© 2026 DEOS Platform. All Rights Reserved.</span>
+          <span className="font-bold text-slate-400">{branding.platformName}</span>
+          <span>{branding.copyrightText || '© 2026 DEOS Operating System. All Rights Reserved.'}</span>
         </div>
         <div className="flex gap-6">
           <button onClick={() => onEnterApp('marketplace')} className="hover:text-slate-400">Marketplace</button>
           <button onClick={() => setIsCorporateContactOpen(true)} className="hover:text-slate-400">Enterprise Contact</button>
           <a href="#" className="hover:text-slate-400">Terms of Service</a>
           <a href="#" className="hover:text-slate-400">Privacy Policy</a>
+          <a href={`mailto:${branding.supportEmail}`} className="hover:text-indigo-400">{branding.supportEmail}</a>
         </div>
       </footer>
     </div>

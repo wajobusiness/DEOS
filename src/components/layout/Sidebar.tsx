@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ViewType, Member } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { usePlatformSettings } from '../../context/PlatformSettingsContext';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -44,7 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { signOut } = useAuth();
-  const mainNavItems = [
+  const { branding, navigation } = usePlatformSettings();
+
+  const allNavItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'wallet' as ViewType, label: 'Wallet', icon: Wallet, badge: 'USDT' },
     { id: 'binary' as ViewType, label: 'Binary Network', icon: Network },
@@ -63,6 +66,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings' as ViewType, label: 'Settings', icon: Settings },
     { id: 'support' as ViewType, label: 'Support & Help', icon: HelpCircle },
   ];
+
+  const mainNavItems = allNavItems.filter((item) => navigation.enabledViews[item.id] !== false);
 
   return (
     <>
@@ -85,18 +90,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => onNavigate('landing')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.platformName} className="h-9 w-auto rounded-lg object-contain" />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-white tracking-tight">DEOS</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                <span className="font-extrabold text-white text-base tracking-tight leading-none group-hover:text-indigo-400 transition-colors">
+                  {branding.platformName}
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                   {isAdminMode ? 'Admin' : 'OS'}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
-                Your Business. Your Legacy.
+              <p className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5 truncate max-w-[140px]">
+                {branding.tagline || 'Your Business. Your Legacy.'}
               </p>
             </div>
           </div>

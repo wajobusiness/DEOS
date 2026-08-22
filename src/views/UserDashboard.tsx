@@ -30,6 +30,7 @@ import { Member, ViewType } from '../types';
 import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
 import { LaunchWizardModal } from '../components/common/LaunchWizardModal';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
 
 interface UserDashboardProps {
   currentUser: Member;
@@ -41,6 +42,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   onNavigate,
 }) => {
   const [showWizard, setShowWizard] = React.useState(false);
+  const { branding, dashboard } = usePlatformSettings();
 
   // Dynamic user computations based on authenticated member profile
   const totalEarnings = currentUser.walletBalance + (currentUser.binaryVolume * 0.10);
@@ -48,8 +50,31 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const directReferrals = currentUser.activeReferrals || 0;
   const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.deos.com`;
 
+  const dynamicWelcome = (dashboard.welcomeHeadline || 'Good morning, {name}! 👋').replace(
+    '{name}',
+    currentUser.name || 'Entrepreneur'
+  );
+
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
+      {/* Dynamic Global Admin Announcement Banner */}
+      {dashboard.announcementBar?.enabled && (
+        <div
+          className={`p-4 rounded-2xl border text-xs font-bold flex items-center justify-between shadow-sm animate-slideDown ${
+            dashboard.announcementBar.severity === 'warning'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : dashboard.announcementBar.severity === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-indigo-50 border-indigo-200 text-indigo-900'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <Zap className="w-4 h-4 shrink-0" />
+            <span>{dashboard.announcementBar.text}</span>
+          </div>
+        </div>
+      )}
+
       {/* Launch Wizard Modal */}
       <LaunchWizardModal
         isOpen={showWizard}
@@ -66,14 +91,14 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Good morning, {currentUser.name}! 👋
+                {dynamicWelcome}
               </h2>
               <Badge variant="purple" size="sm">
                 {currentUser.plan.toUpperCase()} PLAN
               </Badge>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Member ID: <span className="font-mono font-bold text-indigo-600">{currentUser.id}</span> • Renewal Date: {currentUser.renewalDate}
+              {branding.platformName} ID: <span className="font-mono font-bold text-indigo-600">{currentUser.id}</span> • Renewal Date: {currentUser.renewalDate}
             </p>
           </div>
         </div>

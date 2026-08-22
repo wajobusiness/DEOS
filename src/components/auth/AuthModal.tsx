@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User, Globe, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePlatformSettings } from '../../context/PlatformSettingsContext';
 import { supabase } from '../../lib/supabaseClient';
 
 interface AuthModalProps {
@@ -18,6 +19,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSuccess,
   defaultSponsorCode = 'DEOS100245',
 }) => {
+  const { branding } = usePlatformSettings();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
