@@ -171,27 +171,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Banner & Profile Card */}
         <div className="p-3 border-t border-[#1F2937] space-y-3">
-          {/* Admin Switcher Pill */}
-          <div className="bg-gradient-to-r from-indigo-950/60 to-purple-950/60 rounded-xl p-3 border border-indigo-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-indigo-400" />
-              <div>
-                <p className="text-[11px] font-semibold text-white">
-                  {isAdminMode ? 'Super Admin Mode' : 'Growth Plan Active'}
-                </p>
-                <p className="text-[9px] text-slate-400">
-                  {isAdminMode ? 'Platform management' : 'Renews May 12, 2025'}
-                </p>
+          {/* Membership Tier or Admin Switcher Pill */}
+          {currentUser.role === 'super_admin' || currentUser.role === 'admin' || currentUser.role === 'support_staff' ? (
+            <div className="bg-gradient-to-r from-rose-950/60 via-slate-900 to-indigo-950/60 rounded-xl p-3 border border-rose-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-rose-400" />
+                <div>
+                  <p className="text-[11px] font-bold text-white">
+                    {currentUser.role === 'super_admin' ? 'Super Admin' : 'Staff Admin'}
+                  </p>
+                  <p className="text-[9px] text-slate-400">
+                    Platform Control Active
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={onToggleAdminMode}
+                className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors flex items-center gap-1 shadow-xs"
+              >
+                <span>Backoffice</span>
+              </button>
             </div>
-            <button
-              onClick={onToggleAdminMode}
-              className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white transition-colors flex items-center gap-1"
-            >
-              <ShieldCheck className="w-3 h-3" />
-              <span>Backoffice</span>
-            </button>
-          </div>
+          ) : (
+            <div className="bg-gradient-to-r from-indigo-950/60 to-purple-950/60 rounded-xl p-3 border border-indigo-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-indigo-400" />
+                <div>
+                  <p className="text-[11px] font-semibold text-white">
+                    {currentUser.plan.toUpperCase()} Plan Active
+                  </p>
+                  <p className="text-[9px] text-slate-400">
+                    Auto-Renews: {currentUser.renewalDate || '1 Year'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                ACTIVE
+              </span>
+            </div>
+          )}
 
           {/* User Profile Footer */}
           <div className="flex items-center justify-between p-2 rounded-xl bg-[#111827] border border-[#1F2937]">

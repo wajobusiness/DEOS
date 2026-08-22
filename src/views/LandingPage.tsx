@@ -35,12 +35,15 @@ import {
 import { ViewType, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
 import { AuthModal } from '../components/auth/AuthModal';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
 
 interface LandingPageProps {
   onEnterApp: (view?: ViewType) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
+  const { branding, homepage } = usePlatformSettings();
+
   // Auth Modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
@@ -404,20 +407,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           {/* Top Pill */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 text-xs font-bold shadow-inner">
             <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
-            <span>The Operating System for Modern Digital Entrepreneurs</span>
+            <span>{homepage.heroBadge}</span>
           </div>
 
           {/* Headline */}
           <div className="max-w-4xl mx-auto space-y-4">
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
-              Build Your Digital Empire. <br />
+              {homepage.heroHeadline} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400">
-                Automate Income. Scale Globally.
+                {homepage.heroHighlightText}
               </span>
             </h1>
             <p className="text-sm sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Launch your automated business website, tap into high-yielding digital products,
-              capture CRM leads, and build passive residual wealth through an immutable 10% binary network.
+              {homepage.heroSubtitle}
             </p>
           </div>
 
@@ -453,7 +455,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   type="submit"
                   className="w-full sm:w-1/2 py-3 px-5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                 >
-                  <span>{isLeadCaptured ? 'Redirecting...' : 'Claim Free Website & OS'}</span>
+                  <span>{isLeadCaptured ? 'Redirecting...' : (homepage.heroCtaText || 'Claim Free Website & OS')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -471,7 +473,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 <>
                   <iframe
                     className="w-full h-full absolute inset-0 rounded-3xl"
-                    src="https://www.youtube-nocookie.com/embed/Td8gmK7HrS4?autoplay=1&rel=0&modestbranding=1"
+                    src={`https://www.youtube-nocookie.com/embed/${
+                      homepage.heroVideoUrl.includes('youtu.be/')
+                        ? homepage.heroVideoUrl.split('youtu.be/')[1]?.split('?')[0]
+                        : homepage.heroVideoUrl.split('v=')[1]?.split('&')[0] || 'Td8gmK7HrS4'
+                    }?autoplay=1&rel=0&modestbranding=1`}
                     title="DEOS Platform Master Tour"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen

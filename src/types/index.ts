@@ -45,6 +45,59 @@ export type ViewType =
   | 'support'
   | 'admin';
 
+export type UserRole = 'super_admin' | 'admin' | 'support_staff' | 'member';
+
+export interface PlatformBrandingSettings {
+  platformName: string;
+  tagline: string;
+  logoUrl: string;
+  faviconUrl: string;
+  companyName: string;
+  supportEmail: string;
+  supportPhone: string;
+  copyrightText: string;
+  socialLinks: {
+    twitter?: string;
+    telegram?: string;
+    discord?: string;
+    youtube?: string;
+    instagram?: string;
+  };
+}
+
+export interface PlatformThemeSettings {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  fontFamily: string;
+  borderRadius: string;
+  darkModeDefault: boolean;
+}
+
+export interface HomepageContentSettings {
+  heroBadge: string;
+  heroHeadline: string;
+  heroHighlightText: string;
+  heroSubtitle: string;
+  heroCtaText: string;
+  heroVideoUrl: string;
+  announcementBanner: {
+    enabled: boolean;
+    text: string;
+    link?: string;
+  };
+}
+
+export interface SystemFeatureSettings {
+  maintenanceMode: boolean;
+  registrationOpen: boolean;
+  withdrawalsEnabled: boolean;
+  binaryEngineActive: boolean;
+  marketplaceSellingEnabled: boolean;
+  aiCenterEnabled: boolean;
+  defaultCoinRateUsd: number;
+}
+
 export interface Member {
   id: string;
   name: string;
@@ -53,7 +106,7 @@ export interface Member {
   country: string;
   avatar: string;
   plan: PlanTier;
-  role: 'member' | 'admin' | 'super_admin';
+  role: UserRole;
   status: 'active' | 'suspended' | 'banned';
   memberSince: string;
   renewalDate: string;

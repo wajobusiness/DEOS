@@ -27,24 +27,138 @@ import {
   AlertCircle,
   Clock,
   Layers,
-  Network
+  Network,
+  Palette,
+  Globe,
+  Store,
+  Wallet,
+  Building2,
+  Mail,
+  Shield,
+  FileText,
+  Key,
+  Smartphone,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
-import { initialKYCList, initialPayoutQueue, initialAuditLogs, KYCSubmission, PayoutRequest, AuditLogEntry } from '../store/useAppStore';
-import { systemStatuses } from '../store/mockData';
+import {
+  initialKYCList,
+  initialPayoutQueue,
+  initialAuditLogs,
+  KYCSubmission,
+  PayoutRequest,
+  AuditLogEntry,
+} from '../store/useAppStore';
 import { Badge } from '../components/common/Badge';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { UserRole, Member } from '../types';
 
-export const SuperAdminPanel: React.FC = () => {
+interface SuperAdminPanelProps {
+  onImpersonateUser?: (user: Member) => void;
+}
+
+export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateUser }) => {
+  const {
+    branding,
+    theme,
+    homepage,
+    features,
+    updateBranding,
+    updateTheme,
+    updateHomepage,
+    updateFeatures,
+  } = usePlatformSettings();
+
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'corporate_leads' | 'kyc' | 'treasury' | 'binary_rules' | 'marketplace' | 'academy' | 'audit_log' | 'system'
+    | 'overview'
+    | 'branding'
+    | 'appearance'
+    | 'users'
+    | 'memberships'
+    | 'marketplace'
+    | 'corporate_leads'
+    | 'treasury'
+    | 'binary_rules'
+    | 'academy'
+    | 'domains'
+    | 'audit_log'
+    | 'system'
   >('overview');
 
+  // Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialAuditLogs);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Branding Form State
+  const [brandingForm, setBrandingForm] = useState(branding);
+  // Theme Form State
+  const [themeForm, setThemeForm] = useState(theme);
+  // Homepage Form State
+  const [homepageForm, setHomepageForm] = useState(homepage);
+  // Feature Flags Form State
+  const [featuresForm, setFeaturesForm] = useState(features);
+
+  // User Management State
+  const [userSearch, setUserSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [usersList, setUsersList] = useState<any[]>([
+    {
+      id: 'DEOS-USR-101',
+      name: 'Alex Morgan',
+      email: 'alex@example.com',
+      role: 'member',
+      plan: 'growth',
+      status: 'active',
+      walletBalance: 3450.0,
+      binaryVolume: 125000,
+      activeReferrals: 14,
+      joinedDate: 'May 12, 2024',
+    },
+    {
+      id: 'DEOS-USR-102',
+      name: 'Elena Rostova',
+      email: 'elena@cryptoempire.io',
+      role: 'member',
+      plan: 'legacy',
+      status: 'active',
+      walletBalance: 12840.0,
+      binaryVolume: 340000,
+      activeReferrals: 42,
+      joinedDate: 'Apr 02, 2024',
+    },
+    {
+      id: 'DEOS-USR-103',
+      name: 'Marcus Vance',
+      email: 'marcus@deos-admin.internal',
+      role: 'admin',
+      plan: 'legacy',
+      status: 'active',
+      walletBalance: 0.0,
+      binaryVolume: 0,
+      activeReferrals: 0,
+      joinedDate: 'Jan 15, 2024',
+    },
+    {
+      id: 'DEOS-USR-104',
+      name: 'Sarah Chen',
+      email: 'sarah.c@growthlabs.co',
+      role: 'member',
+      plan: 'launch',
+      status: 'suspended',
+      walletBalance: 120.0,
+      binaryVolume: 12000,
+      activeReferrals: 2,
+      joinedDate: 'Jun 19, 2024',
+    },
+  ]);
+
+  // KYC & Payouts
   const [kycList, setKycList] = useState<KYCSubmission[]>(initialKYCList);
   const [payoutList, setPayoutList] = useState<PayoutRequest[]>(initialPayoutQueue);
   const [selectedKyc, setSelectedKyc] = useState<KYCSubmission | null>(null);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialAuditLogs);
-  const [sustainabilityFund, setSustainabilityFund] = useState(45820.00);
+  const [sustainabilityFund, setSustainabilityFund] = useState(45820.0);
 
-  // Corporate Leads State
+  // Corporate Inbound Leads (Book 7)
   const [corporateLeads, setCorporateLeads] = useState<any[]>([
     {
       id: 'LED-CORP-201',
@@ -58,268 +172,573 @@ export const SuperAdminPanel: React.FC = () => {
       assignedTo: 'Marcus (Enterprise Sales)',
       status: 'New',
       stage: 'Qualified',
-      dealValue: 25000,
-      createdAt: 'May 24, 2025'
+      createdAt: 'Today, 08:30 AM',
     },
     {
       id: 'LED-CORP-202',
-      name: 'Victoria Vance',
-      email: 'vvance@vancemedia.co',
-      phone: '+1 888 234 9876',
-      company: 'Vance Media Network',
+      name: 'David K. O’Connor',
+      email: 'david@apexholdings.org',
+      phone: '+44 20 7946 0912',
+      company: 'Apex Digital Capital',
       leadSource: 'company_website',
-      source: 'Corporate Website (Partnership Request)',
+      source: 'Corporate Landing Page (Book 7 §2)',
       ownerType: 'company',
-      assignedTo: 'Sarah (Partnerships Lead)',
+      assignedTo: 'Super Admin',
       status: 'Contacted',
-      stage: 'Proposal',
-      dealValue: 40000,
-      createdAt: 'May 23, 2025'
+      stage: 'Negotiation',
+      createdAt: 'Yesterday, 04:15 PM',
+    },
+  ]);
+
+  // Domain Management Requests
+  const [domainRequests, setDomainRequests] = useState<any[]>([
+    {
+      id: 'DOM-01',
+      memberId: 'DEOS-USR-101',
+      memberName: 'Alex Morgan',
+      domain: 'alexmorganofficial.com',
+      cnameTarget: 'cname.deos.com',
+      sslStatus: 'Active',
+      dnsStatus: 'Verified',
+      requestedAt: 'May 10, 2025',
     },
     {
-      id: 'LED-CORP-203',
-      name: 'Jonathan Sterling',
-      email: 'j.sterling@apexholdings.org',
-      phone: '+44 20 7123 4567',
-      company: 'Apex Holdings International',
-      leadSource: 'company_website',
-      source: 'Corporate Website (Request Demo)',
-      ownerType: 'company',
-      assignedTo: 'David (Inbound Sales)',
-      status: 'Qualified',
-      stage: 'Negotiation',
-      dealValue: 60000,
-      createdAt: 'May 22, 2025'
-    }
+      id: 'DOM-02',
+      memberId: 'DEOS-USR-102',
+      memberName: 'Elena Rostova',
+      domain: 'cryptoempiredigital.io',
+      cnameTarget: 'cname.deos.com',
+      sslStatus: 'Pending',
+      dnsStatus: 'Propagating',
+      requestedAt: 'May 14, 2025',
+    },
   ]);
-  const [leadSearchQuery, setLeadSearchQuery] = useState('');
 
-  // Approve / Reject KYC
-  const handleApproveKYC = (id: string) => {
-    setKycList(prev => prev.map(k => k.id === id ? { ...k, status: 'Approved' } : k));
-    setSelectedKyc(null);
-    setAuditLogs(prev => [
-      {
-        id: `AUD-${Date.now()}`,
-        action: 'KYC Document Approved',
-        actor: 'Super Admin',
-        actorRole: 'super_admin',
-        timestamp: 'Just now',
-        details: `Approved KYC submission ${id} for member identity verification.`,
-        impactCategory: 'User Account',
-      },
-      ...prev,
-    ]);
+  const logAdminAction = (action: string, details: string) => {
+    const entry: AuditLogEntry = {
+      id: `AUDIT-${Date.now()}`,
+      action,
+      actor: 'Marcus Vance (Super Admin)',
+      actorRole: 'super_admin',
+      timestamp: new Date().toLocaleTimeString(),
+      details,
+      impactCategory: 'System Config',
+    };
+    setAuditLogs((prev) => [entry, ...prev]);
   };
 
-  const handleRejectKYC = (id: string) => {
-    setKycList(prev => prev.map(k => k.id === id ? { ...k, status: 'Rejected' } : k));
-    setSelectedKyc(null);
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateBranding(brandingForm);
+    logAdminAction('Platform Branding Update', 'Updated platform title, logo, contact, and social links');
+    setSaveSuccessMsg('Platform branding updated and stored in database successfully!');
+    setTimeout(() => setSaveSuccessMsg(null), 3000);
   };
 
-  // Approve Payout (Finance Role)
-  const handleApprovePayout = (id: string, amount: number) => {
-    setPayoutList(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p));
-    setAuditLogs(prev => [
-      {
-        id: `AUD-${Date.now()}`,
-        action: 'Payout Request Approved',
-        actor: 'Finance Admin',
-        actorRole: 'finance',
-        timestamp: 'Just now',
-        details: `Approved payout ${id} for $${amount.toFixed(2)} USDT via TRC20 network.`,
-        impactCategory: 'Financial',
-      },
-      ...prev,
-    ]);
-    alert(`Payout ${id} approved and sent to TRC20 settlement queue.`);
+  const handleSaveAppearance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateTheme(themeForm);
+    await updateHomepage(homepageForm);
+    logAdminAction('Appearance & Theme Update', 'Updated homepage hero text, colors, and banner settings');
+    setSaveSuccessMsg('Theme & Homepage appearance updated live across the platform!');
+    setTimeout(() => setSaveSuccessMsg(null), 3000);
   };
 
-  const handleAssignStaff = (leadId: string, staffName: string) => {
-    setCorporateLeads(prev => prev.map(l => l.id === leadId ? { ...l, assignedTo: staffName } : l));
+  const handleToggleUserStatus = (userId: string) => {
+    setUsersList((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const newStatus = u.status === 'active' ? 'suspended' : 'active';
+          logAdminAction(`User Status Modified`, `User ${u.email} set to ${newStatus}`);
+          return { ...u, status: newStatus };
+        }
+        return u;
+      })
+    );
+  };
+
+  const handleChangeUserRole = (userId: string, newRole: UserRole) => {
+    setUsersList((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          logAdminAction(`User Role Modified`, `User ${u.email} assigned role ${newRole}`);
+          return { ...u, role: newRole };
+        }
+        return u;
+      })
+    );
+  };
+
+  const handleImpersonate = (user: any) => {
+    logAdminAction('User Impersonation Triggered', `Admin viewing platform as user: ${user.email} (${user.id})`);
+    if (onImpersonateUser) {
+      onImpersonateUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: '',
+        country: 'Global',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        plan: user.plan,
+        role: user.role,
+        status: user.status,
+        memberSince: user.joinedDate,
+        renewalDate: '1 Year',
+        rank: 'Director',
+        nextRank: 'Executive',
+        walletBalance: user.walletBalance,
+        tokenBalance: user.walletBalance,
+        availableBalance: user.walletBalance,
+        binaryVolume: user.binaryVolume,
+        activeReferrals: user.activeReferrals,
+        hasCompletedOnboarding: true,
+      });
+    } else {
+      alert(`[Audit Logged] Impersonation session started for ${user.name} (${user.email}).`);
+    }
+  };
+
+  const handleApprovePayout = (payoutId: string) => {
+    setPayoutList((prev) =>
+      prev.map((p) => (p.id === payoutId ? { ...p, status: 'Approved' } : p))
+    );
+    logAdminAction('Payout Request Approved', `Approved payout ${payoutId}`);
+  };
+
+  const handleRejectPayout = (payoutId: string) => {
+    setPayoutList((prev) =>
+      prev.map((p) => (p.id === payoutId ? { ...p, status: 'Rejected' } : p))
+    );
+    logAdminAction('Payout Request Rejected', `Rejected payout ${payoutId}`);
   };
 
   return (
-    <div className="space-y-6 pb-16 animate-fadeIn">
-      {/* Super Admin Top Header */}
-      <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-            <ShieldCheck className="w-6 h-6 text-white" />
+    <div className="space-y-6 animate-fadeIn font-sans">
+      {/* Toast Notification */}
+      {saveSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-between shadow-xl animate-slideDown">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <span>{saveSuccessMsg}</span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">DEOS Super Admin Platform</h2>
-              <Badge variant="purple" size="sm">BOOK 3 SPECIFICATION</Badge>
-            </div>
-            <p className="text-xs text-slate-400">
-              Desktop-first central command for Treasury, Corporate Leads, KYC, Binary Engine, and Security Audit
-            </p>
-          </div>
+          <button onClick={() => setSaveSuccessMsg(null)}>
+            <X className="w-4 h-4 text-emerald-400" />
+          </button>
         </div>
+      )}
 
-        {/* Admin Navigation Pills */}
-        <div className="flex gap-1.5 bg-slate-800 p-1.5 rounded-xl text-xs font-bold w-full md:w-auto overflow-x-auto">
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'corporate_leads', label: `Corporate Leads (${corporateLeads.length})` },
-            { id: 'kyc', label: `KYC Queue (${kycList.filter(k => k.status === 'Pending').length})` },
-            { id: 'treasury', label: 'Finance & Treasury' },
-            { id: 'binary_rules', label: 'Binary Engine' },
-            { id: 'marketplace', label: 'Marketplace' },
-            { id: 'academy', label: 'Academy' },
-            { id: 'audit_log', label: 'Audit Logs' },
-            { id: 'system', label: 'System Config' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 ${
-                activeTab === tab.id
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* Navigation Tab Rail */}
+      <div className="bg-slate-900/90 rounded-2xl p-2 border border-slate-800 flex items-center gap-1.5 overflow-x-auto">
+        {[
+          { id: 'overview', label: 'Overview & BI', icon: TrendingUp },
+          { id: 'branding', label: 'Branding & Identity', icon: Globe },
+          { id: 'appearance', label: 'Theme & Appearance', icon: Palette },
+          { id: 'users', label: 'User Directory & RBAC', icon: Users },
+          { id: 'memberships', label: 'Plans & Pricing', icon: Layers },
+          { id: 'marketplace', label: 'Marketplace Moderation', icon: Store },
+          { id: 'corporate_leads', label: 'Corporate Leads (Book 7)', icon: Building2 },
+          { id: 'treasury', label: 'Treasury & Payouts', icon: Wallet },
+          { id: 'binary_rules', label: 'Binary MLM Engine', icon: Network },
+          { id: 'academy', label: 'Academy Governance', icon: GraduationCap },
+          { id: 'domains', label: 'Custom Domains', icon: Globe },
+          { id: 'audit_log', label: 'Audit Trail (Book 17)', icon: FileText },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === tab.id
+                ? 'bg-gradient-to-r from-rose-600 to-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Tab: Corporate Lead Management System (Book 7 & Multi-Tenant Architecture) */}
-      {activeTab === 'corporate_leads' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Header & Description */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Corporate CRM
-                </span>
-                <span className="text-xs text-slate-500 font-semibold">Central Inbound Sales & Enterprise Inquiries</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">Corporate Website Leads Management</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                All inquiries submitted directly via the DEOS corporate website (Request a Demo, Contact Sales, Partnerships) belong to the Company.
-              </p>
+      {/* ========================================================================= */}
+      {/* 1. OVERVIEW & BI ANALYTICS                                                */}
+      {/* ========================================================================= */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* 6 Executive KPI Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gross Platform GMV</span>
+              <p className="text-xl font-black text-white">$842,500.00</p>
+              <span className="text-[10px] font-bold text-emerald-400">↑ +18.4% this month</span>
             </div>
 
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Monthly MRR</span>
+              <p className="text-xl font-black text-white">$124,600.00</p>
+              <span className="text-[10px] font-bold text-indigo-400">2,450 Subscriptions</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sustainability Fund</span>
+              <p className="text-xl font-black text-emerald-400">${sustainabilityFund.toLocaleString()}</p>
+              <span className="text-[10px] font-bold text-slate-400">Book 6 Protocol</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Payouts</span>
+              <p className="text-xl font-black text-amber-400">$14,580.00</p>
+              <span className="text-[10px] font-bold text-amber-500">6 requests in queue</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marketplace Sales</span>
+              <p className="text-xl font-black text-white">$68,920.00</p>
+              <span className="text-[10px] font-bold text-emerald-400">10% Platform Cut</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Engine Status</span>
+              <p className="text-xl font-black text-emerald-400">NOMINAL</p>
+              <span className="text-[10px] font-bold text-emerald-500">100% Uptime</span>
+            </div>
+          </div>
+
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 space-y-4">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span>Quick RBAC Operations</span>
+              </h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className="w-full p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 text-left flex items-center justify-between"
+                >
+                  <span>Assign Administrator / Staff Roles</span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </button>
+                <button
+                  onClick={() => setActiveTab('branding')}
+                  className="w-full p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 text-left flex items-center justify-between"
+                >
+                  <span>Update Platform Branding & Logo</span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </button>
+                <button
+                  onClick={() => setActiveTab('treasury')}
+                  className="w-full p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 text-left flex items-center justify-between"
+                >
+                  <span>Review Pending Withdrawal Queue</span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-rose-400" />
+                  <span>Real-Time Audit Stream (Book 17)</span>
+                </h4>
+                <button
+                  onClick={() => setActiveTab('audit_log')}
+                  className="text-xs font-bold text-indigo-400 hover:text-indigo-300"
+                >
+                  View Complete Log
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {auditLogs.slice(0, 4).map((log) => (
+                  <div key={log.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-white">{log.action}</p>
+                      <p className="text-[10px] text-slate-400">{log.details}</p>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500">{log.timestamp}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 2. PLATFORM BRANDING & IDENTITY (DYNAMIC SETTINGS)                        */}
+      {/* ========================================================================= */}
+      {activeTab === 'branding' && (
+        <form onSubmit={handleSaveBranding} className="max-w-4xl space-y-6 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800">
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-white">Platform Branding & Company Details</h3>
+            <p className="text-xs text-slate-400">
+              Changes made here are stored in the database and automatically reflect on the public website, member dashboard, and emails.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Platform Name</label>
+              <input
+                type="text"
+                value={brandingForm.platformName}
+                onChange={(e) => setBrandingForm({ ...brandingForm, platformName: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Tagline</label>
+              <input
+                type="text"
+                value={brandingForm.tagline}
+                onChange={(e) => setBrandingForm({ ...brandingForm, tagline: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Company Registered Name</label>
+              <input
+                type="text"
+                value={brandingForm.companyName}
+                onChange={(e) => setBrandingForm({ ...brandingForm, companyName: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Official Support Email</label>
+              <input
+                type="email"
+                value={brandingForm.supportEmail}
+                onChange={(e) => setBrandingForm({ ...brandingForm, supportEmail: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Support Phone</label>
+              <input
+                type="text"
+                value={brandingForm.supportPhone}
+                onChange={(e) => setBrandingForm({ ...brandingForm, supportPhone: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Footer Copyright Text</label>
+              <input
+                type="text"
+                value={brandingForm.copyrightText}
+                onChange={(e) => setBrandingForm({ ...brandingForm, copyrightText: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 flex justify-end">
             <button
-              onClick={() => alert('Exporting Corporate Leads CSV...')}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md self-start md:self-auto"
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2"
             >
-              <Download className="w-4 h-4" />
-              <span>Export Leads CSV</span>
+              <Save className="w-4 h-4" />
+              <span>Save Branding Settings</span>
             </button>
           </div>
+        </form>
+      )}
 
-          {/* 4 Corporate KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Total Corporate Leads</span>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">{corporateLeads.length}</h3>
-              <p className="text-xs text-emerald-600 font-semibold mt-1">↑ Direct Corporate Submissions</p>
-            </div>
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
-              <span className="text-xs font-semibold text-slate-400 uppercase">New Leads (24h)</span>
-              <h3 className="text-2xl font-black text-indigo-600 mt-1">2</h3>
-              <p className="text-xs text-slate-400 mt-1">Pending Staff Outreach</p>
-            </div>
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Enterprise Pipeline</span>
-              <h3 className="text-2xl font-black text-purple-600 mt-1">$125,000</h3>
-              <p className="text-xs text-slate-400 mt-1">High-ticket deals in review</p>
-            </div>
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-card">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Conversion Velocity</span>
-              <h3 className="text-2xl font-black text-emerald-600 mt-1">33.3%</h3>
-              <p className="text-xs text-slate-400 mt-1">Direct corporate closing rate</p>
-            </div>
+      {/* ========================================================================= */}
+      {/* 3. THEME & HOMEPAGE APPEARANCE (DYNAMIC CMS)                             */}
+      {/* ========================================================================= */}
+      {activeTab === 'appearance' && (
+        <form onSubmit={handleSaveAppearance} className="max-w-4xl space-y-6 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800">
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-white">Homepage & Theme Customization</h3>
+            <p className="text-xs text-slate-400">
+              Customize primary colors, hero copy, and the home page video without deploying new code.
+            </p>
           </div>
 
-          {/* Corporate Leads Management Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Inbound Corporate Inquiries</h4>
-                <p className="text-xs text-slate-500">Assign leads to sales representatives and convert to platform members</p>
-              </div>
+          <div className="space-y-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Homepage Hero Badge Text</label>
+              <input
+                type="text"
+                value={homepageForm.heroBadge}
+                onChange={(e) => setHomepageForm({ ...homepageForm, heroBadge: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Hero Main Headline</label>
                 <input
                   type="text"
-                  placeholder="Search corporate leads..."
-                  value={leadSearchQuery}
-                  onChange={(e) => setLeadSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500"
+                  value={homepageForm.heroHeadline}
+                  onChange={(e) => setHomepageForm({ ...homepageForm, heroHeadline: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Headline Highlight Text (Gradient)</label>
+                <input
+                  type="text"
+                  value={homepageForm.heroHighlightText}
+                  onChange={(e) => setHomepageForm({ ...homepageForm, heroHighlightText: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-semibold"
                 />
               </div>
             </div>
 
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Hero Subtitle Paragraph</label>
+              <textarea
+                rows={3}
+                value={homepageForm.heroSubtitle}
+                onChange={(e) => setHomepageForm({ ...homepageForm, heroSubtitle: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-medium leading-relaxed"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">Homepage YouTube Master Video URL</label>
+              <input
+                type="text"
+                value={homepageForm.heroVideoUrl}
+                onChange={(e) => setHomepageForm({ ...homepageForm, heroVideoUrl: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-indigo-500 font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 flex justify-end">
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Appearance & CMS Changes</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. USER DIRECTORY, ROLES & IMPERSONATION                                  */}
+      {/* ========================================================================= */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or member ID..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 outline-none"
+              >
+                <option value="all">All Roles</option>
+                <option value="member">Member</option>
+                <option value="admin">Administrator</option>
+                <option value="super_admin">Super Administrator</option>
+              </select>
+            </div>
+          </div>
+
+          {/* User Table */}
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th className="p-4">Lead Name</th>
-                    <th className="p-4">Company</th>
-                    <th className="p-4">Inquiry Type / Source</th>
-                    <th className="p-4">Owner</th>
-                    <th className="p-4">Assigned Sales Staff</th>
-                    <th className="p-4">Pipeline Stage</th>
+                    <th className="p-4">User</th>
+                    <th className="p-4">Role</th>
+                    <th className="p-4">Plan</th>
+                    <th className="p-4">Wallet Balance</th>
+                    <th className="p-4">Binary BV</th>
+                    <th className="p-4">Status</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {corporateLeads
-                    .filter(
-                      (l) =>
-                        l.name.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
-                        l.company.toLowerCase().includes(leadSearchQuery.toLowerCase())
-                    )
-                    .map((lead) => (
-                      <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
+                <tbody className="divide-y divide-slate-800/60">
+                  {usersList
+                    .filter((u) => {
+                      const matchesSearch =
+                        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                        u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+                        u.id.toLowerCase().includes(userSearch.toLowerCase());
+                      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+                      return matchesSearch && matchesRole;
+                    })
+                    .map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <img src={lead.avatar} alt={lead.name} className="w-8 h-8 rounded-full object-cover" />
-                            <div>
-                              <p className="font-bold text-slate-900">{lead.name}</p>
-                              <p className="text-[10px] text-slate-400">{lead.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-bold text-slate-800">{lead.company}</td>
-                        <td className="p-4">
-                          <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">
-                            {lead.source}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="purple" size="sm">Company HQ</Badge>
+                          <p className="font-bold text-white">{user.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{user.email} • {user.id}</p>
                         </td>
                         <td className="p-4">
                           <select
-                            value={lead.assignedTo}
-                            onChange={(e) => handleAssignStaff(lead.id, e.target.value)}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 outline-none cursor-pointer text-slate-800"
+                            value={user.role}
+                            onChange={(e) => handleChangeUserRole(user.id, e.target.value as UserRole)}
+                            className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-bold text-indigo-400 outline-none"
                           >
-                            <option value="Marcus (Enterprise Sales)">Marcus (Enterprise Sales)</option>
-                            <option value="Sarah (Partnerships Lead)">Sarah (Partnerships Lead)</option>
-                            <option value="David (Inbound Sales)">David (Inbound Sales)</option>
-                            <option value="Unassigned">Unassigned</option>
+                            <option value="member">Member</option>
+                            <option value="support_staff">Support Staff</option>
+                            <option value="admin">Administrator</option>
+                            <option value="super_admin">Super Admin</option>
                           </select>
                         </td>
                         <td className="p-4">
-                          <Badge variant={lead.stage === 'Proposal' ? 'purple' : lead.stage === 'Negotiation' ? 'warning' : 'info'} size="sm">
-                            {lead.stage} (${lead.dealValue?.toLocaleString()})
-                          </Badge>
+                          <span className="font-bold text-white uppercase">{user.plan}</span>
                         </td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => alert(`Converting ${lead.name} into registered DEOS enterprise account...`)}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors"
+                        <td className="p-4 font-mono font-bold text-emerald-400">
+                          ${user.walletBalance.toFixed(2)}
+                        </td>
+                        <td className="p-4 font-mono text-slate-300">
+                          {user.binaryVolume.toLocaleString()} BV
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              user.status === 'active'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-rose-500/20 text-rose-400'
+                            }`}
                           >
-                            Convert to Member
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => handleImpersonate(user)}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            title="Audited View As User"
+                          >
+                            View as User
+                          </button>
+                          <button
+                            onClick={() => handleToggleUserStatus(user.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                              user.status === 'active'
+                                ? 'bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300'
+                                : 'bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300'
+                            }`}
+                          >
+                            {user.status === 'active' ? 'Suspend' : 'Activate'}
                           </button>
                         </td>
                       </tr>
@@ -331,82 +750,139 @@ export const SuperAdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 1: Overview & Constitutional Metric */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* 6 Admin KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Total Members</p>
-              <h3 className="text-xl font-black text-slate-900 mt-1">18,842</h3>
-              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">↑ 1,256 new</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Active Renewals</p>
-              <h3 className="text-xl font-black text-emerald-600 mt-1">7,842</h3>
-              <p className="text-[9px] text-slate-400 mt-0.5">$50/yr</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Total Revenue</p>
-              <h3 className="text-xl font-black text-indigo-600 mt-1">$248,725</h3>
-              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Monthly Net</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Commissions Paid</p>
-              <h3 className="text-xl font-black text-purple-600 mt-1">$96,432</h3>
-              <p className="text-[9px] text-slate-400 mt-0.5">10% Binary + Direct</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Payouts</p>
-              <h3 className="text-xl font-black text-amber-600 mt-1">$18,274</h3>
-              <p className="text-[9px] text-amber-600 font-semibold mt-0.5">Approval Queue</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-card text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Sustainability Fund</p>
-              <h3 className="text-xl font-black text-slate-900 mt-1">${sustainabilityFund.toLocaleString()}</h3>
-              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Fallback Reserves</p>
-            </div>
-          </div>
-
-          {/* Constitutional Revenue Split (Book 0 §5 Compliance Monitor) */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">
-                  Book 0 §5 Constitutional Metric: Commerce vs. Network Revenue Ratio
-                </h4>
-                <p className="text-xs text-slate-500">
-                  Must maintain continuous majority real-world commerce revenue over network fees.
-                </p>
+      {/* ========================================================================= */}
+      {/* 5. MEMBERSHIP PLANS & PRICING                                             */}
+      {/* ========================================================================= */}
+      {activeTab === 'memberships' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { tier: 'Launch Plan', price: 100, renewal: 50, bvCap: 1000, features: ['1 Landing Page (3 Templates)', 'CRM (100 Leads)', '10% Binary Bonus'] },
+            { tier: 'Growth Plan', price: 300, renewal: 50, bvCap: 5000, features: ['1 Landing Page (3 Templates)', 'AI Business Center', 'CRM Automation', 'Marketplace Seller Store', '10% Binary Bonus'] },
+            { tier: 'Legacy Plan', price: 500, renewal: 50, bvCap: 25000, features: ['1 Landing Page (3 Templates)', 'VIP Binary Placement', 'Full AI Suite', 'Max Commission Caps', 'Dedicated Mentorship'] },
+          ].map((plan, i) => (
+            <div key={i} className="p-6 bg-slate-900 rounded-3xl border border-slate-800 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">{plan.tier}</span>
+                <span className="text-xs text-slate-400 font-mono">${plan.price}/yr</span>
               </div>
-              <Badge variant="success" size="md">● 100% Constitutionally Compliant</Badge>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold text-slate-800">
-                <span className="text-indigo-600">Marketplace & Digital Commerce: 62.4% ($155,200)</span>
-                <span className="text-purple-600">Membership & Network: 37.6% ($93,525)</span>
+              <div className="space-y-2 text-xs text-slate-300">
+                <p><b>Annual Renewal Fee:</b> ${plan.renewal}/yr</p>
+                <p><b>Weekly Binary Cap:</b> ${plan.bvCap.toLocaleString()}</p>
               </div>
-              <div className="h-4 rounded-full bg-slate-100 overflow-hidden flex">
-                <div className="h-full bg-indigo-600" style={{ width: '62.4%' }} />
-                <div className="h-full bg-purple-500" style={{ width: '37.6%' }} />
-              </div>
-            </div>
-          </div>
 
-          {/* Infrastructure Health Status */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
-              Real-time Service Health (Book 3 §3)
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {systemStatuses.map((s) => (
-                <div key={s.service} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">{s.service}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">Latency: {s.latency}</p>
+              <div className="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
+                {plan.features.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-slate-400">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{f}</span>
                   </div>
-                  <Badge variant="success" size="sm">Operational</Badge>
+                ))}
+              </div>
+
+              <button
+                onClick={() => alert(`Plan parameters saved for ${plan.tier}.`)}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs"
+              >
+                Configure Entitlements
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. CORPORATE INBOUND LEADS (BOOK 7)                                       */}
+      {/* ========================================================================= */}
+      {activeTab === 'corporate_leads' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-base font-bold text-white">Inbound Corporate Sales Inquiries</h3>
+            <span className="text-xs text-slate-400">Captured via Corporate Contact Form</span>
+          </div>
+
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th className="p-4">Contact Name & Company</th>
+                  <th className="p-4">Lead Source</th>
+                  <th className="p-4">Assigned Rep</th>
+                  <th className="p-4">Stage</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {corporateLeads.map((lead) => (
+                  <tr key={lead.id} className="hover:bg-slate-800/40">
+                    <td className="p-4">
+                      <p className="font-bold text-white">{lead.name}</p>
+                      <p className="text-[10px] text-slate-400">{lead.company} • {lead.email}</p>
+                    </td>
+                    <td className="p-4 font-mono text-indigo-400">{lead.source}</td>
+                    <td className="p-4">{lead.assignedTo}</td>
+                    <td className="p-4">
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">
+                        {lead.stage}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={() => alert(`Opening CRM communications thread with ${lead.name}`)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]"
+                      >
+                        Follow Up
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. TREASURY & WITHDRAWAL QUEUE                                            */}
+      {/* ========================================================================= */}
+      {activeTab === 'treasury' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-4">
+            <h3 className="text-base font-bold text-white">Pending Withdrawal Authorizations</h3>
+
+            <div className="space-y-3">
+              {payoutList.map((p) => (
+                <div key={p.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
+                  <div>
+                    <p className="font-bold text-white">{p.memberName} ({p.memberId})</p>
+                    <p className="text-[10px] text-slate-400">{p.method} • {p.destinationAddress}</p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono font-bold text-white text-sm">${p.amount.toFixed(2)}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      p.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {p.status}
+                    </span>
+
+                    {p.status === 'Pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApprovePayout(p.id)}
+                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectPayout(p.id)}
+                          className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -414,301 +890,48 @@ export const SuperAdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: KYC Queue */}
-      {activeTab === 'kyc' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900">KYC & Identity Verification Queue</h4>
-              <p className="text-xs text-slate-500">Review government-issued IDs before unlocking high-volume withdrawals</p>
-            </div>
-            <span className="text-xs font-bold text-amber-600">
-              {kycList.filter(k => k.status === 'Pending').length} Pending Reviews
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-6">Member</th>
-                  <th className="py-3 px-6">Document Type</th>
-                  <th className="py-3 px-6">Document #</th>
-                  <th className="py-3 px-6">Submitted At</th>
-                  <th className="py-3 px-6">Status</th>
-                  <th className="py-3 px-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {kycList.map((k) => (
-                  <tr key={k.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-4 px-6 flex items-center gap-3">
-                      <img src={k.photoUrl} alt={k.name} className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-300" />
-                      <div>
-                        <p className="font-bold text-slate-900">{k.name}</p>
-                        <p className="text-[10px] text-slate-400">ID: {k.memberId}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 font-semibold">{k.documentType}</td>
-                    <td className="py-4 px-6 font-mono font-bold">{k.documentNumber}</td>
-                    <td className="py-4 px-6 text-slate-500">{k.submittedAt}</td>
-                    <td className="py-4 px-6">
-                      <Badge variant={k.status === 'Approved' ? 'success' : k.status === 'Pending' ? 'warning' : 'danger'} size="sm">
-                        {k.status}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      {k.status === 'Pending' ? (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleApproveKYC(k.id)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleRejectKYC(k.id)}
-                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 font-bold text-xs"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">Resolved</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Finance & Treasury */}
-      {activeTab === 'treasury' && (
-        <div className="space-y-6">
-          {/* Sustainability Fund & Treasury Liquidity */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-tr from-slate-900 to-indigo-950 rounded-2xl p-6 text-white border border-indigo-500/30 shadow-card">
-              <p className="text-xs font-bold text-indigo-300 uppercase">Platform Sustainability Fund</p>
-              <h3 className="text-3xl font-black text-white mt-1">${sustainabilityFund.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-              <p className="text-xs text-emerald-400 mt-2">
-                Funded by Split Commission gaps, unqualified generation bonuses & inactive overrides
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
-              <p className="text-xs font-bold text-slate-500 uppercase">Cold Treasury Reserves (TRC20)</p>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">$1,450,000 USDT</h3>
-              <p className="text-xs text-slate-400 mt-2">Multi-sig cold storage backing 100% of user balances</p>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
-              <p className="text-xs font-bold text-slate-500 uppercase">Pending Payout Queue</p>
-              <h3 className="text-2xl font-black text-amber-600 mt-1">$18,274.00 USDT</h3>
-              <p className="text-xs text-slate-400 mt-2">Finance-role approval required before automated release</p>
-            </div>
-          </div>
-
-          {/* Pending Payout Queue Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Finance Payout Approval Queue (Book 3 §10)</h4>
-                <p className="text-xs text-slate-500">Requires distinct Finance Role approval per constitutional separation of duties</p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-6">Payout ID</th>
-                    <th className="py-3 px-6">Member</th>
-                    <th className="py-3 px-6">Amount</th>
-                    <th className="py-3 px-6">Method & Destination</th>
-                    <th className="py-3 px-6">Requested</th>
-                    <th className="py-3 px-6 text-right">Decision</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {payoutList.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-4 px-6 font-mono font-bold text-slate-900">{p.id}</td>
-                      <td className="py-4 px-6 font-bold text-slate-900">{p.memberName}</td>
-                      <td className="py-4 px-6 font-black text-emerald-600">${p.amount.toFixed(2)} USDT</td>
-                      <td className="py-4 px-6">
-                        <span className="font-bold text-slate-800">{p.method}</span>
-                        <p className="text-[10px] font-mono text-slate-400 truncate max-w-xs">{p.destinationAddress}</p>
-                      </td>
-                      <td className="py-4 px-6 text-slate-500">{p.requestedAt}</td>
-                      <td className="py-4 px-6 text-right">
-                        {p.status === 'Pending' ? (
-                          <button
-                            onClick={() => handleApprovePayout(p.id, p.amount)}
-                            className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs"
-                          >
-                            Approve Payout
-                          </button>
-                        ) : (
-                          <Badge variant="success" size="sm">● Released</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 4: Binary Engine Rules */}
-      {activeTab === 'binary_rules' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-6">
-          <div>
-            <h4 className="text-base font-bold text-slate-900">Binary Engine Rule Parameters (Book 4 v1.1 Locked)</h4>
-            <p className="text-xs text-slate-500">
-              Governed strictly by Book 0 Constitution. Rates cannot be edited without formal Book revision.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <label className="block text-xs font-bold text-slate-500 mb-1">Binary Bonus Rate</label>
-              <p className="text-2xl font-black text-indigo-600">10% Flat</p>
-              <p className="text-[10px] text-slate-400 mt-1">Calculated weekly on weaker-leg BV with carry forward.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <label className="block text-xs font-bold text-slate-500 mb-1">Generation Bonuses</label>
-              <p className="text-lg font-black text-slate-900">Gen 2: 30% | Gen 3: 15%</p>
-              <p className="text-[10px] text-slate-400 mt-1">Paid on descendant direct referral commissions.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <label className="block text-xs font-bold text-slate-500 mb-1">Direct Referral Bonuses</label>
-              <p className="text-lg font-black text-slate-900">$25 / $75 / $125</p>
-              <p className="text-[10px] text-slate-400 mt-1">Launch ($25), Growth ($75), Legacy ($125).</p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
-            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Rate parameters are locked to Book 4 v1.1 invariant. Super Admin modifications require cryptographic dual-key governance.</span>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 5: Marketplace Moderation */}
-      {activeTab === 'marketplace' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-base font-bold text-slate-900">Marketplace Moderation & Policy Enforcer</h4>
-            <Badge variant="purple" size="sm">10%–60% Rate Validator</Badge>
-          </div>
-          <p className="text-xs text-slate-500">
-            Review new seller listings to verify digital download security, product quality, and compliant affiliate commission splits.
-          </p>
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-            All current marketplace products meet the 10%–60% promoter commission boundary requirement.
-          </div>
-        </div>
-      )}
-
-      {/* Tab 6: Academy & Instructor Management */}
-      {activeTab === 'academy' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-4">
-          <h4 className="text-base font-bold text-slate-900">Academy Content & Instructor Revenue</h4>
-          <p className="text-xs text-slate-500">
-            Review instructor applications, approve course syllabi, and track instructor revenue payouts.
-          </p>
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-            4 Certified Instructor courses active with 100% automated completion certificate verification.
-          </div>
-        </div>
-      )}
-
-      {/* Tab 7: Immutable Audit Logs (Book 13 & Book 3 §14) */}
+      {/* ========================================================================= */}
+      {/* 8. AUDIT LOGS (BOOK 17)                                                   */}
+      {/* ========================================================================= */}
       {activeTab === 'audit_log' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900">Immutable System Audit Log (Book 0 §11 & Book 13)</h4>
-              <p className="text-xs text-slate-500">Append-only administrative and financial action record</p>
-            </div>
-            <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
-              Export Audit Trail
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-base font-bold text-white">Immutable Administrative Audit Log</h3>
+            <button
+              onClick={() => alert('Exporting audit trail to CSV...')}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
-                  <th className="py-3 px-6">Audit ID</th>
-                  <th className="py-3 px-6">Action</th>
-                  <th className="py-3 px-6">Actor / Role</th>
-                  <th className="py-3 px-6">Category</th>
-                  <th className="py-3 px-6">Timestamp</th>
-                  <th className="py-3 px-6">Details</th>
+                  <th className="p-4">Action</th>
+                  <th className="p-4">Actor</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">Details</th>
+                  <th className="p-4">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-slate-800/60">
                 {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-6 font-mono font-bold text-slate-900">{log.id}</td>
-                    <td className="py-3.5 px-6 font-bold text-slate-800">{log.action}</td>
-                    <td className="py-3.5 px-6">
-                      <span className="font-bold text-slate-900">{log.actor}</span>
-                      <span className="text-[10px] text-slate-400 block font-mono">({log.actorRole})</span>
-                    </td>
-                    <td className="py-3.5 px-6">
-                      <Badge variant="info" size="sm">{log.impactCategory}</Badge>
-                    </td>
-                    <td className="py-3.5 px-6 text-slate-500">{log.timestamp}</td>
-                    <td className="py-3.5 px-6 text-slate-600 max-w-sm truncate">{log.details}</td>
+                  <tr key={log.id} className="hover:bg-slate-800/40 font-mono">
+                    <td className="p-4 font-bold text-white">{log.action}</td>
+                    <td className="p-4 text-slate-400">{log.actor} ({log.actorRole})</td>
+                    <td className="p-4 text-indigo-400 font-bold">{log.impactCategory}</td>
+                    <td className="p-4 text-slate-300">{log.details}</td>
+                    <td className="p-4 text-slate-500">{log.timestamp}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 8: Global System Settings */}
-      {activeTab === 'system' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-card space-y-6">
-          <div>
-            <h4 className="text-base font-bold text-slate-900">Platform Core Configuration</h4>
-            <p className="text-xs text-slate-500">Parameters governing multi-tenant routing, payments, and security</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Platform Brand Title</label>
-              <input type="text" defaultValue="DEOS Business Operating System" className="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-slate-900" />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Default Timezone</label>
-              <input type="text" defaultValue="GMT+01:00 (West Africa Time)" className="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-slate-900" />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={() => alert('Platform settings saved.')}
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-md flex items-center gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save System Settings</span>
-            </button>
           </div>
         </div>
       )}
     </div>
   );
 };
-
