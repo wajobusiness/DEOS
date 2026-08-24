@@ -418,3 +418,199 @@ All member applications, landing page renderers, public storefronts, and admin p
   * `dns-ssl-queue`: Automatically requests and renews Let's Encrypt TLS 1.3 certificates for custom domains via ACME HTTP-01 challenges.
 * **Append-Only Immutability:** Financial ledger entries and audit log records can never be updated (`UPDATE`) or deleted (`DELETE`); correcting mutations require equal-and-opposite reversing entries.
 * **Disaster Recovery & Daily Backups:** Automated point-in-time PostgreSQL snapshots with 1-click restore capabilities.
+
+---
+
+## 12. Chapter 17: AI Business Intelligence Center (Book 17)
+
+### 17.1 Global Cognitive Intelligence Layer
+The **AI Business Intelligence Center** is the global intelligence layer that powers the entire Eviona Ecosystem. Rather than operating as disconnected prompt generators, it acts as an autonomous co-pilot and contextual reasoning engine for every entrepreneur.
+
+The engine understands each user's business identity, brand voice, custom domain, products, target audience, and commercial goals to deliver tailored recommendations and automation.
+
+```
+                  ┌────────────────────────────────────────┐
+                  │          GLOBAL PLATFORM CORE          │
+                  └───────────────────┬────────────────────┘
+                                      │
+                                      ▼
+                  ┌────────────────────────────────────────┐
+                  │    AI BUSINESS INTELLIGENCE LAYER      │
+                  │   Brand Identity · Contextual Memory   │
+                  └───────┬───────────┬────────────┬───────┘
+                          │           │            │
+         ┌────────────────┘           │            └────────────────┐
+         ▼                            ▼                             ▼
+┌──────────────────┐        ┌──────────────────┐          ┌──────────────────┐
+│ Personalized     │        │ Marketing Copy   │          │ CRM Intelligence │
+│ AI Assistants &  │        │ & Advertising    │          │ & Predictive Lead│
+│ Custom Chatbots  │        │ Automation       │          │ Scoring Engine   │
+└──────────────────┘        └──────────────────┘          └──────────────────┘
+```
+
+### 17.2 Core Capabilities:
+1. **Personalized AI Business Assistants:** Real-time business advisory and strategic execution tailored to the entrepreneur's live catalog and performance metrics.
+2. **Custom Chatbot Creation:** One-click deployment of automated sales and lead qualification bots onto user landing pages (`username.eviona.com` and custom domains).
+3. **Automated Funnel & Website Generation:** AI synthesis of high-converting landing page copy, FAQs, and CTA matrices.
+4. **CRM Intelligence & Lead Scoring:** Predictive scoring ($0–100\%$) and automated next-step follow-up suggestions based on lead interaction velocity.
+
+---
+
+## 13. Chapter 18: Marketing Intelligence & Advertising Integration Layer (Book 18)
+
+### 18.1 Overview & Architecture Topology
+The **Marketing Intelligence Layer** equips every entrepreneur with the capabilities to track visitors, measure multi-channel campaigns, optimize conversion funnels, and connect landing pages directly with major advertising platforms (Meta, Google, TikTok, LinkedIn, Snapchat).
+
+```
+                       ┌────────────────────────────────────────┐
+                       │          GLOBAL PLATFORM CORE          │
+                       └───────────────────┬────────────────────┘
+                                           │
+                                           ▼
+                       ┌────────────────────────────────────────┐
+                       │               AI ENGINE                │
+                       └───────────────────┬────────────────────┘
+                                           │
+                                           ▼
+                       ┌────────────────────────────────────────┐
+                       │      MARKETING INTELLIGENCE LAYER      │
+                       └───────────────────┬────────────────────┘
+                                           │
+                                           ▼
+                       ┌────────────────────────────────────────┐
+                       │  WEBSITE BUILDER + CRM + EMAIL ENGINE  │
+                       └───────────────────┬────────────────────┘
+                                           │
+                                           ▼
+                       ┌────────────────────────────────────────┐
+                       │       USER ADVERTISING CAMPAIGNS       │
+                       └────────────────────────────────────────┘
+```
+
+### 18.2 The Hybrid Architecture Model:
+* **Global Marketing Infrastructure (Super Admin):** Master API integrations, platform switches, script CSP policies, standard conversion definitions, and gateway health monitoring.
+* **User Marketing Profile (Dashboard):** Tracking Pixels (Meta Pixel, GA4 `G-XXXXXXXX`, TikTok Pixel), Ad Accounts, Campaign Analytics, Lead Source Attribution, and Multi-Channel Reports.
+
+### 18.3 Conversion Event Lifecycle:
+```
+[ Page View ] ──► [ Lead Captured ] ──► [ Registration Started ] ──► [ Registration Completed ] ──► [ Payment Completed ] ──► [ Membership Activated ]
+```
+*Every event triggers:* Analytics tracking, Pixel / CAPI dispatch, CRM lead updates, and AI scoring.
+
+### 18.4 Squad / Agency Delegated Access:
+Entrepreneurs can grant **Campaign Manager Access** to marketing squads or agencies:
+* **Allowed (✓):** View landing pages, access analytics, create campaigns, upload creatives, view leads.
+* **Restricted (✗):** Wallet access, personal banking, financial info, account credentials.
+
+### 18.5 Marketing Database Structure:
+```sql
+CREATE TABLE "marketing_integrations" (
+    "id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL REFERENCES "Member"("id"),
+    "platform" TEXT NOT NULL,
+    "account_id" TEXT,
+    "pixel_id" TEXT,
+    "api_token" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "tracking_events" (
+    "id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL REFERENCES "Member"("id"),
+    "event_name" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "visitor_id" TEXT NOT NULL,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "campaigns" (
+    "id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL REFERENCES "Member"("id"),
+    "name" TEXT NOT NULL,
+    "platform" TEXT NOT NULL,
+    "budget" DECIMAL(10, 2),
+    "status" TEXT NOT NULL DEFAULT 'draft',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "leads_sources" (
+    "id" TEXT PRIMARY KEY,
+    "lead_id" TEXT NOT NULL REFERENCES "Lead"("id"),
+    "source" TEXT NOT NULL,
+    "campaign" TEXT,
+    "medium" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## 14. Chapter 19: Payment Gateway Engine (Book 19)
+
+### 19.1 Centralized Financial Routing
+The **Payment Gateway Engine** is the single centralized financial gateway for the entire platform. No module communicates directly with payment providers; all payments route through this engine.
+
+```
+[ User ] ──► [ Payment Gateway Engine ] ──► [ Payment Provider ] ──► [ Webhook Verification ] ──► [ Financial Engine ] ──► [ Wallet Ledger ] ──► [ EVO Token ] ──► [ Module Business Logic ]
+```
+
+### 19.2 Supported Multi-Rail Gateways:
+* **Bank Transfer:** Manual and automated verification, dedicated virtual accounts.
+* **Paystack:** Card processing, direct bank EFT, USSD, Apple Pay, webhooks.
+* **Kuda Business API:** Instant bank transfer confirmation, deposit verification, automated payouts, reconciliation.
+* **Stripe (Global):** International cards, Apple/Google Pay, ACH, SEPA, multi-currency.
+* **Cryptocurrency:** USDT (TRC20/ERC20/BEP20), BTC, ETH with confirmation before crediting.
+
+### 19.3 Processing & Security Invariants:
+1. **Idempotency & Replay Defense:** Enforces unique transaction keys and HMAC signature verification on all webhooks.
+2. **Double-Entry Financial Ledger:** Every transaction is immutably appended and converted to EVO Tokens at the locked utility rate ($1.00\text{ USD} = 1.00\text{ EVO}$).
+3. **Event-Driven Decoupling:** Emits internal `payment.success` events to activate memberships, complete marketplace orders, unlock academy courses, and credit AI compute quotas.
+4. **Comprehensive Withdrawal Engine:** Multi-tier compliance check, balance hold, and automated/manual payout settlement.
+
+### 19.4 Payment Engine Database Schema:
+```sql
+CREATE TABLE "payment_gateways" (
+    "id" TEXT PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "configuration" JSONB NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "payments" (
+    "id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL REFERENCES "Member"("id"),
+    "gateway_id" TEXT NOT NULL REFERENCES "payment_gateways"("id"),
+    "amount" DECIMAL(12, 2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "reference" TEXT UNIQUE NOT NULL,
+    "verified_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "webhooks" (
+    "id" TEXT PRIMARY KEY,
+    "gateway" TEXT NOT NULL,
+    "event_type" TEXT NOT NULL,
+    "payload" JSONB NOT NULL,
+    "signature" TEXT NOT NULL,
+    "processed" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "payouts" (
+    "id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL REFERENCES "Member"("id"),
+    "amount" DECIMAL(12, 2) NOT NULL,
+    "destination" JSONB NOT NULL,
+    "gateway_id" TEXT NOT NULL REFERENCES "payment_gateways"("id"),
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "reference" TEXT UNIQUE NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+

@@ -1,9 +1,9 @@
 # DEOS — Digital Entrepreneurship Operating System
 ## Book 0: Product Constitution & Core Architecture
 
-**Version:** 2.0 (Comprehensive Multi-Tenant & Model A Standard)
+**Version:** 2.1 (Expanded Multi-Tenant, Marketing & Payment Gateway Standard)
 **Status:** Approved & Binding
-**Document Type:** Governing Reference — binds all subsequent Books (1–15)
+**Document Type:** Governing Reference — binds all subsequent Books (1–19)
 
 > This document is the single source of truth for DEOS. Every designer, developer, AI coding agent, tester, project manager, and investor refers back to this Book before making a decision that isn't explicitly covered elsewhere. Where any later Book conflicts with this one, this Book wins until formally amended.
 
