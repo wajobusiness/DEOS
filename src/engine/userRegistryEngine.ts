@@ -23,6 +23,9 @@ export interface RegisteredUser {
   joinedDate: string;
   renewalDate: string;
   hasCompletedOnboarding: boolean;
+  password?: string;
+  mustChangePassword?: boolean;
+  lastPasswordResetAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -351,5 +354,21 @@ export const userRegistryEngine = {
   getDirectReferrals(sponsorId: string): RegisteredUser[] {
     const users = this.getAllUsers();
     return users.filter(u => u.sponsorId === sponsorId);
+  },
+
+  // 10. Direct Admin Password Reset
+  async resetUserPassword(userId: string, newPassword: string, mustChangePassword: boolean = false): Promise<{ success: boolean; user?: RegisteredUser; error?: string }> {
+    const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const updated = await this.updateUser(userId, {
+      password: newPassword,
+      mustChangePassword,
+      lastPasswordResetAt: now,
+    });
+
+    if (!updated) {
+      return { success: false, error: 'User not found.' };
+    }
+
+    return { success: true, user: updated };
   }
 };

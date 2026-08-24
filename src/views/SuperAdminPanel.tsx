@@ -337,7 +337,81 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   const [userEditForm, setUserEditForm] = useState<any>({});
   const [isEditUserMode, setIsEditUserMode] = useState<boolean>(false);
   const [isSavingUser, setIsSavingUser] = useState<boolean>(false);
-  const [userModalTab, setUserModalTab] = useState<'profile' | 'subscription' | 'network' | 'finances'>('profile');
+  const [userModalTab, setUserModalTab] = useState<'profile' | 'subscription' | 'network' | 'finances' | 'security'>('profile');
+
+  // Password & Security Management State inside Modal
+  const [newPasswordInput, setNewPasswordInput] = useState<string>('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>('');
+  const [showPasswordText, setShowPasswordText] = useState<boolean>(false);
+  const [mustChangePasswordNextLogin, setMustChangePasswordNextLogin] = useState<boolean>(false);
+  const [passwordFeedbackMsg, setPasswordFeedbackMsg] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState<boolean>(false);
+
+  const handleGenerateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+    let generated = 'Evo#';
+    for (let i = 0; i < 8; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewPasswordInput(generated);
+    setConfirmPasswordInput(generated);
+    setShowPasswordText(true);
+    setPasswordFeedbackMsg('Generated high-entropy secure password. Click Apply to save.');
+  };
+
+  const handleAdminDirectPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForDetails) return;
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      alert('Password must be at least 6 characters in length.');
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      alert('Passwords do not match. Please verify confirmation.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await userRegistryEngine.resetUserPassword(
+        selectedUserForDetails.id,
+        newPasswordInput,
+        mustChangePasswordNextLogin
+      );
+
+      logAdminAction(
+        'User Password Reset by Super Admin',
+        `Admin directly reset credentials for user: ${selectedUserForDetails.name} (${selectedUserForDetails.id})${mustChangePasswordNextLogin ? ' [Forced Reset Next Login]' : ''}`
+      );
+
+      setPasswordFeedbackMsg(`Password successfully updated & active for ${selectedUserForDetails.name}!`);
+      showToast(`Password updated for ${selectedUserForDetails.name}!`);
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      fetchLiveUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update password.');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const handleSendSupabasePasswordResetEmail = async () => {
+    if (!selectedUserForDetails?.email) return;
+    try {
+      await supabase.auth.resetPasswordForEmail(selectedUserForDetails.email, {
+        redirectTo: 'https://evionaecosystem.com/reset-password',
+      });
+      logAdminAction(
+        'Password Reset Email Dispatched',
+        `Reset link sent to ${selectedUserForDetails.email}`
+      );
+      showToast(`Password recovery link dispatched to ${selectedUserForDetails.email}!`);
+      setPasswordFeedbackMsg(`Password reset link sent to ${selectedUserForDetails.email}.`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to dispatch reset email.');
+    }
+  };
 
   const handleOpenUserDetails = (user: any) => {
     const live = userRegistryEngine.getUserById(user.id) || user;
@@ -365,6 +439,11 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
       joinedDate: live.joinedDate || 'Recently',
       renewalDate: live.renewalDate || '1 Year',
     });
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
+    setPasswordFeedbackMsg(null);
+    setShowPasswordText(false);
+    setMustChangePasswordNextLogin(live.mustChangePassword === true);
     setIsEditUserMode(false);
     setUserModalTab('profile');
   };
@@ -2691,6 +2770,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 { id: 'subscription', label: 'Membership & Role', icon: ShieldCheck },
                 { id: 'network', label: 'Affiliate & Binary Matrix', icon: Network },
                 { id: 'finances', label: 'Treasury & Wallets', icon: Wallet },
+                { id: 'security', label: 'Password & Security', icon: Key },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -2988,6 +3068,127 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                       className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shrink-0"
                     >
                       Open Treasury Adjuster
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: PASSWORD & SECURITY SETTINGS */}
+              {userModalTab === 'security' && (
+                <div className="space-y-5 animate-fadeIn">
+                  {/* Status Banner */}
+                  <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-indigo-400" />
+                        <h4 className="font-black text-white text-xs">Administrative Password & Credential Override</h4>
+                      </div>
+                      <p className="text-[11px] text-indigo-200">
+                        Super Admins can set a new password, force a password change upon next sign in, or dispatch a password reset email to <b>{userEditForm.email}</b>.
+                      </p>
+                    </div>
+                    {userEditForm.lastPasswordResetAt && (
+                      <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[10px] text-slate-400 font-mono shrink-0">
+                        Last Reset: {userEditForm.lastPasswordResetAt}
+                      </span>
+                    )}
+                  </div>
+
+                  {passwordFeedbackMsg && (
+                    <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs font-bold flex items-center justify-between shadow-sm animate-fadeIn">
+                      <span>{passwordFeedbackMsg}</span>
+                      <button type="button" onClick={() => setPasswordFeedbackMsg(null)} className="text-emerald-400 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Direct Password Set / Reset Box */}
+                  <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <h4 className="font-bold text-white text-xs">Set New Password for User</h4>
+                      <button
+                        type="button"
+                        onClick={handleGenerateRandomPassword}
+                        className="px-3 py-1 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-[11px] flex items-center gap-1 shadow-sm"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Generate Random Password</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">New Password (Min. 6 chars)</label>
+                        <div className="relative">
+                          <input
+                            type={showPasswordText ? 'text' : 'password'}
+                            value={newPasswordInput}
+                            onChange={(e) => setNewPasswordInput(e.target.value)}
+                            placeholder="Enter new strong password"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs outline-none focus:border-indigo-500 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordText(!showPasswordText)}
+                            className="absolute right-3 top-3 text-slate-400 hover:text-white"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">Confirm New Password</label>
+                        <input
+                          type={showPasswordText ? 'text' : 'password'}
+                          value={confirmPasswordInput}
+                          onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                          placeholder="Re-enter password to confirm"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-white block">Require Password Change on Next Login</span>
+                        <span className="text-[11px] text-slate-500">Forces user to choose their own personal password immediately upon next login.</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={mustChangePasswordNextLogin}
+                        onChange={(e) => setMustChangePasswordNextLogin(e.target.checked)}
+                        className="w-5 h-5 accent-indigo-600 rounded cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAdminDirectPasswordReset}
+                        disabled={isResettingPassword || !newPasswordInput}
+                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{isResettingPassword ? 'Updating Password...' : 'Save & Set New Password'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Send Email Reset Option */}
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="font-bold text-white">Send Password Recovery Email</h4>
+                      <p className="text-[11px] text-slate-400">Sends an official magic link allowing the member to reset their credentials securely.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendSupabasePasswordResetEmail}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 flex items-center gap-1.5 shrink-0 shadow-xs"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Dispatch Reset Email</span>
                     </button>
                   </div>
                 </div>
