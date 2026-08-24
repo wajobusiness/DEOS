@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Megaphone,
   Share2,
@@ -23,27 +23,62 @@ import {
   Settings,
   Mail,
   UserCheck,
-  Lock
+  Lock,
+  QrCode,
+  Check,
+  Radio,
+  ExternalLink,
+  MessageCircle,
+  Send,
+  Eye,
+  Bot
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { Member } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { marketingEngine, TrackingPixelsConfig, MarketingCampaign, INITIAL_SWIPE_FILES, PromoSwipeFile } from '../engine/marketingEngine';
 
-export const MarketingCenter: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pixels' | 'funnel' | 'agency' | 'ai-ads' | 'services'>('pixels');
+interface MarketingCenterProps {
+  currentUser?: Member;
+}
 
-  // Tracking Pixel Form State
-  const [pixels, setPixels] = useState({
-    metaPixelId: '128938472910',
-    metaCapiToken: 'EAAG9283401kdlasmdklq9281...',
-    ga4MeasurementId: 'G-EVIONA9821',
-    gtmContainerId: 'GTM-KV9281X',
-    googleAdsId: 'AW-982145678',
-    tiktokPixelId: 'C892810KMS921',
-    tiktokApiToken: 'tt_api_99214...',
-    linkedinTagId: '982341',
-    snapchatPixelId: 'snap_8829104',
-  });
+export const MarketingCenter: React.FC<MarketingCenterProps> = ({ currentUser }) => {
+  const { member } = useAuth();
+  const activeUser = currentUser || member || {
+    id: 'EVO-ID-100245',
+    name: 'Entrepreneur',
+    email: 'user@evionaecosystem.com',
+  };
 
+  const userId = activeUser.id || 'EVO-ID-100245';
+  const userName = activeUser.name || 'Entrepreneur';
+  const userStoreLink = `https://evionaecosystem.com/store?user=${userId}`;
+
+  const [activeTab, setActiveTab] = useState<'pixels' | 'campaigns' | 'swipes' | 'ai-ads' | 'telemetry'>('pixels');
+
+  // Pixels State
+  const [pixels, setPixels] = useState<TrackingPixelsConfig>(() =>
+    marketingEngine.getTrackingPixels(userId)
+  );
   const [isSaved, setIsSaved] = useState(false);
+
+  // Campaigns State
+  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>(() =>
+    marketingEngine.getCampaigns(userId)
+  );
+  const [showCreateCampaignModal, setShowCreateCampaignModal] = useState(false);
+  const [campName, setCampName] = useState('');
+  const [campChannel, setCampChannel] = useState<MarketingCampaign['channel']>('meta');
+  const [campUtmSource, setCampUtmSource] = useState('facebook');
+  const [campUtmMedium, setCampUtmMedium] = useState('cpc');
+  const [campUtmName, setCampUtmName] = useState('growth-launch-2025');
+
+  // Swipe Files State
+  const [swipeFiles] = useState<PromoSwipeFile[]>(INITIAL_SWIPE_FILES);
+  const [copiedSwipeId, setCopiedSwipeId] = useState<string | null>(null);
+  const [copiedCampId, setCopiedCampId] = useState<string | null>(null);
+
+  // Telemetry Log State
   const [isSimulatingEvent, setIsSimulatingEvent] = useState(false);
   const [simulatedEventsLog, setSimulatedEventsLog] = useState<string[]>([
     '✅ Meta CAPI: PageView dispatched for user session',
@@ -52,16 +87,50 @@ export const MarketingCenter: React.FC = () => {
     '✅ AI Engine: Lead scored at 88% high-conversion probability',
   ]);
 
-  // AI Marketing Generator State
+  // AI Ad Generator State
   const [adNiche, setAdNiche] = useState('Digital Entrepreneurship & AI Business OS');
-  const [adTargetPlatform, setAdTargetPlatform] = useState('Meta (Facebook / Instagram)');
+  const [adPlatform, setAdPlatform] = useState('Meta (Facebook / Instagram)');
   const [isGeneratingAd, setIsGeneratingAd] = useState(false);
-  const [generatedAdCopy, setGeneratedAdCopy] = useState<string>('');
+  const [generatedAdResult, setGeneratedAdResult] = useState<any | null>(null);
+
+  // Live Metrics
+  const metrics = marketingEngine.getMarketingMetrics(userId);
 
   const handleSavePixels = (e: React.FormEvent) => {
     e.preventDefault();
+    marketingEngine.saveTrackingPixels(pixels);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
+  };
+
+  const handleCreateCampaignSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campName.trim()) return;
+
+    const newCamp = marketingEngine.createCampaign({
+      name: campName,
+      channel: campChannel,
+      baseUrl: userStoreLink,
+      utmSource: campUtmSource,
+      utmMedium: campUtmMedium,
+      utmCampaign: campUtmName,
+    });
+
+    setCampaigns(marketingEngine.getCampaigns(userId));
+    setShowCreateCampaignModal(false);
+    setCampName('');
+    alert(`Campaign link created: ${newCamp.fullCampaignUrl}`);
+  };
+
+  const handleCopyText = (text: string, id: string, type: 'swipe' | 'camp') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'swipe') {
+      setCopiedSwipeId(id);
+      setTimeout(() => setCopiedSwipeId(null), 2500);
+    } else {
+      setCopiedCampId(id);
+      setTimeout(() => setCopiedCampId(null), 2500);
+    }
   };
 
   const handleFireSimulatedEvent = () => {
@@ -69,48 +138,53 @@ export const MarketingCenter: React.FC = () => {
     setTimeout(() => {
       const timestamp = new Date().toLocaleTimeString();
       setSimulatedEventsLog(prev => [
-        `[${timestamp}] 🚀 Lead Captured: "Sarah J." (Source: Meta Ads, Campaign: #scale-agency)`,
+        `[${timestamp}] 🚀 Lead Captured: "David M." (Source: Meta Ads, Campaign: #scale-agency)`,
         `[${timestamp}] 📡 Meta Conversions API (CAPI): Lead event emitted with value $300.00`,
-        `[${timestamp}] 📊 GA4: "generate_lead" measurement payload delivered`,
-        `[${timestamp}] 🤖 AI CRM Intelligence: Scored 92/100 • Automated follow-up sequence #1 dispatched`,
-        ...prev.slice(0, 5)
+        `[${timestamp}] 📊 GA4: "generate_lead" measurement payload delivered (Measurement ID: ${pixels.ga4MeasurementId})`,
+        `[${timestamp}] 🤖 AI CRM Intelligence: Scored 94/100 • Automated welcome sequence dispatched`,
+        ...prev.slice(0, 4)
       ]);
       setIsSimulatingEvent(false);
-    }, 1000);
+    }, 800);
   };
 
   const handleGenerateAdCopy = () => {
     setIsGeneratingAd(true);
     setTimeout(() => {
-      setGeneratedAdCopy(`### 🎯 High-Converting Meta Ad Campaign\n\n**Primary Headline:** Stop Stitching Disconnected Software. Launch Your Digital Business Operating System Today.\n\n**Primary Text:**\nAre you tired of paying $500/month for 7 different tools just to get your business off the ground? Meet Eviona Ecosystem — your complete website, CRM, marketplace, AI assistants, and automated sales pipeline under one unified dashboard.\n\n👉 Dynamic custom domain included\n👉 1-click product marketplace & affiliate rights\n👉 24/7 AI business co-pilot\n\n**Call to Action (CTA):** Start Your Free Tour Now\n**Suggested Audience:** Ages 25-54 • Interests: Digital Marketing, Entrepreneurship, E-commerce, SaaS.`);
+      const res = marketingEngine.generateAdCopy({
+        niche: adNiche,
+        platform: adPlatform,
+        offer: 'Eviona Business Center & Storefront',
+      });
+      setGeneratedAdResult(res);
       setIsGeneratingAd(false);
-    }, 1200);
+    }, 800);
   };
 
   return (
-    <div className="space-y-6 pb-16 animate-fadeIn">
+    <div className="space-y-6 pb-20 animate-fadeIn max-w-7xl mx-auto">
       {/* Hero Header */}
       <div className="rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 p-6 sm:p-8 text-white border border-indigo-500/20 shadow-card flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="max-w-2xl space-y-3">
+        <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
             <Megaphone className="w-3.5 h-3.5" />
-            <span>Marketing Intelligence & Advertising Integration Layer</span>
+            <span>Marketing Intelligence & Advertising Engine</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Connect Ad Networks. Track Conversions. Scale ROI.
-          </h2>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight">
+            Multi-Channel Traffic & Conversion Suite
+          </h1>
           <p className="text-xs sm:text-sm text-slate-300">
-            Native integrations with Meta Pixel, Meta CAPI, Google Analytics 4, TikTok Pixel, and LinkedIn Insight Tag. Every visitor, lead, and sale is tracked with immutable attribution.
+            Native integrations with Meta Pixel, Meta CAPI, Google Analytics 4, and TikTok Pixel. Track custom UTM campaigns, generate high-converting promotional swipe copy, and scale your ROI.
           </p>
         </div>
 
         <div className="flex gap-2 shrink-0">
           <button
             onClick={() => setActiveTab('ai-ads')}
-            className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all"
+            className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all"
           >
             <Sparkles className="w-4 h-4" />
-            <span>AI Ad Generator</span>
+            <span>AI Copywriter</span>
           </button>
         </div>
       </div>
@@ -119,44 +193,44 @@ export const MarketingCenter: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Total Visitors</p>
-          <h3 className="text-xl font-black text-slate-900 mt-1">10,500</h3>
-          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">↑ +18.4% this mo</p>
+          <h3 className="text-xl font-black text-slate-900 mt-1">{metrics.totalVisitors.toLocaleString()}</h3>
+          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Tracked across campaigns</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Leads Captured</p>
-          <h3 className="text-xl font-black text-indigo-600 mt-1">850</h3>
-          <p className="text-[9px] text-slate-400 mt-0.5">All ad sources</p>
+          <h3 className="text-xl font-black text-indigo-600 mt-1">{metrics.leadsCaptured}</h3>
+          <p className="text-[9px] text-slate-400 mt-0.5">In CRM pipeline</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Conversion Rate</p>
-          <h3 className="text-xl font-black text-emerald-600 mt-1">8.1%</h3>
-          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Industry high</p>
+          <h3 className="text-xl font-black text-emerald-600 mt-1">{metrics.conversionRate}</h3>
+          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Visitor to lead</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Total Sales</p>
-          <h3 className="text-xl font-black text-slate-900 mt-1">120</h3>
-          <p className="text-[9px] text-slate-400 mt-0.5">Verified checkouts</p>
+          <h3 className="text-xl font-black text-slate-900 mt-1">{metrics.totalSales}</h3>
+          <p className="text-[9px] text-slate-400 mt-0.5">Settled orders</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Revenue Generated</p>
-          <h3 className="text-xl font-black text-purple-600 mt-1">5,000 EVO</h3>
-          <p className="text-[9px] text-slate-400 mt-0.5">($5,000.00 USD)</p>
+          <h3 className="text-xl font-black text-purple-600 mt-1">${metrics.revenueGenerated.toFixed(2)} EVO</h3>
+          <p className="text-[9px] text-slate-400 mt-0.5">($1.00 = 1 EVO)</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-card text-center">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Best Traffic Source</p>
-          <h3 className="text-sm font-black text-indigo-600 mt-2 truncate">Meta Ads (64%)</h3>
-          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">ROAS: 4.2x</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase">Top Traffic Source</p>
+          <h3 className="text-xs font-black text-indigo-600 mt-2 truncate">{metrics.bestTrafficSource}</h3>
+          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Active channels</p>
         </div>
       </div>
 
       {/* Main Tabs Navigation */}
-      <div className="flex border-b border-slate-200 bg-white rounded-2xl p-1.5 shadow-card overflow-x-auto gap-1">
+      <div className="flex bg-white rounded-2xl p-1.5 border border-slate-200 shadow-card overflow-x-auto gap-1 text-xs font-bold">
         {[
           { id: 'pixels', label: 'Tracking Pixels & APIs', icon: Sliders },
-          { id: 'funnel', label: 'Conversion Event System', icon: Activity },
-          { id: 'agency', label: 'Agency / Squad Access', icon: Users },
-          { id: 'ai-ads', label: 'AI Marketing Assistant', icon: Sparkles },
-          { id: 'services', label: 'Premium Marketing Services', icon: Zap },
+          { id: 'campaigns', label: `UTM Campaign Links (${campaigns.length})`, icon: Globe },
+          { id: 'swipes', label: 'Promo Swipe Files (WhatsApp/Email)', icon: Share2 },
+          { id: 'ai-ads', label: 'AI Ad Copy Generator', icon: Sparkles },
+          { id: 'telemetry', label: 'Live Telemetry & CAPI Events', icon: Activity },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -164,7 +238,7 @@ export const MarketingCenter: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap transition-all ${
                 isActive
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -177,22 +251,20 @@ export const MarketingCenter: React.FC = () => {
         })}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 1. TRACKING PIXELS & AD CONNECTIONS TAB                                   */}
-      {/* ========================================================================= */}
+      {/* TAB 1: TRACKING PIXELS & AD CONNECTIONS */}
       {activeTab === 'pixels' && (
         <form onSubmit={handleSavePixels} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h3 className="text-lg font-black text-slate-900">Advertising Pixels & Measurement IDs</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Ids entered here are automatically injected into your landing page (<code className="text-indigo-600 font-mono">username.evionaecosystem.com</code> and custom domains).
+                IDs configured here are automatically injected across your Landing Pages, Storefronts, and Domain routing.
               </p>
             </div>
             {isSaved && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Pixel Configurations Saved!</span>
+                <span>Saved & Active!</span>
               </div>
             )}
           </div>
@@ -220,23 +292,23 @@ export const MarketingCenter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Server-Side Conversions API (CAPI) Token</label>
+                <label className="block font-bold text-slate-700 mb-1">Conversions API (CAPI) Token</label>
                 <input
                   type="password"
                   value={pixels.metaCapiToken}
                   onChange={(e) => setPixels({ ...pixels, metaCapiToken: e.target.value })}
-                  placeholder="EAAG9283401..."
+                  placeholder="EAAG9283401kdlasmdklq9281..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-medium outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
-            {/* Google Analytics & Ads Section */}
+            {/* Google Analytics 4 & GTM */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs">G</div>
-                  <span className="font-bold text-slate-900 text-sm">Google Analytics 4 & Tag Manager</span>
+                  <span className="font-bold text-slate-900 text-sm">Google Analytics 4 & GTM</span>
                 </div>
                 <Badge variant="emerald" size="sm">Active</Badge>
               </div>
@@ -247,31 +319,31 @@ export const MarketingCenter: React.FC = () => {
                   type="text"
                   value={pixels.ga4MeasurementId}
                   onChange={(e) => setPixels({ ...pixels, ga4MeasurementId: e.target.value })}
-                  placeholder="e.g. G-EVIONA9821"
+                  placeholder="G-EVIONA9821"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-medium outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Google Tag Manager Container ID</label>
+                <label className="block font-bold text-slate-700 mb-1">Google Tag Manager (GTM) Container ID</label>
                 <input
                   type="text"
                   value={pixels.gtmContainerId}
                   onChange={(e) => setPixels({ ...pixels, gtmContainerId: e.target.value })}
-                  placeholder="e.g. GTM-KV9281X"
+                  placeholder="GTM-KV9281X"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-medium outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
-            {/* TikTok for Business */}
+            {/* TikTok Pixel */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">🎵</div>
+                  <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs">TT</div>
                   <span className="font-bold text-slate-900 text-sm">TikTok Pixel & Events API</span>
                 </div>
-                <Badge variant="purple" size="sm">Connected</Badge>
+                <Badge variant="emerald" size="sm">Active</Badge>
               </div>
 
               <div>
@@ -280,305 +352,336 @@ export const MarketingCenter: React.FC = () => {
                   type="text"
                   value={pixels.tiktokPixelId}
                   onChange={(e) => setPixels({ ...pixels, tiktokPixelId: e.target.value })}
-                  placeholder="e.g. C892810KMS921"
+                  placeholder="C892810KMS921"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-medium outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
-            {/* LinkedIn & Snapchat */}
+            {/* LinkedIn Insight Tag */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center font-bold text-xs">in</div>
+                  <div className="w-7 h-7 rounded-lg bg-sky-700 text-white flex items-center justify-center font-bold text-xs">in</div>
                   <span className="font-bold text-slate-900 text-sm">LinkedIn Insight Tag</span>
                 </div>
-                <Badge variant="blue" size="sm">Connected</Badge>
+                <Badge variant="emerald" size="sm">Active</Badge>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">LinkedIn Partner ID</label>
+                <label className="block font-bold text-slate-700 mb-1">LinkedIn Partner Tag ID</label>
                 <input
                   type="text"
                   value={pixels.linkedinTagId}
                   onChange={(e) => setPixels({ ...pixels, linkedinTagId: e.target.value })}
-                  placeholder="e.g. 982341"
+                  placeholder="982341"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-medium outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save & Apply Tracking Scripts</span>
+              <span>Save & Sync Tracking Pixels</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* ========================================================================= */}
-      {/* 2. CONVERSION EVENT SYSTEM TAB                                            */}
-      {/* ========================================================================= */}
-      {activeTab === 'funnel' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Standard Platform Conversion Event Pipeline</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Every user interaction dispatches synchronized payloads to your Pixels, CAPI, CRM, and AI lead scoring engine.
-                </p>
-              </div>
-
-              <button
-                onClick={handleFireSimulatedEvent}
-                disabled={isSimulatingEvent}
-                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-purple-600/20 flex items-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                <span>{isSimulatingEvent ? 'Firing Event...' : 'Simulate Live Test Event'}</span>
-              </button>
+      {/* TAB 2: UTM CAMPAIGN LINKS BUILDER */}
+      {activeTab === 'campaigns' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Custom UTM Campaign Tracking Links</h3>
+              <p className="text-xs text-slate-500">
+                Generate trackable links with embedded referral IDs and custom campaign analytics.
+              </p>
             </div>
+            <button
+              onClick={() => setShowCreateCampaignModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Campaign Link</span>
+            </button>
+          </div>
 
-            {/* Interactive Visual Pipeline */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3 text-center">
-              {[
-                { step: '1', name: 'Page View', badge: 'Client Pixel' },
-                { step: '2', name: 'Lead Captured', badge: 'CRM & CAPI' },
-                { step: '3', name: 'Registration Started', badge: 'Funnel Step' },
-                { step: '4', name: 'Registration Done', badge: 'User Created' },
-                { step: '5', name: 'Payment Done', badge: 'Ledger Credited' },
-                { step: '6', name: 'Membership Active', badge: 'MLM Trigger' },
-              ].map((ev, i) => (
-                <div key={i} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 relative group hover:border-indigo-500 transition-colors">
-                  <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 font-bold text-[10px] flex items-center justify-center mx-auto mb-1.5">
-                    {ev.step}
-                  </span>
-                  <h4 className="text-xs font-black text-slate-900">{ev.name}</h4>
-                  <span className="text-[9px] font-bold text-indigo-600 mt-1 block">{ev.badge}</span>
+          <div className="divide-y divide-slate-100">
+            {campaigns.map((camp) => (
+              <div key={camp.id} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
+                <div className="space-y-1.5 max-w-xl min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 text-sm">{camp.name}</h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 uppercase">
+                      {camp.channel}
+                    </span>
+                  </div>
+                  <p className="font-mono text-indigo-600 text-[11px] truncate">{camp.fullCampaignUrl}</p>
+                  <p className="text-slate-400 text-[10px]">Created on {camp.createdAt}</p>
                 </div>
-              ))}
-            </div>
 
-            {/* Live Event Stream Log */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Live Event Dispatch Stream</h4>
-              <div className="p-4 rounded-2xl bg-slate-950 text-emerald-400 font-mono text-xs space-y-1.5 max-h-56 overflow-y-auto">
-                {simulatedEventsLog.map((log, idx) => (
-                  <div key={idx} className="leading-relaxed border-b border-slate-900 pb-1">{log}</div>
-                ))}
+                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  <div className="text-right text-xs">
+                    <p className="font-black text-slate-900">{camp.clicks} Clicks</p>
+                    <p className="text-emerald-600 font-bold">{camp.leadsGenerated} Leads • {camp.salesGenerated} Sales</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleCopyText(camp.fullCampaignUrl, camp.id, 'camp')}
+                    className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center gap-1.5 transition-colors"
+                    title="Copy Campaign Link"
+                  >
+                    {copiedCampId === camp.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedCampId === camp.id ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 3. SQUAD / AGENCY DELEGATED ACCESS TAB                                    */}
-      {/* ========================================================================= */}
-      {activeTab === 'agency' && (
+      {/* TAB 3: PROMOTIONAL SWIPE FILES (WhatsApp / Email / SMS) */}
+      {activeTab === 'swipes' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-black text-slate-900">Marketing Team & Agency Delegated Access</h3>
+          <div>
+            <h3 className="text-lg font-black text-slate-900">Promotional Swipe Files & Broadcast Templates</h3>
             <p className="text-xs text-slate-500">
-              Grant authorized marketing personnel or growth squads permission to manage your ad campaigns and creative funnels without exposing financial balances.
+              Your personal referral ID (<code className="font-mono text-indigo-600 font-bold">{userId}</code>) is automatically embedded into every message below.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Allowed Permissions */}
-            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-800">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <h4 className="font-bold text-sm">Allowed Permissions (Campaign Manager)</h4>
-              </div>
-              <ul className="text-xs text-emerald-900 space-y-2 font-medium">
-                <li className="flex items-center gap-2">✓ View dynamic landing page layouts & sections</li>
-                <li className="flex items-center gap-2">✓ Access campaign analytics, UTM tracking & visitor metrics</li>
-                <li className="flex items-center gap-2">✓ Create, test, and link advertising campaigns</li>
-                <li className="flex items-center gap-2">✓ Upload ad creative assets, banners, and copy</li>
-                <li className="flex items-center gap-2">✓ View inbound leads and contact form submissions</li>
-              </ul>
-            </div>
+            {swipeFiles.map((swipe) => {
+              const personalizedContent = swipe.content
+                .replace(/\{\{REF_LINK\}\}/g, userStoreLink)
+                .replace(/\{\{USER_NAME\}\}/g, userName);
 
-            {/* Restricted Permissions */}
-            <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-3">
-              <div className="flex items-center gap-2 text-rose-800">
-                <Lock className="w-5 h-5 text-rose-600" />
-                <h4 className="font-bold text-sm">Strictly Restricted Areas</h4>
-              </div>
-              <ul className="text-xs text-rose-900 space-y-2 font-medium">
-                <li className="flex items-center gap-2">✗ No access to wallet balance or withdrawal requests</li>
-                <li className="flex items-center gap-2">✗ No access to personal banking or KYC verification records</li>
-                <li className="flex items-center gap-2">✗ No access to account passwords or security settings</li>
-                <li className="flex items-center gap-2">✗ No access to MLM binary tree placements or commissions</li>
-                <li className="flex items-center gap-2">✗ No access to internal peer-to-peer EVO token transfers</li>
-              </ul>
-            </div>
-          </div>
+              return (
+                <div key={swipe.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700">
+                        {swipe.category}
+                      </span>
+                    </div>
+                    <h4 className="font-black text-slate-900 text-sm">{swipe.title}</h4>
+                    <p className="text-xs text-slate-500">{swipe.description}</p>
+                    <div className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs whitespace-pre-line font-sans leading-relaxed">
+                      {personalizedContent}
+                    </div>
+                  </div>
 
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">Invite Marketing Manager / Agency Partner</h4>
-              <p className="text-[11px] text-slate-500">Provide their email to issue a scoped invitation link.</p>
-            </div>
-            <div className="flex w-full sm:w-auto gap-2">
-              <input
-                type="email"
-                placeholder="agency@marketingpartner.com"
-                className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-medium outline-none focus:border-indigo-500 w-full sm:w-64"
-              />
-              <button
-                type="button"
-                onClick={() => alert('Scoped Agency Invitation dispatched with Campaign Manager permissions.')}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0 shadow-md"
-              >
-                Send Invite
-              </button>
-            </div>
+                  <button
+                    onClick={() => handleCopyText(personalizedContent, swipe.id, 'swipe')}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-transform active:scale-95"
+                  >
+                    {copiedSwipeId === swipe.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedSwipeId === swipe.id ? 'Copied with Your Link!' : 'Copy to Clipboard'}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. AI MARKETING ASSISTANT TAB                                             */}
-      {/* ========================================================================= */}
+      {/* TAB 4: AI AD COPY & HOOK GENERATOR */}
       {activeTab === 'ai-ads' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-black text-slate-900">AI Marketing & Ad Campaign Assistant</h3>
-            <p className="text-xs text-slate-500">
-              Generate structured ad copy, high-intent audience suggestions, and follow-up email series trained on your store catalog.
-            </p>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6 max-w-3xl">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">AI Advertising Copywriter</h3>
+            <p className="text-xs text-slate-500">Generate high-converting headlines, primary text, and target audience recipes for Meta, Google, and TikTok ads.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Business Niche & Offer</label>
+              <label className="block font-bold text-slate-700 mb-1">Target Niche / Industry</label>
               <input
                 type="text"
                 value={adNiche}
                 onChange={(e) => setAdNiche(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-semibold outline-none focus:border-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Target Advertising Platform</label>
+              <label className="block font-bold text-slate-700 mb-1">Ad Network</label>
               <select
-                value={adTargetPlatform}
-                onChange={(e) => setAdTargetPlatform(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-semibold outline-none focus:border-indigo-500"
+                value={adPlatform}
+                onChange={(e) => setAdPlatform(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
               >
-                <option>Meta (Facebook / Instagram)</option>
-                <option>Google Ads (Search & Performance Max)</option>
-                <option>TikTok Ads</option>
-                <option>LinkedIn Sponsored Content</option>
+                <option value="Meta (Facebook / Instagram)">Meta (Facebook / Instagram)</option>
+                <option value="Google Search / YouTube">Google Search & YouTube Ads</option>
+                <option value="TikTok Ads">TikTok Viral Short Video Ads</option>
               </select>
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <button
-              onClick={handleGenerateAdCopy}
-              disabled={isGeneratingAd}
-              className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2"
-            >
-              {isGeneratingAd ? (
-                <>
-                  <Sparkles className="w-4 h-4 animate-spin" />
-                  <span>Synthesizing Campaign Assets...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Generate Complete Ad Set</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleGenerateAdCopy}
+            disabled={isGeneratingAd}
+            className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{isGeneratingAd ? 'Generating Ad Assets...' : 'Generate High-Converting Ad Copy'}</span>
+          </button>
 
-          {generatedAdCopy && (
-            <div className="p-5 rounded-2xl bg-slate-50 border-2 border-indigo-200 space-y-3 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <Badge variant="purple" size="sm">Generated Campaign Creative</Badge>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedAdCopy);
-                    alert('Copied to clipboard!');
-                  }}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copy Assets</span>
-                </button>
+          {generatedAdResult && (
+            <div className="p-6 rounded-3xl bg-indigo-50/70 border border-indigo-100 space-y-4 text-xs">
+              <div>
+                <span className="text-[10px] font-bold text-indigo-600 uppercase">Primary Headline</span>
+                <h4 className="font-extrabold text-slate-900 text-sm mt-0.5">{generatedAdResult.headline}</h4>
               </div>
-              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-800 whitespace-pre-line leading-relaxed">
-                {generatedAdCopy}
+
+              <div>
+                <span className="text-[10px] font-bold text-indigo-600 uppercase">Body Copy</span>
+                <p className="text-slate-700 whitespace-pre-line mt-1 bg-white p-4 rounded-xl border border-indigo-100">
+                  {generatedAdResult.bodyCopy}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-[11px]">
+                <div className="bg-white p-3 rounded-xl border border-indigo-100">
+                  <span className="text-slate-400 block font-bold">Suggested Audience:</span>
+                  <span className="font-bold text-slate-800">{generatedAdResult.targetAudience}</span>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-indigo-100">
+                  <span className="text-slate-400 block font-bold">Recommended Budget:</span>
+                  <span className="font-bold text-emerald-600">{generatedAdResult.suggestedBudget}</span>
+                </div>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 5. PREMIUM MARKETING SERVICES TAB                                         */}
-      {/* ========================================================================= */}
-      {activeTab === 'services' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-black text-slate-900">Premium Growth & Managed Marketing Services</h3>
-              <p className="text-xs text-slate-500">
-                Let Eviona certified growth squads build, optimize, and scale your campaigns directly from your wallet balance.
-              </p>
+      {/* TAB 5: TELEMETRY & CONVERSION EVENTS */}
+      {activeTab === 'telemetry' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Conversion Telemetry & Event Stream</h3>
+              <p className="text-xs text-slate-500">Live feed of conversion events dispatched to Meta CAPI, Google Analytics, and TikTok.</p>
+            </div>
+            <button
+              onClick={handleFireSimulatedEvent}
+              disabled={isSimulatingEvent}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-2"
+            >
+              <Radio className="w-4 h-4" />
+              <span>{isSimulatingEvent ? 'Emitting...' : 'Emit Test Conversion Event'}</span>
+            </button>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-slate-950 text-emerald-400 font-mono text-xs space-y-2.5">
+            {simulatedEventsLog.map((log, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-slate-600">{i + 1}.</span>
+                <span>{log}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create Campaign Link Modal */}
+      {showCreateCampaignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900">Create UTM Campaign Tracking Link</h3>
+              <button onClick={() => setShowCreateCampaignModal(false)} className="text-slate-400 hover:text-slate-700">
+                <Check className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {[
-                {
-                  title: 'Turnkey Meta Ads Setup',
-                  price: '150 EVO',
-                  desc: 'Complete Pixel audit, custom audience creation, 5 creative copy variants, and CAPI configuration.',
-                  badge: 'Popular',
-                },
-                {
-                  title: 'High-Converting Funnel Audit',
-                  price: '250 EVO',
-                  desc: 'Comprehensive conversion rate audit of your landing page copy, mobile speed, and checkout flow.',
-                  badge: 'Growth',
-                },
-                {
-                  title: 'Dedicated Agency Squad (Monthly)',
-                  price: '500 EVO / mo',
-                  desc: 'Full-service ad management, daily budget pacing, weekly A/B testing, and direct lead nurturing.',
-                  badge: 'Enterprise',
-                },
-              ].map((service, idx) => (
-                <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-4 hover:border-indigo-500 transition-colors">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-black uppercase text-indigo-600">{service.badge}</span>
-                      <span className="font-black text-slate-900 text-base">{service.price}</span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-900">{service.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">{service.desc}</p>
-                  </div>
+            <form onSubmit={handleCreateCampaignSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Campaign Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. TikTok Summer Ad Campaign"
+                  value={campName}
+                  onChange={(e) => setCampName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                />
+              </div>
 
-                  <button
-                    onClick={() => alert(`Purchased ${service.title} using EVO Token balance!`)}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20"
-                  >
-                    Order with EVO Wallet
-                  </button>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Channel Platform</label>
+                <select
+                  value={campChannel}
+                  onChange={(e) => {
+                    setCampChannel(e.target.value as any);
+                    setCampUtmSource(e.target.value);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                >
+                  <option value="meta">Meta (Facebook / Instagram)</option>
+                  <option value="google">Google Ads</option>
+                  <option value="tiktok">TikTok Ads</option>
+                  <option value="whatsapp">WhatsApp Direct</option>
+                  <option value="email">Email Broadcast</option>
+                  <option value="twitter">Twitter / X</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">utm_source</label>
+                  <input
+                    type="text"
+                    value={campUtmSource}
+                    onChange={(e) => setCampUtmSource(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono"
+                  />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">utm_medium</label>
+                  <input
+                    type="text"
+                    value={campUtmMedium}
+                    onChange={(e) => setCampUtmMedium(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">utm_campaign</label>
+                <input
+                  type="text"
+                  value={campUtmName}
+                  onChange={(e) => setCampUtmName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCampaignModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30"
+                >
+                  Generate Link
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
