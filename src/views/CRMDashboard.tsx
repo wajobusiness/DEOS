@@ -35,10 +35,19 @@ import { Badge } from '../components/common/Badge';
 export const CRMDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequences' | 'campaigns'>('pipeline');
 
-  // Member CRM only displays leads owned by the member (ownerType === 'member')
-  const [memberLeads, setMemberLeads] = useState<Lead[]>(
-    initialLeads.filter(l => l.ownerType === 'member')
-  );
+  // Member CRM displays leads owned by the member + captured from their website
+  const [memberLeads, setMemberLeads] = useState<Lead[]>(() => {
+    try {
+      const saved = localStorage.getItem('eviona_crm_leads_v2');
+      if (saved) {
+        const parsed: Lead[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return initialLeads.filter(l => l.ownerType === 'member');
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);

@@ -367,7 +367,7 @@ export function App() {
               }}
             />
           )}
-          {currentView === 'builder' && <WebsiteBuilder />}
+          {currentView === 'builder' && <WebsiteBuilder currentUser={activeMember} onNavigate={handleNavigate} />}
           {currentView === 'domains' && <DomainIntegration />}
           {currentView === 'ai-center' && <AIBusinessCenter />}
           {currentView === 'crm' && <CRMDashboard />}
