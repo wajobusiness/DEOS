@@ -60,14 +60,14 @@ export interface PlatformBrandingSettings {
   faviconUrl?: string;
   companyLegalName?: string;
   companyName?: string;
-  supportEmail: string;
-  supportPhone: string;
+  supportEmail?: string;
+  supportPhone?: string;
   contactAddress?: string;
-  copyrightText: string;
-  defaultCurrency: string;
-  defaultLanguage: string;
-  timezone: string;
-  socialLinks: {
+  copyrightText?: string;
+  defaultCurrency?: string;
+  defaultLanguage?: string;
+  timezone?: string;
+  socialLinks?: {
     twitter?: string;
     telegram?: string;
     discord?: string;
@@ -187,10 +187,10 @@ export interface Product {
   category: string;
   price: number;
   originalPrice?: number;
-  affiliateCommissionRate: number; // e.g. 0.40 = 40%
+  affiliateCommissionRate?: number; // e.g. 0.40 = 40%
   salesCount: number;
   rating: number;
-  reviewsCount: number;
+  reviewsCount?: number;
   seller?: string;
   sellerName?: string;
   sellerAvatar?: string;
@@ -205,11 +205,11 @@ export interface Lead {
   id: string;
   name: string;
   avatar: string;
-  company: string;
+  company?: string;
   email?: string;
   phone?: string;
-  leadSource: 'company_website' | 'member_landing_page' | 'marketplace' | 'ad_campaign' | 'direct_referral';
-  ownerType: 'company' | 'member';
+  leadSource?: 'company_website' | 'member_landing_page' | 'marketplace' | 'ad_campaign' | 'direct_referral';
+  ownerType?: 'company' | 'member';
   ownerId?: string | null; // null for company leads, member ID for member leads
   ownerName?: string;
   assignedTo?: string | null; // Staff / Admin ID for corporate sales follow-up
