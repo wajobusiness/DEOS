@@ -51,7 +51,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const planPrices: Record<PlanTier, number> = {
     launch: 100,
     growth: 300,
-    legacy: 1000,
+    legacy: 500,
   };
 
   const handleCopyAddress = () => {
@@ -268,7 +268,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     {selectedPlan === 'legacy' && <CheckCircle2 className="w-5 h-5 text-amber-400" />}
                   </div>
                   <div>
-                    <span className="text-3xl font-black text-white">$1,000</span>
+                    <span className="text-3xl font-black text-white">$500</span>
                     <span className="text-xs text-slate-400 font-medium ml-1">/ year</span>
                   </div>
                   <p className="text-xs text-slate-300">

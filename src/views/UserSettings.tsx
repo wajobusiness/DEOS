@@ -17,14 +17,16 @@ import {
   Lock,
   Smartphone
 } from 'lucide-react';
-import { Member } from '../types';
+import { Member, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
+import { useAuth } from '../context/AuthContext';
 
 interface UserSettingsProps {
   currentUser: Member;
 }
 
 export const UserSettings: React.FC<UserSettingsProps> = ({ currentUser }) => {
+  const { updatePlan } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -380,16 +382,101 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ currentUser }) => {
 
           {/* BILLING TAB */}
           {activeTab === 'billing' && (
-            <div className="space-y-4 text-xs">
-              <h3 className="text-base font-bold text-slate-900">Membership Subscription</h3>
-              <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
-                <div className="flex justify-between font-bold">
-                  <span className="text-indigo-900 text-sm">{currentUser.plan.toUpperCase()} Plan ($300 Membership)</span>
-                  <Badge variant="emerald" size="sm">Active</Badge>
+            <div className="space-y-6 text-xs">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Membership Subscription & Plan Tiers</h3>
+                <p className="text-xs text-slate-500">Manage your active tier, renew annual license, or upgrade your operating limits.</p>
+              </div>
+
+              {/* Current Active Plan Card */}
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white space-y-3 shadow-md">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-indigo-300 tracking-wider">Current Membership Tier</span>
+                    <h4 className="text-xl font-black">{currentUser.plan.toUpperCase()} TIER</h4>
+                  </div>
+                  <Badge variant="emerald" size="sm">Active & Verified</Badge>
                 </div>
-                <p className="text-slate-600">Annual renewal: $50/year • Next billing: <b>{currentUser.renewalDate || '1 Year'}</b></p>
-                <div className="pt-2">
-                  <span className="text-[11px] text-indigo-700 font-semibold">10% Binary Network Active • Unlimited Dynamic Landing Page & CRM Access</span>
+                <p className="text-xs text-indigo-200">
+                  Annual renewal date: <b>{currentUser.renewalDate || 'In 365 Days'}</b> ($50.00/year renewal fee).
+                </p>
+                <div className="pt-2 flex flex-wrap gap-3">
+                  <button
+                    onClick={async () => {
+                      await updatePlan(currentUser.plan);
+                      alert(`Successfully renewed ${currentUser.plan.toUpperCase()} tier subscription for 1 additional year!`);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-white text-indigo-950 font-bold hover:bg-indigo-50 shadow-sm"
+                  >
+                    Renew Subscription ($50/yr)
+                  </button>
+                </div>
+              </div>
+
+              {/* 3 Tier Upgrade Options */}
+              <div className="space-y-3 pt-2">
+                <h4 className="font-bold text-slate-900 text-sm">Available Upgrade Packages</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      id: 'launch' as PlanTier,
+                      name: 'Launch Tier',
+                      price: '$100/yr',
+                      features: ['1 Landing Page (3 Templates)', 'Subdomain & SSL', 'CRM (100 Leads)', '10% Binary Network Position'],
+                    },
+                    {
+                      id: 'growth' as PlanTier,
+                      name: 'Growth Tier',
+                      price: '$300/yr',
+                      features: ['Launch Features Included', 'AI Business Center', 'CRM Automation & Email', 'Marketplace Seller Store', '10% Binary Commissions'],
+                    },
+                    {
+                      id: 'legacy' as PlanTier,
+                      name: 'Legacy Tier',
+                      price: '$500/yr',
+                      features: ['Growth Features Included', 'Binary Matrix Priority', 'Full Academy Vault', 'VIP Mentorship & Support'],
+                    },
+                  ].map((tier) => (
+                    <div
+                      key={tier.id}
+                      className={`p-5 rounded-2xl border flex flex-col justify-between ${
+                        currentUser.plan === tier.id
+                          ? 'border-indigo-600 bg-indigo-50/50 shadow-xs'
+                          : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-slate-900">{tier.name}</span>
+                          {currentUser.plan === tier.id && <Badge variant="purple" size="sm">Current</Badge>}
+                        </div>
+                        <span className="text-lg font-black text-slate-900">{tier.price}</span>
+                        <ul className="space-y-1.5 pt-2 text-[11px] text-slate-600">
+                          {tier.features.map((f, i) => (
+                            <li key={i} className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <button
+                        disabled={currentUser.plan === tier.id}
+                        onClick={async () => {
+                          await updatePlan(tier.id);
+                          alert(`Upgraded account to ${tier.name}! All associated features have been unlocked.`);
+                        }}
+                        className={`w-full mt-4 py-2 rounded-xl font-bold text-xs transition-all ${
+                          currentUser.plan === tier.id
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                        }`}
+                      >
+                        {currentUser.plan === tier.id ? 'Active Plan' : `Upgrade to ${tier.name}`}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
