@@ -1,11 +1,11 @@
 import { EventItem, EventTicket, EventSpeaker, EventAgendaItem, Lead } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
-const STORAGE_EVENTS_KEY = 'eviona_events_master_v3';
-const STORAGE_TICKETS_KEY = 'eviona_event_tickets_v3';
+const STORAGE_EVENTS_KEY = 'eviona_events_master_v4';
+const STORAGE_TICKETS_KEY = 'eviona_event_tickets_v4';
 const STORAGE_CRM_LEADS_KEY = 'eviona_crm_leads_v2';
 
-export const INITIAL_EVENTS: EventItem[] = [
+export const INITIAL_PLATFORM_EVENTS: EventItem[] = [
   {
     id: 'EVT-001',
     slug: 'global-entrepreneur-summit-2025',
@@ -18,11 +18,11 @@ export const INITIAL_EVENTS: EventItem[] = [
     time: '02:00 PM EST',
     endTime: '06:00 PM EST',
     timezone: 'EST (New York)',
-    instructor: 'Alex Rivera & Guests',
+    instructor: 'Alex Rivera & Global Keynotes',
     instructorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    organizerId: 'EVO-ID-100245',
+    organizerId: 'EVO-ID-000001',
     organizerName: 'Eviona Global Labs',
-    organizerEmail: 'events@evionaecosystem.com',
+    organizerEmail: 'official-events@evionaecosystem.com',
     venue: 'Eviona Virtual Broadcast Studio (Room #1)',
     meetingLink: 'https://zoom.us/j/98127391823',
     meetingPlatform: 'Zoom / Eviona Studio',
@@ -84,8 +84,9 @@ export const INITIAL_EVENTS: EventItem[] = [
     timezone: 'EST (New York)',
     instructor: 'Marcus Vance',
     instructorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-    organizerId: 'EVO-ID-100245',
-    organizerName: 'Eviona Academy',
+    organizerId: 'EVO-ID-000002',
+    organizerName: 'Marcus Vance',
+    organizerEmail: 'marcus@vancecapital.com',
     venue: 'YouTube Live Broadcast',
     meetingLink: 'https://youtube.com/live/demo123',
     meetingPlatform: 'YouTube Live',
@@ -130,8 +131,9 @@ export const INITIAL_EVENTS: EventItem[] = [
     timezone: 'Global',
     instructor: 'David Sterling',
     instructorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    organizerId: 'EVO-ID-100245',
-    organizerName: 'Eviona Business Center',
+    organizerId: 'EVO-ID-000003',
+    organizerName: 'David Sterling',
+    organizerEmail: 'david@eviona.com',
     venue: 'Instant Video Stream',
     meetingLink: 'https://evionaecosystem.com/webinar/evergreen-opportunity',
     meetingPlatform: 'Eviona Evergreen Player',
@@ -175,8 +177,8 @@ export const eventsEngine = {
     } catch (e) {
       console.warn('[EventsEngine] Error loading events:', e);
     }
-    localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(INITIAL_EVENTS));
-    return INITIAL_EVENTS;
+    localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(INITIAL_PLATFORM_EVENTS));
+    return INITIAL_PLATFORM_EVENTS;
   },
 
   // 2. Get Event By ID or Slug
@@ -185,7 +187,7 @@ export const eventsEngine = {
     return list.find(e => e.id === idOrSlug || e.slug === idOrSlug);
   },
 
-  // 3. Create Event
+  // 3. Create Event (User becomes the verified Host)
   createEvent(eventData: Omit<EventItem, 'id' | 'registered' | 'checkedInCount' | 'revenue' | 'createdAt'>): EventItem {
     const generatedId = `EVT-${Date.now().toString().slice(-4)}`;
     const generatedSlug = eventData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -227,7 +229,23 @@ export const eventsEngine = {
     return newEvent;
   },
 
-  // 4. Register Attendee for Event (with CRM ingestion, ticket generation & reminder workflows)
+  // 4. Update Event
+  updateEvent(eventId: string, updates: Partial<EventItem>): EventItem[] {
+    const all = this.getEvents('All');
+    const updated = all.map(e => (e.id === eventId ? { ...e, ...updates } : e));
+    localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  // 5. Delete Event
+  deleteEvent(eventId: string): EventItem[] {
+    const all = this.getEvents('All');
+    const updated = all.filter(e => e.id !== eventId);
+    localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  // 6. Register Attendee for Event
   async registerAttendee(data: {
     eventId: string;
     attendeeName: string;
@@ -309,7 +327,19 @@ export const eventsEngine = {
     return { ticket: newTicket, event: { ...event, registered: event.registered + 1 } };
   },
 
-  // 5. Get User Tickets
+  // 7. Get Attendees / Tickets for a specific Event
+  getEventAttendees(eventId: string): EventTicket[] {
+    try {
+      const saved = localStorage.getItem(STORAGE_TICKETS_KEY);
+      if (saved) {
+        const tickets: EventTicket[] = JSON.parse(saved);
+        return tickets.filter(t => t.eventId === eventId);
+      }
+    } catch {}
+    return [];
+  },
+
+  // 8. Get User Tickets
   getUserTickets(userEmail?: string): EventTicket[] {
     try {
       const saved = localStorage.getItem(STORAGE_TICKETS_KEY);
@@ -322,7 +352,7 @@ export const eventsEngine = {
     return [];
   },
 
-  // 6. Check In Attendee
+  // 9. Check In Attendee
   checkInAttendee(ticketNumber: string): { success: boolean; message: string } {
     try {
       const saved = localStorage.getItem(STORAGE_TICKETS_KEY);
@@ -339,7 +369,7 @@ export const eventsEngine = {
     return { success: false, message: 'Ticket not found or already checked in.' };
   },
 
-  // 7. AI Event Copywriter
+  // 10. AI Event Copywriter
   generateAIEventContent(prompt: { topic: string; category: string; format: string }) {
     const { topic, category, format } = prompt;
     const cleanTopic = topic.trim() || 'Digital Business Mastery';
