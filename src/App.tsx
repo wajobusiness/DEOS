@@ -12,6 +12,7 @@ import { AuthModal } from './components/auth/AuthModal';
 import { LandingPage } from './views/LandingPage';
 import { OnboardingWizard } from './views/OnboardingWizard';
 import { UserDashboard } from './views/UserDashboard';
+import { UserStoreView } from './views/UserStoreView';
 import { BinaryNetwork } from './views/BinaryNetwork';
 import { PartnerCenter } from './views/PartnerCenter';
 import { DepositFlow } from './views/DepositFlow';
@@ -39,6 +40,7 @@ export function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [targetStoreUser, setTargetStoreUser] = useState<string>('');
   const [activeReferralCode, setActiveReferralCode] = useState<string>(() => {
     try {
       return sessionStorage.getItem('eviona_active_ref') || 'EVO-ID-100245';
@@ -47,18 +49,19 @@ export function App() {
     }
   });
 
-  // Handle URL Routing (/backoffice, /join, Affiliate Links, and Email Verification Callbacks)
+  // Handle URL Routing (/backoffice, /store, /join, Affiliate Links, and Email Verification Callbacks)
   useEffect(() => {
     const handleUrlRouting = () => {
       const pathname = window.location.pathname;
       const hash = window.location.hash;
       const search = window.location.search;
 
-      // Parse Query Params for ?ref=EVO-ID-... and &leg=...
+      // Parse Query Params for ?ref=EVO-ID-... and &leg=... and ?user=...
       const rawQuery = search || (hash.includes('?') ? `?${hash.split('?')[1]}` : '');
       const urlParams = new URLSearchParams(rawQuery);
       const refParam = urlParams.get('ref');
       const legParam = urlParams.get('leg');
+      const userParam = urlParams.get('user') || urlParams.get('store');
 
       if (refParam) {
         sessionStorage.setItem('eviona_active_ref', refParam);
@@ -70,6 +73,17 @@ export function App() {
           setAuthModalMode('register');
           setIsAuthModalOpen(true);
         }
+      }
+
+      // Handle Isolated Store Route (/store, /store?user=..., /s/...)
+      if (pathname.startsWith('/store') || hash.startsWith('#/store') || search.includes('store') || pathname.startsWith('/s/')) {
+        const storeUser = userParam || refParam || (pathname.split('/store/')[1]) || (pathname.split('/s/')[1]) || '';
+        if (storeUser) {
+          setTargetStoreUser(storeUser);
+          sessionStorage.setItem('eviona_active_ref', storeUser);
+        }
+        setCurrentView('store');
+        return;
       }
 
       // Handle Backoffice Route
@@ -107,7 +121,7 @@ export function App() {
       setIsAdminMode(false);
     }
 
-    const publicViews: ViewType[] = ['landing', 'marketplace'];
+    const publicViews: ViewType[] = ['landing', 'marketplace', 'store'];
     if (!publicViews.includes(view) && !isAuthenticated) {
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
@@ -152,8 +166,27 @@ export function App() {
     );
   }
 
-  // 2. Unauthenticated Visitor Flow (Public Landing Page or Public Marketplace)
+  // 2. Unauthenticated Visitor Flow (Public Landing Page, Public Marketplace, or Public User Store)
   if (!isAuthenticated) {
+    if (currentView === 'store') {
+      return (
+        <div className="min-h-screen bg-slate-50 p-4 sm:p-8 max-w-7xl mx-auto">
+          <UserStoreView
+            isPublicDirect={true}
+            targetUserSlug={targetStoreUser || activeReferralCode}
+            onNavigate={handleNavigate}
+          />
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            initialMode={authModalMode}
+            defaultSponsorCode={activeReferralCode}
+            onSuccess={() => setCurrentView('dashboard')}
+          />
+        </div>
+      );
+    }
+
     if (currentView === 'marketplace') {
       return (
         <>
@@ -177,6 +210,8 @@ export function App() {
           onEnterApp={(targetView?: ViewType) => {
             if (targetView === 'marketplace') {
               setCurrentView('marketplace');
+            } else if (targetView === 'store') {
+              setCurrentView('store');
             } else {
               setAuthModalMode(targetView === 'onboarding' ? 'register' : 'login');
               setIsAuthModalOpen(true);
@@ -197,7 +232,6 @@ export function App() {
   }
 
   // 3. Authenticated New User: Must Complete Onboarding (Plan Selection -> Wallet Payment -> Video Tour)
-  // At this point, the user does not have access to the full user dashboard
   if (member && member.hasCompletedOnboarding === false) {
     return (
       <OnboardingWizard
@@ -211,10 +245,10 @@ export function App() {
     );
   }
 
-  // 4. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
+  // 4. Authenticated Full Operating System Shell (User Dashboard, Store, Wallet, CRM, etc.)
   const activeMember = member || {
-    id: 'EVO-ID-ACTIVE',
-    memberCode: 'EVO-ID-ACTIVE',
+    id: 'EVO-ID-100245',
+    memberCode: 'EVO-ID-100245',
     name: 'Entrepreneur',
     email: 'entrepreneur@evionaecosystem.com',
     phone: '',
@@ -271,6 +305,9 @@ export function App() {
           {currentView === 'dashboard' && (
             <UserDashboard currentUser={activeMember} onNavigate={handleNavigate} />
           )}
+          {currentView === 'store' && (
+            <UserStoreView currentUser={activeMember} targetUserSlug={targetStoreUser} onNavigate={handleNavigate} />
+          )}
           {currentView === 'binary' && <BinaryNetwork />}
           {currentView === 'partner' && <PartnerCenter currentUser={activeMember} />}
           {currentView === 'deposit' && <DepositFlow onNavigate={handleNavigate} />}
@@ -280,7 +317,7 @@ export function App() {
           {currentView === 'marketplace' && (
             <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={false} currentUser={activeMember} />
           )}
-          {currentView === 'sellers' && <SellersDashboard />}
+          {currentView === 'sellers' && <SellersDashboard currentUser={activeMember} onNavigate={handleNavigate} />}
           {currentView === 'builder' && <WebsiteBuilder />}
           {currentView === 'domains' && <DomainIntegration />}
           {currentView === 'ai-center' && <AIBusinessCenter />}

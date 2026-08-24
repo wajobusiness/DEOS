@@ -28,6 +28,7 @@ export type ViewType =
   | 'landing'
   | 'onboarding'
   | 'dashboard'
+  | 'store'
   | 'wallet'
   | 'deposit'
   | 'binary'
@@ -238,6 +239,30 @@ export interface SellerOrder {
   date: string;
   time: string;
   status: 'Settled' | 'Processing' | 'Refunded';
+}
+
+export interface UserStoreSettings {
+  userId: string;
+  storeSlug: string;
+  storeName: string;
+  tagline: string;
+  bio: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  themeColor: 'indigo' | 'purple' | 'emerald' | 'rose' | 'amber' | 'blue';
+  customDomain?: string;
+  supportEmail?: string;
+  whatsappNumber?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+    website?: string;
+  };
+  featuredProductIds: string[];
+  curatedMarketplaceProductIds: string[];
+  announcementText?: string;
+  announcementActive?: boolean;
 }
 
 export interface Lead {
