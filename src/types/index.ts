@@ -376,18 +376,86 @@ export interface Course {
   status: 'In Progress' | 'Completed' | 'Not Started';
 }
 
+export type EventFormat = 
+  | 'online_webinar'
+  | 'physical'
+  | 'zoom'
+  | 'google_meet'
+  | 'teams'
+  | 'youtube_live'
+  | 'facebook_live'
+  | 'prerecorded_evergreen'
+  | 'hybrid';
+
+export interface EventSpeaker {
+  id: string;
+  name: string;
+  role: string;
+  company?: string;
+  avatar: string;
+  bio?: string;
+  topic?: string;
+}
+
+export interface EventAgendaItem {
+  id: string;
+  time: string;
+  title: string;
+  speakerName?: string;
+  description?: string;
+}
+
+export interface EventTicket {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  ticketNumber: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  attendeePhone?: string;
+  pricePaid: number;
+  qrCodeUrl: string;
+  status: 'confirmed' | 'checked_in' | 'cancelled';
+  registeredAt: string;
+}
+
 export interface EventItem {
   id: string;
+  slug?: string;
   title: string;
-  category: 'Live Event' | 'Webinar' | 'Virtual Event' | 'Draft';
+  subtitle?: string;
+  description?: string;
+  category: string;
+  format?: EventFormat;
   date: string;
   time: string;
-  instructor: string;
-  instructorAvatar: string;
+  endTime?: string;
+  timezone?: string;
+  instructor?: string;
+  instructorAvatar?: string;
+  organizerId?: string;
+  organizerName?: string;
+  organizerEmail?: string;
+  venue?: string;
+  meetingLink?: string;
+  meetingPlatform?: string;
   registered: number;
   capacity: number;
+  checkedInCount?: number;
   revenue: number;
-  status: 'Upcoming' | 'Live' | 'Past' | 'Draft';
+  isPaid?: boolean;
+  ticketPrice?: number;
+  image?: string;
+  bannerImage?: string;
+  videoEmbedUrl?: string;
+  replayUrl?: string;
+  status: 'Upcoming' | 'Live' | 'Past' | 'Draft' | 'Completed' | 'Cancelled';
+  visibility?: 'public' | 'members_only' | 'private';
+  speakers?: EventSpeaker[];
+  agenda?: EventAgendaItem[];
+  faqs?: Array<{ question: string; answer: string }>;
+  tags?: string[];
+  createdAt?: string;
 }
 
 export interface TeamMember {
