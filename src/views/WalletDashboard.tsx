@@ -12,11 +12,15 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  AlertCircle,
+  Building2,
+  ShieldCheck
 } from 'lucide-react';
 import { initialTransactions } from '../store/mockData';
 import { Member, ViewType, WalletTransaction } from '../types';
 import { Badge } from '../components/common/Badge';
+import { paymentGateway } from '../engine/paymentGatewayEngine';
 
 interface WalletDashboardProps {
   currentUser: Member;
@@ -31,7 +35,95 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
-  const filteredTransactions = initialTransactions.filter(t => {
+  // Dynamic Ledger Transactions State
+  const [transactions, setTransactions] = useState<WalletTransaction[]>(initialTransactions);
+
+  // Withdrawal Form State
+  const [withdrawAmount, setWithdrawAmount] = useState('250.00');
+  const [withdrawMethod, setWithdrawMethod] = useState<'USDT (TRC20)' | 'Bank Transfer' | 'Kuda Instant'>('USDT (TRC20)');
+  const [withdrawAddress, setWithdrawAddress] = useState('TX9xZgHkM92pqWrtY8dKl9mTRC20Address');
+  const [withdrawBankAcc, setWithdrawBankAcc] = useState('0928374102');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  // P2P Transfer Form State
+  const [transferRecipient, setTransferRecipient] = useState('');
+  const [transferAmount, setTransferAmount] = useState('50.00');
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  // Handle Withdrawal Request via Payment Gateway Engine
+  const handleExecuteWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(withdrawAmount);
+    if (!amount || amount < 25) {
+      alert('Minimum withdrawal is $25.00 (25 EVO)');
+      return;
+    }
+
+    setIsWithdrawing(true);
+    try {
+      const result = await paymentGateway.requestWithdrawal({
+        userId: currentUser.id,
+        amountUsd: amount,
+        method: withdrawMethod,
+        destination: {
+          cryptoAddress: withdrawMethod === 'USDT (TRC20)' ? withdrawAddress : undefined,
+          accountNumber: withdrawMethod !== 'USDT (TRC20)' ? withdrawBankAcc : undefined,
+        },
+      });
+
+      const newTx: WalletTransaction = {
+        id: result.reference,
+        type: 'withdrawal',
+        description: `Withdrawal via ${withdrawMethod}`,
+        amount: -amount,
+        currency: 'USD',
+        status: 'Processing',
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setTransactions(prev => [newTx, ...prev]);
+      setShowWithdrawModal(false);
+      alert(result.message);
+    } catch (err: any) {
+      alert(err.message || 'Withdrawal failed');
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  // Handle P2P Member Transfer
+  const handleExecuteTransfer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(transferAmount);
+    if (!amount || amount <= 0) return;
+    if (!transferRecipient.trim()) {
+      alert('Please enter a recipient Member ID or Email');
+      return;
+    }
+
+    setIsTransferring(true);
+    setTimeout(() => {
+      const newTx: WalletTransaction = {
+        id: `TX-P2P-${Date.now().toString().slice(-6)}`,
+        type: 'coin_transfer',
+        description: `P2P Transfer to ${transferRecipient}`,
+        amount: -amount,
+        currency: 'EVO',
+        status: 'Completed',
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setTransactions(prev => [newTx, ...prev]);
+      setIsTransferring(false);
+      setShowTransferModal(false);
+      setTransferRecipient('');
+      alert(`Successfully transferred ${amount} EVO Tokens to ${transferRecipient}!`);
+    }, 800);
+  };
+
+  const filteredTransactions = transactions.filter(t => {
     if (filterType === 'all') return true;
     if (filterType === 'commissions') return t.type.includes('commission') || t.type.includes('bonus');
     if (filterType === 'transfers') return t.type.includes('transfer') || t.type.includes('withdrawal');
@@ -42,49 +134,49 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* 4 Balance Cards Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-card border border-indigo-500/20 flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 rounded-3xl p-6 text-white shadow-card border border-indigo-500/20 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-indigo-300 uppercase">Total Wallet Balance</span>
             <Wallet className="w-5 h-5 text-indigo-400" />
           </div>
           <div className="my-3">
-            <h3 className="text-3xl font-extrabold tracking-tight">${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-[10px] text-emerald-400 font-semibold mt-1">↑ +8.4% this month</p>
+            <h3 className="text-3xl font-black tracking-tight">${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
+            <p className="text-[10px] text-emerald-400 font-semibold mt-1">↑ +18.4% this month</p>
           </div>
-          <span className="text-[10px] text-slate-400">Combined USDT + EVO Valuation</span>
+          <span className="text-[10px] text-slate-400">Fixed Model A Valuation ($1.00 = 1.00 EVO)</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase">EVO Token</span>
             <Coins className="w-5 h-5 text-purple-600" />
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-bold text-slate-900">{currentUser.tokenBalance.toLocaleString()} <span className="text-xs text-purple-600">EVO</span></h3>
-            <p className="text-[10px] text-slate-400 mt-1">EVO is the utility token powering the Eviona Ecosystem.</p>
+            <h3 className="text-2xl font-black text-slate-900">{currentUser.tokenBalance.toLocaleString()} <span className="text-xs text-purple-600">EVO</span></h3>
+            <p className="text-[10px] text-slate-400 mt-1">Internal accounting utility currency</p>
           </div>
-          <span className="text-[10px] text-indigo-600 font-bold">Utility Token Unit</span>
+          <span className="text-[10px] text-indigo-600 font-bold">1:1 USD Fixed Utility Unit</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">USDT Balance</span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">TRC20</span>
+            <span className="text-xs font-bold text-slate-500 uppercase">USDT (TRC20) Ready</span>
+            <Badge variant="emerald" size="sm">Instant</Badge>
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-bold text-slate-900">1,250.00 <span className="text-xs text-emerald-600">USDT</span></h3>
+            <h3 className="text-2xl font-black text-slate-900">1,250.00 <span className="text-xs text-emerald-600">USDT</span></h3>
             <p className="text-[10px] text-slate-400 mt-1">Directly withdrawable</p>
           </div>
-          <span className="text-[10px] text-emerald-600 font-semibold">Ready for payout</span>
+          <span className="text-[10px] text-emerald-600 font-semibold">Ready for crypto payout</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase">Available Balance</span>
             <CheckCircle2 className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-bold text-slate-900">${currentUser.availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
+            <h3 className="text-2xl font-black text-slate-900">${currentUser.availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
             <p className="text-[10px] text-slate-400 mt-1">Pending escrow: $250.00</p>
           </div>
           <span className="text-[10px] text-slate-400">Unlocked capital</span>
@@ -95,183 +187,81 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => onNavigate('deposit')}
-          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-2"
+          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-2 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Deposit (5 Methods)</span>
+          <span>Deposit Funds</span>
         </button>
 
         <button
           onClick={() => setShowWithdrawModal(true)}
-          className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs shadow-sm flex items-center gap-2"
+          className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs border border-slate-200 shadow-xs flex items-center gap-2 transition-all"
         >
-          <ArrowUpRight className="w-4 h-4 text-slate-600" />
-          <span>Request Withdrawal</span>
+          <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+          <span>Request Payout</span>
         </button>
 
         <button
           onClick={() => setShowTransferModal(true)}
-          className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs shadow-sm flex items-center gap-2"
+          className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs border border-slate-200 shadow-xs flex items-center gap-2 transition-all"
         >
-          <Send className="w-4 h-4 text-slate-600" />
-          <span>Internal Transfer</span>
-        </button>
-
-        <button
-          onClick={() => onNavigate('deposit')}
-          className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs shadow-sm flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4 text-purple-600" />
-          <span>Convert Currency</span>
+          <Send className="w-4 h-4 text-purple-600" />
+          <span>P2P Transfer</span>
         </button>
       </div>
 
-      {/* Chart & Allocation Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Balance Trajectory Chart */}
-        <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance Growth History</h4>
-              <p className="text-lg font-bold text-slate-900 mt-0.5">$3,450.00 Total Net</p>
-            </div>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-              <button className="px-3 py-1 text-xs font-bold bg-white text-indigo-600 rounded-lg shadow-2xs">30D</button>
-              <button className="px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900">60D</button>
-              <button className="px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900">90D</button>
-            </div>
-          </div>
-
-          <div className="h-48 w-full mt-4">
-            <svg viewBox="0 0 500 150" className="w-full h-full">
-              <defs>
-                <linearGradient id="walletGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0 130 Q 80 110 160 80 T 320 60 T 500 20 L 500 150 L 0 150 Z"
-                fill="url(#walletGrad)"
-              />
-              <path
-                d="M 0 130 Q 80 110 160 80 T 320 60 T 500 20"
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <circle cx="500" cy="20" r="5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Wallet Allocation Donut */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200 shadow-card flex flex-col justify-between">
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Wallet Allocation
-          </h4>
-
-          <div className="flex items-center gap-4 my-auto">
-            <div className="relative w-28 h-28 shrink-0">
-              <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#EEF2FF" strokeWidth="5" />
-                {/* EVO Token 70% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#8B5CF6" strokeWidth="5" strokeDasharray="62 100" strokeDashoffset="0" />
-                {/* USDT 30% */}
-                <circle cx="18" cy="18" r="14" fill="transparent" stroke="#10B981" strokeWidth="5" strokeDasharray="26 100" strokeDashoffset="-62" />
-              </svg>
-            </div>
-
-            <div className="space-y-2 text-xs flex-1">
-              <div className="flex justify-between">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <span className="w-2 h-2 rounded-full bg-purple-500" />
-                  EVO Token
-                </span>
-                <span className="font-bold text-slate-900">71.0%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  USDT (TRC20)
-                </span>
-                <span className="font-bold text-slate-900">29.0%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500">
-            Internal P2P transfers between active members have zero transaction fees.
-          </div>
-        </div>
-      </div>
-
-      {/* Append-Only Ledger Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-        <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Transaction History & Filter Table */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-card overflow-hidden">
+        <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h4 className="text-sm font-bold text-slate-900">Append-Only Financial Ledger</h4>
-            <p className="text-xs text-slate-500">Immutable record of all deposits, commissions, and transfers</p>
+            <h3 className="text-base font-bold text-slate-900">Immutable Wallet Ledger Transactions</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Append-only double-entry ledger history (Book 0 Invariant §14).</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs">
+          <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            {['all', 'commissions', 'transfers'].map((f) => (
               <button
-                onClick={() => setFilterType('all')}
-                className={`px-3 py-1 font-semibold rounded-lg ${filterType === 'all' ? 'bg-white shadow-2xs text-indigo-600' : 'text-slate-600'}`}
+                key={f}
+                onClick={() => setFilterType(f)}
+                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                  filterType === f
+                    ? 'bg-white shadow-xs text-indigo-600 font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
               >
-                All
+                {f}
               </button>
-              <button
-                onClick={() => setFilterType('commissions')}
-                className={`px-3 py-1 font-semibold rounded-lg ${filterType === 'commissions' ? 'bg-white shadow-2xs text-indigo-600' : 'text-slate-600'}`}
-              >
-                Commissions
-              </button>
-              <button
-                onClick={() => setFilterType('transfers')}
-                className={`px-3 py-1 font-semibold rounded-lg ${filterType === 'transfers' ? 'bg-white shadow-2xs text-indigo-600' : 'text-slate-600'}`}
-              >
-                Payouts
-              </button>
-            </div>
-
-            <button className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
-              <Download className="w-4 h-4" />
-            </button>
+            ))}
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
+          <table className="w-full text-left text-xs text-slate-600">
+            <thead className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-200">
               <tr>
                 <th className="py-3.5 px-6">Transaction ID</th>
                 <th className="py-3.5 px-6">Description</th>
-                <th className="py-3.5 px-6">Event Type</th>
-                <th className="py-3.5 px-6">Date & Time</th>
+                <th className="py-3.5 px-6">Amount</th>
                 <th className="py-3.5 px-6">Status</th>
-                <th className="py-3.5 px-6 text-right">Amount</th>
+                <th className="py-3.5 px-6 text-right">Date & Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredTransactions.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-4 px-6 font-mono font-bold text-slate-900">{t.id}</td>
-                  <td className="py-4 px-6 font-semibold text-slate-800">{t.description}</td>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {filteredTransactions.map((tx) => (
+                <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-4 px-6 font-mono font-bold text-slate-900">{tx.id}</td>
+                  <td className="py-4 px-6 font-bold text-slate-800">{tx.description}</td>
+                  <td className="py-4 px-6 font-black text-sm">
+                    <span className={tx.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                      {tx.amount >= 0 ? `+${tx.amount.toFixed(2)}` : tx.amount.toFixed(2)} {tx.currency}
+                    </span>
+                  </td>
                   <td className="py-4 px-6">
-                    <span className="font-mono text-[10px] text-slate-500">{t.type}</span>
+                    <Badge variant={tx.status === 'Completed' ? 'emerald' : tx.status === 'Processing' ? 'purple' : 'warning'} size="sm">
+                      {tx.status}
+                    </Badge>
                   </td>
-                  <td className="py-4 px-6 text-slate-500">
-                    {t.date} <span className="text-[10px] text-slate-400">({t.time})</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <Badge variant="success" size="sm">● Completed</Badge>
-                  </td>
-                  <td className={`py-4 px-6 text-right font-bold ${t.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                    {t.amount > 0 ? `+${t.amount.toFixed(2)}` : t.amount.toFixed(2)} {t.currency}
-                  </td>
+                  <td className="py-4 px-6 text-right text-slate-400">{tx.date} • {tx.time}</td>
                 </tr>
               ))}
             </tbody>
@@ -281,94 +271,143 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
 
       {/* Modal: Request Withdrawal */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Request USDT Withdrawal</h3>
-            <p className="text-xs text-slate-500 mb-4">Payouts are processed to your confirmed TRC20 address.</p>
-
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Amount (USDT)</label>
+                <h3 className="text-lg font-black text-slate-900">Request Payout / Withdrawal</h3>
+                <p className="text-xs text-slate-500">Processed through the Centralized Payment Gateway Engine.</p>
+              </div>
+              <button onClick={() => setShowWithdrawModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+
+            <form onSubmit={handleExecuteWithdrawal} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Payout Method / Rail</label>
+                <select
+                  value={withdrawMethod}
+                  onChange={(e) => setWithdrawMethod(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                >
+                  <option value="USDT (TRC20)">USDT (TRC-20 Blockchain Instant)</option>
+                  <option value="Bank Transfer">Bank Transfer (Paystack / EFT)</option>
+                  <option value="Kuda Instant">Kuda Business API (Instant Settlement)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Amount ($ USD / EVO)</label>
                 <input
                   type="number"
-                  placeholder="500.00"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500"
+                  step="0.01"
+                  min="25"
+                  required
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Destination TRC20 Address</label>
-                <input
-                  type="text"
-                  placeholder="T..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono outline-none focus:border-indigo-500"
-                />
+                <span className="text-[10px] text-slate-400 mt-1 block">Minimum withdrawal: $25.00</span>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {withdrawMethod === 'USDT (TRC20)' ? (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Destination TRC20 Address</label>
+                  <input
+                    type="text"
+                    required
+                    value={withdrawAddress}
+                    onChange={(e) => setWithdrawAddress(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold outline-none focus:border-indigo-500"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Destination Account Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={withdrawBankAcc}
+                    onChange={(e) => setWithdrawBankAcc(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold outline-none focus:border-indigo-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
+                  type="button"
                   onClick={() => setShowWithdrawModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    alert('Withdrawal request submitted for compliance verification.');
-                    setShowWithdrawModal(false);
-                  }}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-md"
+                  type="submit"
+                  disabled={isWithdrawing}
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
                 >
-                  Confirm Withdrawal
+                  {isWithdrawing ? 'Processing...' : 'Confirm Withdrawal'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Modal: Internal Transfer */}
+      {/* Modal: Internal P2P Transfer */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Internal Member Transfer</h3>
-            <p className="text-xs text-slate-500 mb-4">Send EVO Token or USDT instantly to another active member.</p>
-
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Recipient Member ID / Email</label>
+                <h3 className="text-lg font-black text-slate-900">P2P Member Token Transfer</h3>
+                <p className="text-xs text-slate-500">Send EVO Tokens instantly to any verified member code or email.</p>
+              </div>
+              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+
+            <form onSubmit={handleExecuteTransfer} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Recipient Member ID or Email</label>
                 <input
                   type="text"
-                  placeholder="EVO100..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Amount</label>
-                <input
-                  type="number"
-                  placeholder="100.00"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500"
+                  required
+                  placeholder="e.g. EVO902144 or partner@eviona.com"
+                  value={transferRecipient}
+                  onChange={(e) => setTransferRecipient(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Amount (EVO Tokens)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
+                  type="button"
                   onClick={() => setShowTransferModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    alert('Transfer completed with zero transaction fees.');
-                    setShowTransferModal(false);
-                  }}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-md"
+                  type="submit"
+                  disabled={isTransferring}
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
                 >
-                  Send Funds
+                  {isTransferring ? 'Sending Tokens...' : 'Send Funds (Zero Fee)'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

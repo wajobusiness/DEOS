@@ -14,6 +14,8 @@ export type LedgerEventType =
   | 'academy_instructor_revenue'
   | 'coin_deposit'
   | 'coin_conversion'
+  | 'coin_transfer'
+  | 'withdrawal'
   | 'wallet_withdrawal'
   | 'wallet_transfer_in'
   | 'wallet_transfer_out';
@@ -49,14 +51,18 @@ export type UserRole = 'super_admin' | 'admin' | 'support_staff' | 'member';
 
 export interface PlatformBrandingSettings {
   platformName: string;
+  shortName?: string;
   tagline: string;
-  logoUrl: string;
+  description?: string;
+  logoUrl?: string;
   darkLogoUrl?: string;
   lightLogoUrl?: string;
-  faviconUrl: string;
-  companyName: string;
+  faviconUrl?: string;
+  companyLegalName?: string;
+  companyName?: string;
   supportEmail: string;
   supportPhone: string;
+  contactAddress?: string;
   copyrightText: string;
   defaultCurrency: string;
   defaultLanguage: string;
@@ -168,7 +174,7 @@ export interface WalletTransaction {
   description: string;
   amount: number;
   currency: 'USDT' | 'EVO' | 'DEOS' | 'USD';
-  status: 'Completed' | 'Pending' | 'Failed';
+  status: 'Completed' | 'Pending' | 'Failed' | 'Processing';
   date: string;
   time: string;
 }
@@ -177,16 +183,22 @@ export interface Product {
   id: string;
   slug?: string;
   title: string;
+  description?: string;
   category: string;
   price: number;
+  originalPrice?: number;
   affiliateCommissionRate: number; // e.g. 0.40 = 40%
   salesCount: number;
   rating: number;
   reviewsCount: number;
-  sellerName: string;
-  sellerAvatar: string;
-  badge?: 'Best Seller' | 'New' | 'Top Rated' | 'Hot';
+  seller?: string;
+  sellerName?: string;
+  sellerAvatar?: string;
+  badge?: string;
   image: string;
+  isCreatorCourse?: boolean;
+  licenseType?: string;
+  instantDownload?: boolean;
 }
 
 export interface Lead {
@@ -222,12 +234,17 @@ export interface Course {
   id: string;
   title: string;
   category: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  lessonsCount: number;
-  completedLessons: number;
+  description?: string;
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+  level?: string;
+  duration?: string;
+  lessonsCount?: number;
+  completedLessons?: number;
   rating: number;
-  studentsCount: number;
-  image: string;
+  studentsCount?: number;
+  image?: string;
+  thumbnail?: string;
+  instructor?: string;
   status: 'In Progress' | 'Completed' | 'Not Started';
 }
 
