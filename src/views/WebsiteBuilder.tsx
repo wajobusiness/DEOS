@@ -254,6 +254,15 @@ export const WebsiteBuilder: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Simulated Floating AI Chatbot Widget */}
+            <div className="bg-slate-900/90 backdrop-blur-sm p-3 border-t border-slate-800 flex items-center justify-between text-xs text-white">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-bold text-[11px]">Apex Lead Concierge (AI Active)</span>
+              </div>
+              <span className="text-[9px] font-mono text-indigo-300">Meta Pixel • GA4 Tracked</span>
+            </div>
           </div>
         </div>
 
@@ -348,6 +357,10 @@ export const WebsiteBuilder: React.FC = () => {
               </div>
               <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-[11px]">
                 SSL Certificate: <b>Active (Auto-renewing)</b>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-[11px]">
+                <span className="font-bold text-slate-900 block">Marketing & Pixel Injection</span>
+                <p className="text-slate-500">Meta Pixel (128938472910) + GA4 (G-EVIONA9821) auto-injected from Marketing Center.</p>
               </div>
             </div>
           )}
