@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   ShoppingBag,
@@ -44,9 +44,9 @@ import {
   TrendingUp,
   Package
 } from 'lucide-react';
-import { initialProducts } from '../store/mockData';
 import { Product, ViewType, Member } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
+import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { AuthModal } from '../components/auth/AuthModal';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
@@ -106,96 +106,23 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
     { id: 'Music', label: 'Music & Audio', count: '980+ Products', icon: Music, bg: 'bg-pink-50', text: 'text-pink-600' },
   ];
 
-  // Rich Product Catalog
-  const marketplaceProducts = [
-    {
-      id: 'PRD-01',
-      title: 'AI Business Mastery Complete Course',
-      category: 'Digital Courses',
-      badge: 'BEST SELLER',
-      badgeColor: 'bg-emerald-600 text-white',
-      sellerName: 'TechGuru',
-      sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-      rating: 4.9,
-      reviewsCount: '2.1k',
-      price: 197.00,
-      discountBadge: '50% OFF',
-      salesCount: '1,250+ Sales',
-      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
-      affiliateCommissionRate: 0.50,
-    },
-    {
-      id: 'PRD-02',
-      title: 'Website Builder Pro Template',
-      category: 'Templates',
-      badge: 'TOP RATED',
-      badgeColor: 'bg-teal-600 text-white',
-      sellerName: 'WebSolutions',
-      sellerAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
-      rating: 4.8,
-      reviewsCount: '980',
-      price: 97.00,
-      discountBadge: '40% OFF',
-      salesCount: '980+ Sales',
-      image: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=600&auto=format&fit=crop&q=80',
-      affiliateCommissionRate: 0.40,
-    },
-    {
-      id: 'PRD-03',
-      title: 'Digital Marketing Mastery Kit',
-      category: 'Marketing',
-      badge: 'NEW',
-      badgeColor: 'bg-blue-600 text-white',
-      sellerName: 'MarketPro',
-      sellerAvatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100&auto=format&fit=crop&q=80',
-      rating: 4.7,
-      reviewsCount: '1.3k',
-      price: 147.00,
-      discountBadge: '40% OFF',
-      salesCount: '750+ Sales',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80',
-      affiliateCommissionRate: 0.45,
-    },
-    {
-      id: 'PRD-04',
-      title: 'E-commerce Blueprint',
-      category: 'Digital Courses',
-      badge: 'BEST SELLER',
-      badgeColor: 'bg-emerald-600 text-white',
-      sellerName: 'SuccessLabs',
-      sellerAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80',
-      rating: 4.9,
-      reviewsCount: '2.7k',
-      price: 197.00,
-      discountBadge: '50% OFF',
-      salesCount: '1,130+ Sales',
-      image: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=600&auto=format&fit=crop&q=80',
-      affiliateCommissionRate: 0.50,
-    },
-    {
-      id: 'PRD-05',
-      title: 'Social Media Growth Kit',
-      category: 'Marketing',
-      badge: 'HOT',
-      badgeColor: 'bg-rose-600 text-white',
-      sellerName: 'SocialBoost',
-      sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      rating: 4.8,
-      reviewsCount: '1.5k',
-      price: 57.00,
-      discountBadge: '40% OFF',
-      salesCount: '620+ Sales',
-      image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&auto=format&fit=crop&q=80',
-      affiliateCommissionRate: 0.40,
-    }
-  ];
+  // Dynamic Marketplace Catalog
+  const [products, setProducts] = useState<Product[]>(() => marketplaceEngine.getProducts());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setProducts(marketplaceEngine.getProducts());
+    };
+    window.addEventListener('storage', handleUpdate);
+    return () => window.removeEventListener('storage', handleUpdate);
+  }, []);
 
   // Filter products
-  const filteredProducts = marketplaceProducts.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     const matchesCat = selectedCategory === 'All' || p.category.toLowerCase().includes(selectedCategory.toLowerCase());
     const matchesSearch =
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sellerName || p.seller || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
@@ -228,6 +155,17 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
       }
     }
 
+    // Record Real Seller Orders for each product purchased
+    const activeRef = sessionStorage.getItem('eviona_active_ref') || undefined;
+    cart.forEach((item) => {
+      marketplaceEngine.recordPurchase({
+        product: item,
+        buyerEmail: checkoutEmail,
+        buyerName: checkoutName || 'Customer',
+        promoterCode: activeRef,
+      });
+    });
+
     setCompletedOrder({
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       buyerName: checkoutName || 'Entrepreneur',
@@ -238,6 +176,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     });
 
+    // Refresh products count
+    setProducts(marketplaceEngine.getProducts());
     setCart([]);
     setIsCartOpen(false);
     setIsCheckoutModalOpen(false);

@@ -200,18 +200,44 @@ export interface Product {
   category: string;
   price: number;
   originalPrice?: number;
-  affiliateCommissionRate?: number; // e.g. 0.40 = 40%
+  affiliateCommissionRate?: number; // e.g. 0.40 = 40% (0.01 to 1.0)
+  commissionPercentage?: number; // 1 to 100%
   salesCount: number;
   rating: number;
   reviewsCount?: number;
   seller?: string;
+  sellerId?: string;
   sellerName?: string;
   sellerAvatar?: string;
+  sellerEmail?: string;
   badge?: string;
+  badgeColor?: string;
+  discountBadge?: string;
   image: string;
   isCreatorCourse?: boolean;
   licenseType?: string;
   instantDownload?: boolean;
+  downloadUrl?: string;
+  status?: 'active' | 'paused' | 'archived';
+  createdAt?: string;
+}
+
+export interface SellerOrder {
+  id: string;
+  productId: string;
+  productName: string;
+  buyerName?: string;
+  buyerEmail: string;
+  sellerId: string;
+  sellerName: string;
+  amountUsd: number;
+  netSellerEarned: number;
+  promoterAttributed?: string;
+  promoterCommission?: number;
+  platformFee?: number;
+  date: string;
+  time: string;
+  status: 'Settled' | 'Processing' | 'Refunded';
 }
 
 export interface Lead {
