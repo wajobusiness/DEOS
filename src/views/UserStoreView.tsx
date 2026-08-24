@@ -31,11 +31,14 @@ import {
   ArrowRight,
   TrendingUp,
   Tag,
-  Clock
+  Clock,
+  FileText,
+  HelpCircle,
+  Percent,
+  Bot
 } from 'lucide-react';
-import { Member, Product, UserStoreSettings, ViewType } from '../types';
+import { Member, Product, UserStoreSettings, ViewType, StoreCoupon } from '../types';
 import { Badge } from '../components/common/Badge';
-import { storeEngine } from '../engine/storeEngine';
 import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { useWallet } from '../context/WalletContext';
 
@@ -54,19 +57,17 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
 }) => {
   const { walletBalance, processPurchase } = useWallet();
 
-  // Determine Store Owner Identity
   const activeUserId = currentUser?.id || 'EVO-ID-100245';
   const effectiveStoreOwnerId = targetUserSlug || activeUserId;
   const isOwner = !isPublicDirect && (effectiveStoreOwnerId === activeUserId || !targetUserSlug);
 
-  // Store Settings & Catalog State
   const [storeSettings, setStoreSettings] = useState<UserStoreSettings>(() =>
-    storeEngine.getStoreSettings(effectiveStoreOwnerId, currentUser?.name)
+    marketplaceEngine.getStoreSettings(effectiveStoreOwnerId, currentUser?.name)
   );
 
-  const [activeTab, setActiveTab] = useState<'storefront' | 'customize' | 'curate'>('storefront');
+  const [activeTab, setActiveTab] = useState<'storefront' | 'customize' | 'curate' | 'coupons'>('storefront');
   const [storeProducts, setStoreProducts] = useState<Product[]>(() =>
-    storeEngine.getStoreProducts(effectiveStoreOwnerId)
+    marketplaceEngine.getStoreProducts(effectiveStoreOwnerId)
   );
   const [allMarketplaceProducts, setAllMarketplaceProducts] = useState<Product[]>(() =>
     marketplaceEngine.getProducts()
@@ -83,10 +84,20 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
   const [buyerName, setBuyerName] = useState(currentUser?.name || '');
   const [buyerEmail, setBuyerEmail] = useState(currentUser?.email || '');
   const [paymentRail, setPaymentRail] = useState<'wallet' | 'card' | 'paystack' | 'usdt'>('wallet');
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; message: string } | null>(null);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
 
-  // Store Customization Form State
+  // Coupons State (Owner tab)
+  const [storeCoupons, setStoreCoupons] = useState<StoreCoupon[]>(() =>
+    marketplaceEngine.getStoreCoupons(storeSettings.userId)
+  );
+  const [newCouponCode, setNewCouponCode] = useState('');
+  const [newCouponDiscount, setNewCouponDiscount] = useState('15');
+  const [newCouponType, setNewCouponType] = useState<'percentage' | 'fixed'>('percentage');
+
+  // Customization State
   const [editName, setEditName] = useState(storeSettings.storeName);
   const [editTagline, setEditTagline] = useState(storeSettings.tagline);
   const [editBio, setEditBio] = useState(storeSettings.bio);
@@ -95,19 +106,17 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
   const [editAnnouncementActive, setEditAnnouncementActive] = useState(storeSettings.announcementActive !== false);
   const [editSupportEmail, setEditSupportEmail] = useState(storeSettings.supportEmail || '');
   const [editWhatsapp, setEditWhatsapp] = useState(storeSettings.whatsappNumber || '');
+  const [editGoogleAnalytics, setEditGoogleAnalytics] = useState(storeSettings.trackingPixels?.googleAnalyticsId || '');
+  const [editMetaPixel, setEditMetaPixel] = useState(storeSettings.trackingPixels?.facebookPixelId || '');
+  const [editTikTokPixel, setEditTikTokPixel] = useState(storeSettings.trackingPixels?.tiktokPixelId || '');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-  // Record visit on mount
-  useEffect(() => {
-    storeEngine.recordStoreView(effectiveStoreOwnerId);
-  }, [effectiveStoreOwnerId]);
-
-  // Sync products and settings
   const refreshStore = () => {
-    const updatedSettings = storeEngine.getStoreSettings(effectiveStoreOwnerId, currentUser?.name);
+    const updatedSettings = marketplaceEngine.getStoreSettings(effectiveStoreOwnerId, currentUser?.name);
     setStoreSettings(updatedSettings);
-    setStoreProducts(storeEngine.getStoreProducts(effectiveStoreOwnerId));
+    setStoreProducts(marketplaceEngine.getStoreProducts(effectiveStoreOwnerId));
     setAllMarketplaceProducts(marketplaceEngine.getProducts());
+    setStoreCoupons(marketplaceEngine.getStoreCoupons(updatedSettings.userId));
   };
 
   const storeUrl = `https://evionaecosystem.com/store?user=${storeSettings.userId}`;
@@ -131,21 +140,43 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
       announcementActive: editAnnouncementActive,
       supportEmail: editSupportEmail,
       whatsappNumber: editWhatsapp,
+      trackingPixels: {
+        googleAnalyticsId: editGoogleAnalytics,
+        facebookPixelId: editMetaPixel,
+        tiktokPixelId: editTikTokPixel,
+      },
     };
-    storeEngine.saveStoreSettings(updated);
+    marketplaceEngine.saveStoreSettings(updated);
     setStoreSettings(updated);
     setIsSavingSettings(false);
     setActiveTab('storefront');
     alert('Storefront customizations saved successfully!');
   };
 
-  const handleToggleCurateProduct = (productId: string) => {
-    storeEngine.toggleProductInStore(storeSettings.userId, productId);
-    refreshStore();
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForCheckout || !couponInput.trim()) return;
+    const res = marketplaceEngine.validateCoupon(couponInput, storeSettings.userId, selectedProductForCheckout.price);
+    if (res.valid) {
+      setAppliedCoupon({ code: couponInput.toUpperCase(), discount: res.discountAmount, message: res.message });
+    } else {
+      alert(res.message);
+    }
   };
 
-  const handleBuyProduct = (product: Product) => {
-    setSelectedProductForCheckout(product);
+  const handleCreateCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCouponCode.trim()) return;
+    marketplaceEngine.createCoupon({
+      storeId: storeSettings.userId,
+      code: newCouponCode,
+      discountType: newCouponType,
+      discountValue: parseFloat(newCouponDiscount) || 10,
+      isActive: true,
+    });
+    setStoreCoupons(marketplaceEngine.getStoreCoupons(storeSettings.userId));
+    setNewCouponCode('');
+    alert(`Coupon "${newCouponCode.toUpperCase()}" created!`);
   };
 
   const handleExecutePurchase = async (e: React.FormEvent) => {
@@ -154,10 +185,13 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
 
     setIsProcessingCheckout(true);
     try {
+      const discount = appliedCoupon ? appliedCoupon.discount : 0;
+      const finalPrice = Math.max(0, selectedProductForCheckout.price - discount);
+
       if (paymentRail === 'wallet') {
         const res = processPurchase(
-          selectedProductForCheckout.price,
-          `Storefront Purchase: ${selectedProductForCheckout.title} (Store: ${storeSettings.storeName})`
+          finalPrice,
+          `Storefront Order: ${selectedProductForCheckout.title} (Store: ${storeSettings.storeName})`
         );
         if (!res.success) {
           alert(res.error || 'Insufficient wallet balance. Please select card or crypto.');
@@ -166,25 +200,29 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
         }
       }
 
-      // Record real seller order & affiliate attribution to store owner
+      // Record real order in unified engine
       const order = marketplaceEngine.recordPurchase({
         product: selectedProductForCheckout,
         buyerEmail: buyerEmail,
-        buyerName: buyerName || 'Storefront Customer',
+        buyerName: buyerName || 'Store Customer',
         promoterCode: storeSettings.userId,
+        couponCode: appliedCoupon?.code,
+        discountAmount: discount,
       });
 
       setCompletedOrder({
         orderId: order.id,
         product: selectedProductForCheckout,
         buyerEmail: buyerEmail,
-        amount: selectedProductForCheckout.price,
+        amount: finalPrice,
         licenseKey: `EVO-STORE-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
         downloadUrl: selectedProductForCheckout.downloadUrl || 'https://evionaecosystem.com/downloads/instant-asset.zip',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       });
 
       setSelectedProductForCheckout(null);
+      setAppliedCoupon(null);
+      setCouponInput('');
       refreshStore();
     } catch (err: any) {
       alert(err.message || 'Purchase processing failed');
@@ -211,21 +249,24 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
       : 'from-slate-950 via-indigo-950 to-slate-900 border-indigo-500/20';
 
   return (
-    <div className="space-y-6 pb-20 animate-fadeIn">
-      {/* Owner Top Navigation Bar */}
+    <div className="space-y-6 pb-20 animate-fadeIn max-w-7xl mx-auto">
+      {/* Owner Header Control Hub */}
       {isOwner && (
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-              <Store className="w-4 h-4" />
+        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-card flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">
+              <Store className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-900">Your Isolated Storefront Hub</h4>
-              <p className="text-[11px] text-slate-500 font-mono truncate max-w-xs">{storeUrl}</p>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-slate-900">{storeSettings.storeName}</h4>
+                <Badge variant="purple" size="sm">Storefront Hub</Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-mono truncate max-w-xs">{storeUrl}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
               <button
                 onClick={() => setActiveTab('storefront')}
@@ -233,7 +274,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                   activeTab === 'storefront' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
                 }`}
               >
-                Storefront Preview
+                Storefront View
               </button>
               <button
                 onClick={() => setActiveTab('curate')}
@@ -241,7 +282,15 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                   activeTab === 'curate' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
                 }`}
               >
-                Curate Products ({storeProducts.length})
+                Catalog ({storeProducts.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('coupons')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeTab === 'coupons' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
+                }`}
+              >
+                Coupons
               </button>
               <button
                 onClick={() => setActiveTab('customize')}
@@ -249,27 +298,27 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                   activeTab === 'customize' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
                 }`}
               >
-                Branding & Settings
+                Branding & Pixels
               </button>
             </div>
 
             <button
               onClick={handleCopyStoreLink}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-indigo-600/20"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-indigo-600/20"
             >
-              {copiedStoreLink ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedStoreLink ? 'Copied Link' : 'Copy Store Link'}</span>
+              {copiedStoreLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedStoreLink ? 'Copied' : 'Copy Storefront Link'}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Mode A: Storefront View (Customer / Visitor View) */}
+      {/* Mode A: Public Storefront Display View */}
       {activeTab === 'storefront' && (
         <div className="space-y-6">
-          {/* Store Announcement Bar */}
+          {/* Announcement Strip */}
           {storeSettings.announcementActive && storeSettings.announcementText && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold text-center shadow-md flex items-center justify-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white text-xs font-bold text-center shadow-md flex items-center justify-center gap-2">
               <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
               <span>{storeSettings.announcementText}</span>
             </div>
@@ -281,21 +330,21 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
               <img
                 src={storeSettings.logoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                 alt={storeSettings.storeName}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover border-2 border-white/20 shadow-xl"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover border-2 border-white/20 shadow-xl bg-white"
               />
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{storeSettings.storeName}</h1>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Store
+                    Verified Storefront
                   </span>
                 </div>
                 <p className="text-sm text-indigo-200 font-medium">{storeSettings.tagline}</p>
                 <p className="text-xs text-slate-300 max-w-xl leading-relaxed">{storeSettings.bio}</p>
 
-                {/* Contact Pills */}
-                <div className="flex items-center gap-3 pt-2 text-xs text-indigo-200">
+                {/* Contact & Support Pills */}
+                <div className="flex items-center gap-3 pt-2 text-xs text-indigo-200 flex-wrap">
                   {storeSettings.supportEmail && (
                     <span className="flex items-center gap-1">
                       <Mail className="w-3.5 h-3.5 text-indigo-400" />
@@ -303,16 +352,21 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                     </span>
                   )}
                   {storeSettings.whatsappNumber && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                      WhatsApp Order Ready
-                    </span>
+                    <a
+                      href={`https://api.whatsapp.com/send?phone=${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(`Hello, I am contacting you regarding your store on Eviona: ${storeUrl}`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-emerald-300 hover:underline"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      Direct WhatsApp
+                    </a>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Share & Action Buttons */}
+            {/* Share & QR Code Actions */}
             <div className="flex items-center gap-2.5 z-10 w-full sm:w-auto">
               <button
                 onClick={() => setShowShareModal(true)}
@@ -337,7 +391,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Search store catalog..."
+                placeholder="Search products in this store..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
@@ -345,7 +399,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-              {['All', 'Templates', 'Digital Courses', 'Software & Tools', 'Marketing'].map((cat) => (
+              {['All', 'Software & Tools', 'Templates', 'Digital Courses', 'Marketing'].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
@@ -359,21 +413,12 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
             </div>
           </div>
 
-          {/* Storefront Products Grid */}
+          {/* Products Grid */}
           {filteredStoreProducts.length === 0 ? (
             <div className="p-16 bg-white rounded-3xl border border-slate-200 text-center text-slate-400 text-xs space-y-3">
               <ShoppingBag className="w-12 h-12 mx-auto text-slate-300" />
               <p className="font-bold text-slate-700 text-sm">No Products In Store</p>
               <p className="text-slate-400">Curate courses and templates from the Eviona Marketplace to showcase them here.</p>
-              {isOwner && (
-                <button
-                  onClick={() => setActiveTab('curate')}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Curate Marketplace Products</span>
-                </button>
-              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -416,12 +461,16 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-bold block">Instant Download</span>
+                          <span className="text-[10px] text-slate-400 font-bold block">Instant Delivery</span>
                           <span className="text-base font-black text-indigo-600">${product.price.toFixed(2)}</span>
                         </div>
 
                         <button
-                          onClick={() => handleBuyProduct(product)}
+                          onClick={() => {
+                            setSelectedProductForCheckout(product);
+                            setAppliedCoupon(null);
+                            setCouponInput('');
+                          }}
                           className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-transform active:scale-95"
                         >
                           <ShoppingBag className="w-3.5 h-3.5" />
@@ -437,13 +486,13 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
         </div>
       )}
 
-      {/* Mode B: Curate Marketplace Products Tab (Owner Only) */}
+      {/* Mode B: Curate Marketplace Products Tab */}
       {activeTab === 'curate' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-6 space-y-6">
           <div>
-            <h3 className="text-lg font-black text-slate-900">Curate Products into Your Storefront</h3>
+            <h3 className="text-lg font-black text-slate-900">Curate Marketplace Products into Your Storefront</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Toggle any product from the Eviona Marketplace to appear directly in your personal store. When visitors purchase through your store, you earn full affiliate commission.
+              Toggle products from the global marketplace to display in your storefront. You earn full affiliate commission on every sale made through your store link.
             </p>
           </div>
 
@@ -473,7 +522,17 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                   </div>
 
                   <button
-                    onClick={() => handleToggleCurateProduct(p.id)}
+                    onClick={() => {
+                      let list = storeSettings.curatedMarketplaceProductIds || [];
+                      if (list.includes(p.id)) {
+                        list = list.filter(id => id !== p.id);
+                      } else {
+                        list = [...list, p.id];
+                      }
+                      storeSettings.curatedMarketplaceProductIds = list;
+                      marketplaceEngine.saveStoreSettings(storeSettings);
+                      refreshStore();
+                    }}
                     className={`px-4 py-2 rounded-xl font-bold text-xs transition-colors shrink-0 ${
                       inStore
                         ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
@@ -489,19 +548,102 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
         </div>
       )}
 
-      {/* Mode C: Customize Branding & Settings Tab (Owner Only) */}
+      {/* Mode C: Coupons & Discounts Tab */}
+      {activeTab === 'coupons' && (
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Store Coupons & Discounts</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Create promotional discount codes for your customers and community.
+              </p>
+            </div>
+          </div>
+
+          {/* Create Coupon Form */}
+          <form onSubmit={handleCreateCoupon} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Coupon Code</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. VIP20"
+                value={newCouponCode}
+                onChange={(e) => setNewCouponCode(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-bold uppercase outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Discount Type</label>
+              <select
+                value={newCouponType}
+                onChange={(e) => setNewCouponType(e.target.value as any)}
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+              >
+                <option value="percentage">Percentage (% OFF)</option>
+                <option value="fixed">Fixed Dollar ($ OFF)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Discount Value</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={newCouponDiscount}
+                onChange={(e) => setNewCouponDiscount(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Coupon</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Active Coupons List */}
+          <div className="divide-y divide-slate-100">
+            {storeCoupons.map((c) => (
+              <div key={c.id} className="py-3.5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono font-black">
+                    {c.code}
+                  </span>
+                  <span className="font-bold text-slate-800">
+                    {c.discountValue}{c.discountType === 'percentage' ? '%' : '$'} Discount
+                  </span>
+                  <span className="text-slate-400">• Used {c.timesUsed} times</span>
+                </div>
+                <Badge variant={c.isActive ? 'emerald' : 'warning'} size="sm">
+                  {c.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mode D: Branding, SEO & Marketing Pixels Tab */}
       {activeTab === 'customize' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-6 sm:p-8 space-y-6 max-w-3xl">
           <div>
-            <h3 className="text-lg font-black text-slate-900">Storefront Branding & Visual Identity</h3>
+            <h3 className="text-lg font-black text-slate-900">Storefront Branding & Marketing Pixels</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Customize how your personal isolated store appears to friends and customers.
+              Configure brand identity and connect Google Analytics, Meta Pixel, and TikTok tracking.
             </p>
           </div>
 
           <form onSubmit={handleSaveStoreCustomization} className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Store Name</label>
+              <label className="block font-bold text-slate-700 mb-1">Storefront Name</label>
               <input
                 type="text"
                 required
@@ -512,7 +654,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Tagline / Headline</label>
+              <label className="block font-bold text-slate-700 mb-1">Headline Tagline</label>
               <input
                 type="text"
                 value={editTagline}
@@ -522,7 +664,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Store Bio & Welcome Message</label>
+              <label className="block font-bold text-slate-700 mb-1">Store Bio & Welcome Note</label>
               <textarea
                 rows={3}
                 value={editBio}
@@ -533,7 +675,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Theme Color Gradient</label>
+                <label className="block font-bold text-slate-700 mb-1">Theme Gradient</label>
                 <select
                   value={editTheme}
                   onChange={(e) => setEditTheme(e.target.value as any)}
@@ -569,23 +711,44 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
               />
             </div>
 
+            {/* Marketing Pixels Section */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800">Top Promo Announcement Bar</span>
-                <input
-                  type="checkbox"
-                  checked={editAnnouncementActive}
-                  onChange={(e) => setEditAnnouncementActive(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-600 rounded"
-                />
+              <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span>Marketing Pixels & Conversion Tracking</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-600 text-[11px] mb-1">Google Analytics (G-XXXX)</label>
+                  <input
+                    type="text"
+                    placeholder="G-12345678"
+                    value={editGoogleAnalytics}
+                    onChange={(e) => setEditGoogleAnalytics(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono text-xs outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 text-[11px] mb-1">Meta / FB Pixel ID</label>
+                  <input
+                    type="text"
+                    placeholder="123456789012345"
+                    value={editMetaPixel}
+                    onChange={(e) => setEditMetaPixel(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono text-xs outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 text-[11px] mb-1">TikTok Pixel ID</label>
+                  <input
+                    type="text"
+                    placeholder="C9XXXXXXXXXXXX"
+                    value={editTikTokPixel}
+                    onChange={(e) => setEditTikTokPixel(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono text-xs outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
-              <input
-                type="text"
-                placeholder="e.g. 🚀 Special 40% discount for my community!"
-                value={editAnnouncement}
-                onChange={(e) => setEditAnnouncement(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-              />
             </div>
 
             <div className="flex justify-end pt-2">
@@ -594,7 +757,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                 disabled={isSavingSettings}
                 className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
               >
-                {isSavingSettings ? 'Saving...' : 'Save Storefront Settings'}
+                {isSavingSettings ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
           </form>
@@ -613,7 +776,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
             </div>
 
             <p className="text-xs text-slate-500">
-              Share your personal storefront link. Any purchase made through this link is tracked and credited to your wallet.
+              Share your personal storefront link with friends and customers. All purchases made here are tracked and credited to your wallet.
             </p>
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
@@ -675,7 +838,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
         </div>
       )}
 
-      {/* Checkout Modal */}
+      {/* Checkout Modal with Coupon Support */}
       {selectedProductForCheckout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
@@ -693,8 +856,35 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
               <img src={selectedProductForCheckout.image} alt={selectedProductForCheckout.title} className="w-12 h-12 rounded-xl object-cover" />
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs text-slate-900 truncate">{selectedProductForCheckout.title}</h4>
-                <p className="text-[11px] text-indigo-600 font-bold">${selectedProductForCheckout.price.toFixed(2)} EVO / USD</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-indigo-600 font-black">
+                    ${(selectedProductForCheckout.price - (appliedCoupon?.discount || 0)).toFixed(2)} EVO / USD
+                  </p>
+                  {appliedCoupon && (
+                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Coupon Applied (-${appliedCoupon.discount.toFixed(2)})
+                    </span>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Coupon Code Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Promo / Coupon Code (e.g. LAUNCH20)"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold uppercase outline-none focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+              >
+                Apply
+              </button>
             </div>
 
             <form onSubmit={handleExecutePurchase} className="space-y-3.5 text-xs">
@@ -749,7 +939,9 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
                   disabled={isProcessingCheckout}
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
                 >
-                  {isProcessingCheckout ? 'Processing...' : `Pay $${selectedProductForCheckout.price.toFixed(2)}`}
+                  {isProcessingCheckout
+                    ? 'Processing...'
+                    : `Pay $${(selectedProductForCheckout.price - (appliedCoupon?.discount || 0)).toFixed(2)}`}
                 </button>
               </div>
             </form>

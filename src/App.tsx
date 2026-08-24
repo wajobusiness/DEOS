@@ -13,6 +13,7 @@ import { LandingPage } from './views/LandingPage';
 import { OnboardingWizard } from './views/OnboardingWizard';
 import { UserDashboard } from './views/UserDashboard';
 import { UserStoreView } from './views/UserStoreView';
+import { StoresDirectory } from './views/StoresDirectory';
 import { BinaryNetwork } from './views/BinaryNetwork';
 import { PartnerCenter } from './views/PartnerCenter';
 import { DepositFlow } from './views/DepositFlow';
@@ -49,7 +50,7 @@ export function App() {
     }
   });
 
-  // Handle URL Routing (/backoffice, /store, /join, Affiliate Links, and Email Verification Callbacks)
+  // Handle URL Routing (/backoffice, /stores, /store, /join, Affiliate Links, and Email Verification Callbacks)
   useEffect(() => {
     const handleUrlRouting = () => {
       const pathname = window.location.pathname;
@@ -73,6 +74,12 @@ export function App() {
           setAuthModalMode('register');
           setIsAuthModalOpen(true);
         }
+      }
+
+      // Handle Stores Directory Route (/stores)
+      if (pathname === '/stores' || hash.startsWith('#/stores')) {
+        setCurrentView('stores');
+        return;
       }
 
       // Handle Isolated Store Route (/store, /store?user=..., /s/...)
@@ -121,7 +128,7 @@ export function App() {
       setIsAdminMode(false);
     }
 
-    const publicViews: ViewType[] = ['landing', 'marketplace', 'store'];
+    const publicViews: ViewType[] = ['landing', 'marketplace', 'store', 'stores'];
     if (!publicViews.includes(view) && !isAuthenticated) {
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
@@ -166,8 +173,29 @@ export function App() {
     );
   }
 
-  // 2. Unauthenticated Visitor Flow (Public Landing Page, Public Marketplace, or Public User Store)
+  // 2. Unauthenticated Visitor Flow (Public Landing Page, Public Marketplace, Stores Directory, or Public User Store)
   if (!isAuthenticated) {
+    if (currentView === 'stores') {
+      return (
+        <div className="min-h-screen bg-slate-50 p-4 sm:p-8 max-w-7xl mx-auto">
+          <StoresDirectory
+            onNavigate={handleNavigate}
+            onOpenStore={(slug) => {
+              setTargetStoreUser(slug);
+              setCurrentView('store');
+            }}
+          />
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            initialMode={authModalMode}
+            defaultSponsorCode={activeReferralCode}
+            onSuccess={() => setCurrentView('dashboard')}
+          />
+        </div>
+      );
+    }
+
     if (currentView === 'store') {
       return (
         <div className="min-h-screen bg-slate-50 p-4 sm:p-8 max-w-7xl mx-auto">
@@ -212,6 +240,8 @@ export function App() {
               setCurrentView('marketplace');
             } else if (targetView === 'store') {
               setCurrentView('store');
+            } else if (targetView === 'stores') {
+              setCurrentView('stores');
             } else {
               setAuthModalMode(targetView === 'onboarding' ? 'register' : 'login');
               setIsAuthModalOpen(true);
@@ -308,6 +338,16 @@ export function App() {
           {currentView === 'store' && (
             <UserStoreView currentUser={activeMember} targetUserSlug={targetStoreUser} onNavigate={handleNavigate} />
           )}
+          {currentView === 'stores' && (
+            <StoresDirectory
+              currentUser={activeMember}
+              onNavigate={handleNavigate}
+              onOpenStore={(slug) => {
+                setTargetStoreUser(slug);
+                setCurrentView('store');
+              }}
+            />
+          )}
           {currentView === 'binary' && <BinaryNetwork />}
           {currentView === 'partner' && <PartnerCenter currentUser={activeMember} />}
           {currentView === 'deposit' && <DepositFlow onNavigate={handleNavigate} />}
@@ -317,7 +357,16 @@ export function App() {
           {currentView === 'marketplace' && (
             <MarketplaceHome onNavigate={handleNavigate} isPublicGuest={false} currentUser={activeMember} />
           )}
-          {currentView === 'sellers' && <SellersDashboard currentUser={activeMember} onNavigate={handleNavigate} />}
+          {currentView === 'sellers' && (
+            <SellersDashboard
+              currentUser={activeMember}
+              onNavigate={handleNavigate}
+              onOpenStore={(slug) => {
+                setTargetStoreUser(slug);
+                setCurrentView('store');
+              }}
+            />
+          )}
           {currentView === 'builder' && <WebsiteBuilder />}
           {currentView === 'domains' && <DomainIntegration />}
           {currentView === 'ai-center' && <AIBusinessCenter />}

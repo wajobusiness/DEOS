@@ -29,6 +29,7 @@ export type ViewType =
   | 'onboarding'
   | 'dashboard'
   | 'store'
+  | 'stores'
   | 'wallet'
   | 'deposit'
   | 'binary'
@@ -208,6 +209,7 @@ export interface Product {
   reviewsCount?: number;
   seller?: string;
   sellerId?: string;
+  storeId?: string;
   sellerName?: string;
   sellerAvatar?: string;
   sellerEmail?: string;
@@ -219,7 +221,15 @@ export interface Product {
   licenseType?: string;
   instantDownload?: boolean;
   downloadUrl?: string;
+  inventoryCount?: number;
   status?: 'active' | 'paused' | 'archived';
+  visibility?: 'public' | 'store_only' | 'unlisted';
+  approved?: boolean;
+  isFeatured?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  features?: string[];
   createdAt?: string;
 }
 
@@ -236,6 +246,8 @@ export interface SellerOrder {
   promoterAttributed?: string;
   promoterCommission?: number;
   platformFee?: number;
+  couponCodeUsed?: string;
+  discountAmount?: number;
   date: string;
   time: string;
   status: 'Settled' | 'Processing' | 'Refunded';
@@ -247,22 +259,74 @@ export interface UserStoreSettings {
   storeName: string;
   tagline: string;
   bio: string;
+  aboutSection?: string;
   logoUrl?: string;
   bannerUrl?: string;
   themeColor: 'indigo' | 'purple' | 'emerald' | 'rose' | 'amber' | 'blue';
   customDomain?: string;
   supportEmail?: string;
   whatsappNumber?: string;
+  contactNumber?: string;
+  category?: string;
+  rating?: number;
+  reviewsCount?: number;
+  verifiedSeller?: boolean;
+  isFeaturedStore?: boolean;
   socialLinks?: {
     instagram?: string;
     twitter?: string;
     youtube?: string;
     website?: string;
+    facebook?: string;
+    linkedin?: string;
+  };
+  trackingPixels?: {
+    googleAnalyticsId?: string;
+    googleTagManagerId?: string;
+    facebookPixelId?: string;
+    tiktokPixelId?: string;
+    linkedinInsightId?: string;
+  };
+  seoMeta?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string[];
+    ogImageUrl?: string;
+  };
+  storePolicies?: {
+    shippingInfo?: string;
+    returnPolicy?: string;
+    terms?: string;
   };
   featuredProductIds: string[];
   curatedMarketplaceProductIds: string[];
   announcementText?: string;
   announcementActive?: boolean;
+}
+
+export interface StoreCoupon {
+  id: string;
+  storeId: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderAmount?: number;
+  expiryDate?: string;
+  usageLimit?: number;
+  timesUsed: number;
+  isActive: boolean;
+}
+
+export interface StoreReview {
+  id: string;
+  storeId: string;
+  productId?: string;
+  authorName: string;
+  authorAvatar?: string;
+  rating: number;
+  comment: string;
+  date: string;
+  verifiedPurchase: boolean;
 }
 
 export interface Lead {

@@ -54,6 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'partner' as ViewType, label: 'Partner Center', icon: Users },
     { id: 'marketplace' as ViewType, label: 'Eviona Marketplace', icon: ShoppingBag },
     { id: 'store' as ViewType, label: 'My Storefront', icon: Store, badge: 'New', highlight: true },
+    { id: 'stores' as ViewType, label: 'Stores Directory', icon: Globe },
     { id: 'sellers' as ViewType, label: 'Sellers Dashboard', icon: Store },
     { id: 'academy' as ViewType, label: 'Eviona Academy', icon: GraduationCap },
     { id: 'builder' as ViewType, label: 'Eviona Business Center', icon: Globe, highlight: true },
