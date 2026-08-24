@@ -105,7 +105,7 @@ export const WebsiteBuilder: React.FC = () => {
               <Badge variant="success" size="sm">● Published</Badge>
             </div>
             <p className="text-[10px] text-slate-500">
-              Subdomain: <code className="text-indigo-600 font-mono">johndoe.eviona.com</code>
+              Subdomain: <code className="text-indigo-600 font-mono">johndoe.evionaecosystem.com</code>
             </p>
           </div>
         </div>

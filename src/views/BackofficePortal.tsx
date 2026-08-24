@@ -163,7 +163,7 @@ export const BackofficePortal: React.FC<BackofficePortalProps> = ({
             <input
               type="email"
               required
-              placeholder="admin@eviona.com"
+              placeholder="admin@evionaecosystem.com"
               value={staffEmail}
               onChange={(e) => setStaffEmail(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-rose-500 font-mono"

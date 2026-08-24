@@ -3,7 +3,7 @@ import { Member, TreeNode, WalletTransaction, Product, Lead, Deal, Course, Event
 export const currentUser: Member = {
   id: 'EVO100245',
   name: 'John Doe',
-  email: 'john.doe@eviona.com',
+  email: 'john.doe@evionaecosystem.com',
   phone: '+234 801 234 5678',
   country: 'Nigeria',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',

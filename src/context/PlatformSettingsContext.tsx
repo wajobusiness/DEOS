@@ -34,7 +34,7 @@ const DEFAULT_BRANDING: PlatformBrandingSettings = {
   lightLogoUrl: '',
   faviconUrl: '',
   companyName: 'Eviona Global Technologies Inc.',
-  supportEmail: 'support@eviona.com',
+  supportEmail: 'support@evionaecosystem.com',
   supportPhone: '+1 (800) 555-EVIONA',
   copyrightText: '© 2026 Eviona Ecosystem. All rights reserved.',
   defaultCurrency: 'USD',
@@ -96,7 +96,7 @@ const DEFAULT_HOMEPAGE: HomepageContentSettings = {
     },
     {
       q: 'Do I get a website and domain when I register?',
-      a: 'Yes. Upon account creation, your personalized website (username.eviona.com) is provisioned instantly, along with DNS configuration tools to connect your custom domain with free automatic SSL.',
+      a: 'Yes. Upon account creation, your personalized website (username.evionaecosystem.com) is provisioned instantly, along with DNS configuration tools to connect your custom domain with free automatic SSL.',
     },
   ],
 };

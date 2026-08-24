@@ -128,14 +128,14 @@ export const initialAuditLogs: AuditLogEntry[] = [
 ];
 
 export const defaultDomainConfig: DomainConfig = {
-  subdomain: 'johndoe.eviona.com',
+  subdomain: 'johndoe.evionaecosystem.com',
   customDomain: 'johnsonagency.com',
   dnsStatus: 'active',
   sslStatus: 'active',
   domainCreditVoucher: true,
   dnsRecords: [
     { type: 'A', name: '@', value: '76.76.21.21', status: 'configured' },
-    { type: 'CNAME', name: 'www', value: 'cname.eviona.com', status: 'configured' },
+    { type: 'CNAME', name: 'www', value: 'cname.evionaecosystem.com', status: 'configured' },
     { type: 'TXT', name: '@', value: 'eviona-site-verification=9a8d7f6e5c4b', status: 'configured' },
   ],
 };

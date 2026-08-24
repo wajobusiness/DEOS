@@ -372,7 +372,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. EVO902144 or partner@eviona.com"
+                  placeholder="e.g. EVO902144 or partner@evionaecosystem.com"
                   value={transferRecipient}
                   onChange={(e) => setTransferRecipient(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"

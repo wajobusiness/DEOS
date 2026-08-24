@@ -232,13 +232,13 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   };
 
   const handleCopyStorefront = () => {
-    navigator.clipboard.writeText(`https://eviona.com/m/@${memberCode}`);
+    navigator.clipboard.writeText(`https://evionaecosystem.com/m/@${memberCode}`);
     setCopiedStorefront(true);
     setTimeout(() => setCopiedStorefront(false), 2000);
   };
 
   const handleCopyPromoteLink = (p: any) => {
-    navigator.clipboard.writeText(`https://eviona.com/marketplace/p/${p.id}?ref=${memberCode}`);
+    navigator.clipboard.writeText(`https://evionaecosystem.com/marketplace/p/${p.id}?ref=${memberCode}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };

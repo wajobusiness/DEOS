@@ -36,7 +36,7 @@ export const AIBusinessCenter: React.FC = () => {
   // Business Context State
   const [businessProfile, setBusinessProfile] = useState({
     businessName: 'Apex Growth Digital',
-    domain: 'apexgrowth.eviona.com',
+    domain: 'apexgrowth.evionaecosystem.com',
     industry: 'Digital Marketing & Coaching',
     targetAudience: 'Aspiring Entrepreneurs & Agency Owners',
     primaryGoal: 'Scale monthly active clients to 50 members',
@@ -50,7 +50,7 @@ export const AIBusinessCenter: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: "Hello! I am your Eviona Business Co-Pilot. I've analyzed your business profile for 'Apex Growth Digital' and your domain 'apexgrowth.eviona.com'. How can I help you accelerate conversions or automate operations today?",
+      text: "Hello! I am your Eviona Business Co-Pilot. I've analyzed your business profile for 'Apex Growth Digital' and your domain 'apexgrowth.evionaecosystem.com'. How can I help you accelerate conversions or automate operations today?",
       time: '10:00 AM'
     }
   ]);
@@ -77,7 +77,7 @@ export const AIBusinessCenter: React.FC = () => {
   // 4. Knowledge Base State
   const [knowledgeSources, setKnowledgeSources] = useState([
     { id: 'KB-1', title: 'Apex Growth Service Catalog & Pricing PDF', type: 'Document', status: 'Indexed & Active', items: '24 Pages' },
-    { id: 'KB-2', title: 'https://apexgrowth.eviona.com/faq', type: 'Live URL', status: 'Indexed & Active', items: '18 FAQs' },
+    { id: 'KB-2', title: 'https://apexgrowth.evionaecosystem.com/faq', type: 'Live URL', status: 'Indexed & Active', items: '18 FAQs' },
     { id: 'KB-3', title: 'Product Refund & Delivery Policy', type: 'Text Document', status: 'Indexed & Active', items: '1,200 Words' },
   ]);
 

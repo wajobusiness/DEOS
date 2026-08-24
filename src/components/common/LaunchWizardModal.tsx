@@ -32,7 +32,7 @@ export const LaunchWizardModal: React.FC<LaunchWizardModalProps> = ({
     { id: 4, title: 'Multi-Currency Eviona Wallet Activated', view: 'wallet' as ViewType },
     { id: 5, title: 'EVO Token Deposit & Activation Completed', view: 'deposit' as ViewType },
     { id: 6, title: 'Growth Plan Membership Activated', view: 'settings' as ViewType },
-    { id: 7, title: 'Subdomain Provisioned (username.eviona.com)', view: 'builder' as ViewType },
+    { id: 7, title: 'Subdomain Provisioned (username.evionaecosystem.com)', view: 'builder' as ViewType },
     { id: 8, title: 'Free Domain Voucher Claimed', view: 'builder' as ViewType },
     { id: 9, title: 'Custom Domain Connected & SSL Verified', view: 'builder' as ViewType },
     { id: 10, title: 'Business Website Theme Published', view: 'builder' as ViewType },

@@ -42,7 +42,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
 
   // Generate unique member code & auto-provision subdomain
   const memberCode = `EVO${Math.floor(100000 + Math.random() * 900000)}`;
-  const cleanSubdomain = `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.eviona.com`;
+  const cleanSubdomain = `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.evionaecosystem.com`;
 
   res.status(201).json({
     success: true,
@@ -77,7 +77,7 @@ app.post('/api/payments/initialize', async (req: Request, res: Response) => {
 
     const intent = await paymentGateway.initializePayment({
       userId,
-      userEmail: userEmail || 'user@eviona.com',
+      userEmail: userEmail || 'user@evionaecosystem.com',
       userName: userName || 'Entrepreneur',
       amountUsd: Number(amountUsd),
       currency: currency || 'USD',
@@ -100,73 +100,88 @@ app.post('/api/payments/verify', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Payment rail and reference required' });
     }
 
-    const result = await paymentGateway.finalizePayment(paymentRail, reference, {
-      userId: userId || 'EVO_ACTIVE',
-      amountUsd: Number(amountUsd) || 100.0,
-      purpose: purpose || 'wallet_topup',
+    const result = await paymentGateway.finalizePayment({
+      provider: paymentRail as PaymentProviderType,
+      reference,
+      userId: userId || 'EVO100245',
+      amountUsd: Number(amountUsd) || 100,
+      purpose: purpose || 'wallet_deposit',
       metadata,
     });
 
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      transaction: result.transaction,
+      tokenAmountCredited: result.tokenAmountCredited,
+      message: 'Payment verified and EVO Tokens credited at Model A: $1.00 USD = 1.00 EVO standard.',
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Payment verification failed' });
   }
 });
 
-app.post('/api/payments/webhook', async (req: Request, res: Response) => {
-  const signature = req.headers['x-paystack-signature'] || req.headers['stripe-signature'] || 'test-sig';
-  console.log(`[Eviona Webhook Engine] Received webhook with signature: ${signature}`);
-  res.status(200).json({ received: true, status: 'processed' });
-});
-
-app.post('/api/payouts/request', async (req: Request, res: Response) => {
+app.post('/api/payments/withdraw', async (req: Request, res: Response) => {
   try {
-    const { userId, amountUsd, method, destination } = req.body;
-    const result = await paymentGateway.requestWithdrawal({
+    const { userId, amountEvo, destinationRail, recipientDetails } = req.body;
+
+    if (!userId || !amountEvo || !destinationRail) {
+      return res.status(400).json({ error: 'Missing withdrawal parameters' });
+    }
+
+    const withdrawalTx = await paymentGateway.requestWithdrawal({
       userId,
-      amountUsd: Number(amountUsd),
-      method,
-      destination,
+      amountEvo: Number(amountEvo),
+      destinationRail: destinationRail as PaymentProviderType,
+      recipientDetails,
     });
-    res.status(200).json(result);
+
+    res.status(200).json({
+      success: true,
+      transaction: withdrawalTx,
+      message: 'Withdrawal queued and dispatched to settlement rail.',
+    });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'Withdrawal request failed' });
   }
 });
 
 // ----------------------------------------------------
-// 4. Marketplace & Guest Checkout Route (Book 5)
+// 4. Marketplace Guest Checkout & 4-Way Split (Book 5)
 // ----------------------------------------------------
-app.post('/api/marketplace/guest-checkout', (req: Request, res: Response) => {
-  const { buyerName, buyerEmail, items, promoterCode, paymentMethod } = req.body;
+app.post('/api/marketplace/checkout', (req: Request, res: Response) => {
+  const { customerName, customerEmail, cartItems, paymentMethod, promoterCode } = req.body;
 
-  if (!buyerEmail || !items || !Array.isArray(items) || items.length === 0) {
+  if (!customerEmail || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
     return res.status(400).json({ error: 'Invalid checkout payload' });
   }
 
-  const orderId = `ORD-${Date.now().toString().slice(-6)}`;
-  const totalAmount = items.reduce((acc: number, item: any) => acc + Number(item.price), 0);
+  let totalAmount = 0;
+  let totalPromoterEarned = 0;
+  let totalUplineOverride = 0;
+  let totalPlatformFee = 0;
+  let totalSellerPayout = 0;
 
-  // Compute splits using Book 5 engine
-  const itemSplits = items.map((item: any) => ({
-    item: item.title,
-    price: item.price,
-    split: calculateMarketplaceFeeSplit(item.price, promoterCode ? (item.affiliateCommissionRate || 0.40) : null),
-  }));
+  cartItems.forEach((item: any) => {
+    const price = Number(item.price) || 0;
+    const affiliateRate = Number(item.affiliateCommissionPct) || 40;
+    const split = calculateMarketplaceFeeSplit(price, affiliateRate);
 
-  const totalPromoterEarned = itemSplits.reduce((acc, curr) => acc + curr.split.promoterCommissionNet, 0);
-  const totalUplineOverride = itemSplits.reduce((acc, curr) => acc + curr.split.uplineOverride, 0);
-  const totalPlatformFee = itemSplits.reduce((acc, curr) => acc + curr.split.platformFee, 0);
-  const totalSellerPayout = itemSplits.reduce((acc, curr) => acc + curr.split.sellerPayoutNet, 0);
+    totalAmount += price;
+    totalPromoterEarned += split.promoterCommission;
+    totalUplineOverride += split.uplineOverride;
+    totalPlatformFee += split.platformNetworkFee;
+    totalSellerPayout += split.sellerPayout;
+  });
 
-  const licenseKey = `EVO-LIC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+  const licenseKey = `EVO-LIC-2026-${Math.floor(100000 + Math.random() * 900000)}`;
 
   res.status(200).json({
     success: true,
     order: {
-      orderId,
-      buyerName: buyerName || 'Guest Customer',
-      buyerEmail,
+      id: `ORD-${Date.now().toString().slice(-6)}`,
+      customerName,
+      customerEmail,
+      itemsCount: cartItems.length,
       totalAmount,
       currency: 'EVO',
       fiatEquivalentUSD: totalAmount,
@@ -178,7 +193,7 @@ app.post('/api/marketplace/guest-checkout', (req: Request, res: Response) => {
         uplineOverrideEVO: totalUplineOverride,
         sellerPayoutEVO: totalSellerPayout,
       },
-      digitalDownloadUrl: `https://cdn.eviona.com/downloads/${licenseKey}.zip`,
+      digitalDownloadUrl: `https://cdn.evionaecosystem.com/downloads/${licenseKey}.zip`,
     },
     message: 'Guest checkout completed and commission attributed successfully in EVO Tokens.',
   });

@@ -32,9 +32,9 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const [showQRModal, setShowQRModal] = useState(false);
 
   const memberCode = currentUser.id || 'EVO100245';
-  const referralLink = `https://eviona.com/join?ref=${memberCode}`;
+  const referralLink = `https://evionaecosystem.com/join?ref=${memberCode}`;
   const websiteEmbeddedLink = `https://johnsonagency.com/#join?ref=${memberCode}`;
-  const productAffiliateLink = `https://eviona.com/marketplace/${selectedProductSlug}?ref=${memberCode}`;
+  const productAffiliateLink = `https://evionaecosystem.com/marketplace/${selectedProductSlug}?ref=${memberCode}`;
 
   const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);

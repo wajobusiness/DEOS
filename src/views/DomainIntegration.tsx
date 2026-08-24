@@ -40,7 +40,7 @@ export const DomainIntegration: React.FC = () => {
       ...prev,
       customDomain: formatted,
       dnsRecords: [
-        { type: 'CNAME', name: 'www', value: 'cname.eviona.com', status: 'configured' },
+        { type: 'CNAME', name: 'www', value: 'cname.evionaecosystem.com', status: 'configured' },
         { type: 'A', name: '@', value: '76.76.21.21', status: 'configured' },
         { type: 'TXT', name: '_eviona-verify', value: `eviona-site-verification-${Date.now().toString().slice(-6)}`, status: 'configured' },
       ]
@@ -309,7 +309,7 @@ export const DomainIntegration: React.FC = () => {
 
               <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-1.5 text-slate-600">
                 <span className="font-bold text-indigo-950 block">DNS Setup Requirement:</span>
-                <p>1. Add a <b>CNAME</b> record pointing <b>www</b> to <b>cname.eviona.com</b></p>
+                <p>1. Add a <b>CNAME</b> record pointing <b>www</b> to <b>cname.evionaecosystem.com</b></p>
                 <p>2. Add an <b>A</b> record pointing <b>@</b> to <b>76.76.21.21</b></p>
               </div>
 

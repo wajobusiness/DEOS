@@ -48,7 +48,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const totalEarnings = currentUser.walletBalance + (currentUser.binaryVolume * 0.10);
   const binaryBV = currentUser.binaryVolume || 0;
   const directReferrals = currentUser.activeReferrals || 0;
-  const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.eviona.com`;
+  const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.evionaecosystem.com`;
 
   const dynamicWelcome = (dashboard.welcomeHeadline || 'Good morning, {name}! 👋').replace(
     '{name}',

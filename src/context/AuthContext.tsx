@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       id: authUser.id,
       name: metaName,
-      email: authUser.email || 'entrepreneur@eviona.com',
+      email: authUser.email || 'entrepreneur@evionaecosystem.com',
       phone: authUser.user_metadata?.phone || '',
       country: metaCountry,
       avatar: authUser.user_metadata?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -346,7 +346,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.warn('Supabase Auth signIn notice:', error.message);
         // Resilient fallback for super admin credentials
-        if (cleanEmail === 'admin@eviona.com' && (password === 'admin123' || password === 'admin' || password === 'password')) {
+        if ((cleanEmail === 'admin@evionaecosystem.com' || cleanEmail === 'admin@eviona.com') && (password === 'admin123' || password === 'admin' || password === 'password')) {
           const adminUser: User = {
             id: 'admin-super-01',
             app_metadata: {},

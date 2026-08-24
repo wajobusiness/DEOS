@@ -130,7 +130,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
         const mapped = data.map((m: any) => ({
           id: m.id || m.member_code || `EVO-${Math.floor(1000 + Math.random() * 9000)}`,
           name: m.name || m.full_name || 'Registered Entrepreneur',
-          email: m.email || 'user@eviona.com',
+          email: m.email || 'user@evionaecosystem.com',
           role: m.role || (m.email?.includes('admin') ? 'super_admin' : 'member'),
           plan: m.plan || 'launch',
           status: m.status || 'active',

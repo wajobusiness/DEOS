@@ -186,7 +186,7 @@ export const MarketingCenter: React.FC = () => {
             <div>
               <h3 className="text-lg font-black text-slate-900">Advertising Pixels & Measurement IDs</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Ids entered here are automatically injected into your landing page (<code className="text-indigo-600 font-mono">username.eviona.com</code> and custom domains).
+                Ids entered here are automatically injected into your landing page (<code className="text-indigo-600 font-mono">username.evionaecosystem.com</code> and custom domains).
               </p>
             </div>
             {isSaved && (
