@@ -47,7 +47,8 @@ import {
   ToggleRight,
   Plus,
   Trash2,
-  Loader2
+  Loader2,
+  Coins
 } from 'lucide-react';
 import {
   initialKYCList,
@@ -59,6 +60,10 @@ import {
 } from '../store/useAppStore';
 import { Badge } from '../components/common/Badge';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { adminApprovalEngine, DepositApprovalRequest, WithdrawalApprovalRequest } from '../engine/adminApprovalEngine';
+import { marketplaceEngine } from '../engine/marketplaceEngine';
+import { adminStoreData, MembershipPlanConfig } from '../engine/adminStoreData';
+import { Product, PlanTier } from '../types';
 import { UserRole, Member, ViewType } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
@@ -121,6 +126,134 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   useEffect(() => {
     setCommissionsForm(commissions);
   }, [commissions]);
+
+    // Admin Approvals & Governance State
+  const [depositRequests, setDepositRequests] = useState<DepositApprovalRequest[]>(() => adminApprovalEngine.getDepositRequests());
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalApprovalRequest[]>(() => adminApprovalEngine.getWithdrawalRequests());
+  const [productsList, setProductsList] = useState<Product[]>(() => marketplaceEngine.getProducts(true));
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlanConfig[]>(() => adminStoreData.getMembershipPlans());
+
+  // Direct Wallet Balance Adjustment Modal State
+  const [selectedUserForWalletAdj, setSelectedUserForWalletAdj] = useState<any | null>(null);
+  const [adjType, setAdjType] = useState<'credit' | 'debit'>('credit');
+  const [adjAmount, setAdjAmount] = useState<string>('100.00');
+  const [adjReason, setAdjReason] = useState<string>('Super Admin Balance Adjustment / Bonus');
+
+  // Edit Product Modal State
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const handleApproveDeposit = (reqId: string) => {
+    const res = adminApprovalEngine.approveDeposit(reqId, 'Super Admin');
+    if (res.success) {
+      setDepositRequests(adminApprovalEngine.getDepositRequests());
+      fetchLiveUsers();
+      logAdminAction('Deposit Approved', `Approved deposit request ${reqId} for ${res.request?.userName} ($${res.request?.amount.toFixed(2)} EVO)`);
+      showToast(`Approved deposit of $${res.request?.amount.toFixed(2)} EVO! Funds credited to user wallet.`);
+    } else {
+      alert(res.error || 'Failed to approve deposit.');
+    }
+  };
+
+  const handleRejectDeposit = (reqId: string) => {
+    const reason = prompt('Please enter a rejection reason:', 'Invalid transaction hash / receipt unverified');
+    if (!reason) return;
+    const res = adminApprovalEngine.rejectDeposit(reqId, reason, 'Super Admin');
+    if (res.success) {
+      setDepositRequests(adminApprovalEngine.getDepositRequests());
+      logAdminAction('Deposit Rejected', `Rejected deposit request ${reqId} (${reason})`);
+      showToast(`Deposit request ${reqId} rejected.`);
+    }
+  };
+
+  const handleApproveWithdrawal = (reqId: string) => {
+    const res = adminApprovalEngine.approveWithdrawal(reqId, 'Super Admin');
+    if (res.success) {
+      setWithdrawalRequests(adminApprovalEngine.getWithdrawalRequests());
+      logAdminAction('Withdrawal Released', `Released payout ${reqId} for ${res.request?.userName} ($${res.request?.amount.toFixed(2)} EVO)`);
+      showToast(`Payout released for request ${reqId}!`);
+    }
+  };
+
+  const handleRejectWithdrawal = (reqId: string) => {
+    const reason = prompt('Please enter a rejection reason:', 'KYC verification required / invalid payout destination');
+    if (!reason) return;
+    const res = adminApprovalEngine.rejectWithdrawal(reqId, reason, 'Super Admin');
+    if (res.success) {
+      setWithdrawalRequests(adminApprovalEngine.getWithdrawalRequests());
+      fetchLiveUsers();
+      logAdminAction('Withdrawal Rejected & Refunded', `Rejected ${reqId} and refunded $${res.request?.amount.toFixed(2)} EVO to ${res.request?.userName}`);
+      showToast(`Withdrawal rejected. $${res.request?.amount.toFixed(2)} EVO refunded to user.`);
+    }
+  };
+
+  const handleChangeUserPlan = async (userId: string, newPlan: PlanTier) => {
+    const targetUser = usersList.find((u) => u.id === userId);
+    setUsersList((prev) => prev.map((u) => (u.id === userId ? { ...u, plan: newPlan } : u)));
+    await adminApprovalEngine.adminUpdateMember(userId, { plan: newPlan });
+    logAdminAction('User Plan Modified', `User ${targetUser?.email || userId} plan upgraded/changed to ${newPlan}`);
+    showToast(`User plan updated to ${newPlan.toUpperCase()}!`);
+  };
+
+  const handleExecuteWalletAdjustment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForWalletAdj) return;
+    const num = parseFloat(adjAmount);
+    if (isNaN(num) || num <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+    const finalAmount = adjType === 'credit' ? num : -num;
+    const res = adminApprovalEngine.adminAdjustWalletBalance({
+      targetUserId: selectedUserForWalletAdj.id,
+      targetUserEmail: selectedUserForWalletAdj.email,
+      amount: finalAmount,
+      reason: adjReason,
+      adminName: 'Super Admin',
+    });
+
+    if (res.success) {
+      setUsersList((prev) =>
+        prev.map((u) => (u.id === selectedUserForWalletAdj.id ? { ...u, walletBalance: res.newBalance } : u))
+      );
+      logAdminAction(
+        `Admin Wallet ${adjType.toUpperCase()}`,
+        `${adjType === 'credit' ? 'Credited' : 'Debited'} $${num.toFixed(2)} EVO to ${selectedUserForWalletAdj.email} (${adjReason})`
+      );
+      showToast(`Successfully ${adjType === 'credit' ? 'credited' : 'debited'} $${num.toFixed(2)} EVO for ${selectedUserForWalletAdj.name}!`);
+      setSelectedUserForWalletAdj(null);
+    }
+  };
+
+  const handleSaveProductEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    marketplaceEngine.updateProduct(editingProduct.id, {
+      price: editingProduct.price,
+      affiliateCommissionRate: editingProduct.affiliateCommissionRate,
+      category: editingProduct.category,
+      status: editingProduct.status,
+    });
+    setProductsList(marketplaceEngine.getProducts(true));
+    const commPct = Math.round((editingProduct.affiliateCommissionRate ?? 0.1) * 100);
+    logAdminAction('Marketplace Product Updated', `Updated product: ${editingProduct.title} (Price: $${editingProduct.price}, Comm: ${commPct}%)`);
+    showToast(`Product "${editingProduct.title}" updated successfully!`);
+    setEditingProduct(null);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    if (confirm('Are you sure you want to delete/moderate this product from the platform catalog?')) {
+      marketplaceEngine.deleteProduct(productId);
+      setProductsList(marketplaceEngine.getProducts(true));
+      showToast('Product removed from catalog.');
+    }
+  };
+
+  const handleSaveMembershipPlans = (e: React.FormEvent) => {
+    e.preventDefault();
+    adminStoreData.saveMembershipPlans(membershipPlans);
+    logAdminAction('Membership Pricing Updated', 'Updated membership tier limits and pricing');
+    showToast('Membership tier pricing & limits updated successfully!');
+  };
 
   // Live User Management State
   const [userSearch, setUserSearch] = useState('');
@@ -1179,7 +1312,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                           </select>
                         </td>
                         <td className="p-4">
-                          <span className="font-bold text-white uppercase">{user.plan}</span>
+                          <select
+                            value={user.plan}
+                            onChange={(e) => handleChangeUserPlan(user.id, e.target.value as PlanTier)}
+                            className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-bold text-white uppercase outline-none"
+                          >
+                            <option value="launch">LAUNCH ($100)</option>
+                            <option value="growth">GROWTH ($300)</option>
+                            <option value="legacy">LEGACY ($500)</option>
+                          </select>
                         </td>
                         <td className="p-4 font-mono font-bold text-emerald-400">
                           ${user.walletBalance.toFixed(2)}
@@ -1200,6 +1341,13 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                         </td>
                         <td className="p-4 text-right space-x-2">
                           <button
+                            onClick={() => setSelectedUserForWalletAdj(user)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            title="Credit or Debit User Wallet Directly"
+                          >
+                            Adjust Funds
+                          </button>
+                          <button
                             onClick={() => handleImpersonate(user)}
                             className="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold shadow-xs transition-colors"
                             title="Audited View As User"
@@ -1219,6 +1367,437 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                         </td>
                       </tr>
                     ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TREASURY & FINANCIAL APPROVALS (DEPOSITS, WITHDRAWALS & BALANCES)         */}
+      {/* ========================================================================= */}
+      {activeTab === 'treasury' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 mb-2">
+                <Wallet className="w-3.5 h-3.5" />
+                <span>Super Admin Treasury Governance</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Deposit & Withdrawal Approvals Pipeline</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Reconcile blockchain & bank deposits, approve fiat/crypto withdrawal releases, and execute direct ledger adjustments.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300">
+                Pending Deposits: <b className="text-amber-400">{depositRequests.filter(r => r.status === 'Pending_Approval').length}</b>
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300">
+                Pending Withdrawals: <b className="text-purple-400">{withdrawalRequests.filter(r => r.status === 'Pending_Approval').length}</b>
+              </span>
+            </div>
+          </div>
+
+          {/* Section 1: User Deposit Approval Queue */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Coins className="w-4 h-4 text-emerald-400" />
+              <span>Incoming User Deposit Verification Queue</span>
+            </h4>
+
+            <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">User Details</th>
+                      <th className="p-4">Deposit Amount</th>
+                      <th className="p-4">Payment Rail</th>
+                      <th className="p-4">Tx Reference / Hash</th>
+                      <th className="p-4">Submitted At</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Approval Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {depositRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="p-4">
+                          <p className="font-bold text-white">{req.userName}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{req.userEmail} • {req.userId}</p>
+                        </td>
+                        <td className="p-4 font-mono font-bold text-emerald-400 text-sm">
+                          +${req.amount.toFixed(2)} EVO
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300">
+                            {req.rail}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-[11px]">
+                          <p className="text-white font-bold">{req.reference}</p>
+                          {req.proofHash && <p className="text-slate-500 text-[10px] truncate max-w-xs">{req.proofHash}</p>}
+                        </td>
+                        <td className="p-4 text-slate-400 text-[11px]">
+                          {req.createdAt}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                              req.status === 'Approved'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : req.status === 'Rejected'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
+                            }`}
+                          >
+                            {req.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          {req.status === 'Pending_Approval' ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveDeposit(req.id)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all"
+                              >
+                                ✓ Approve & Credit
+                              </button>
+                              <button
+                                onClick={() => handleRejectDeposit(req.id)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs transition-all"
+                              >
+                                ✕ Reject
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">Settled by {req.reviewedBy || 'Admin'}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: User Withdrawal Approval Queue */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-purple-400" />
+              <span>Outgoing User Withdrawal & Settlement Queue</span>
+            </h4>
+
+            <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">User Details</th>
+                      <th className="p-4">Withdrawal Amount</th>
+                      <th className="p-4">Destination Rail</th>
+                      <th className="p-4">Payout Target Details</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Settlement Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {withdrawalRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="p-4">
+                          <p className="font-bold text-white">{req.userName}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{req.userEmail} • {req.userId}</p>
+                        </td>
+                        <td className="p-4 font-mono font-bold text-purple-400 text-sm">
+                          -${req.amount.toFixed(2)} EVO
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300">
+                            {req.method}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-[11px] text-slate-300">
+                          {req.destinationDetails}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                              req.status === 'Approved'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : req.status === 'Rejected'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
+                            }`}
+                          >
+                            {req.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          {req.status === 'Pending_Approval' ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveWithdrawal(req.id)}
+                                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-sm transition-all"
+                              >
+                                ✓ Release Payout
+                              </button>
+                              <button
+                                onClick={() => handleRejectWithdrawal(req.id)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs transition-all"
+                              >
+                                ✕ Reject & Refund
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">Processed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MARKETPLACE MODERATION & PRODUCT CATALOG CONTROLS                         */}
+      {/* ========================================================================= */}
+      {activeTab === 'marketplace' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20 mb-2">
+                <Store className="w-3.5 h-3.5" />
+                <span>Marketplace & Catalog Governance</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Global Product Moderation & Commission Overrides</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Edit prices, adjust seller affiliate commission percentages (1%–100%), toggle visibility, and moderate digital products.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="p-4">Product Details</th>
+                    <th className="p-4">Seller Details</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Price ($ USD)</th>
+                    <th className="p-4">Affiliate Commission</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Moderation Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {productsList.map((prod) => (
+                    <tr key={prod.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-4">
+                        <p className="font-bold text-white">{prod.title}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{prod.id}</p>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-bold text-white">{prod.sellerName}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{prod.sellerId}</p>
+                      </td>
+                      <td className="p-4 text-slate-300">
+                        {prod.category}
+                      </td>
+                      <td className="p-4 font-mono font-bold text-emerald-400">
+                        ${prod.price.toFixed(2)}
+                      </td>
+                      <td className="p-4 font-bold text-indigo-400">
+                        {Math.round((prod.affiliateCommissionRate ?? 0.1) * 100)}% ({((prod.price * (prod.affiliateCommissionRate ?? 0.1))).toFixed(2)} USD)
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                            prod.status === 'active'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {prod.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-2">
+                        <button
+                          onClick={() => setEditingProduct(prod)}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-xs shadow-xs transition-colors"
+                        >
+                          Edit & Override
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          className="px-3 py-1.5 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MEMBERSHIPS & PRICING PLANS ENGINE                                        */}
+      {/* ========================================================================= */}
+      {activeTab === 'memberships' && (
+        <form onSubmit={handleSaveMembershipPlans} className="max-w-4xl space-y-6 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20 mb-2">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Tier Packages & Licensing</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Membership Plans, Pricing & Quotas</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Configure annual license prices, annual renewal fees, storage limits, and CRM lead allowances for each tier.
+              </p>
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md flex items-center gap-2 shrink-0"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Tier Settings</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            {membershipPlans.map((plan, idx) => (
+              <div key={plan.id} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-extrabold text-white text-sm uppercase">{plan.name}</h4>
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase">{plan.id}</span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Annual Tier Price ($ USD)</label>
+                  <input
+                    type="number"
+                    value={plan.priceUsd}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setMembershipPlans(prev => prev.map((p, i) => i === idx ? { ...p, priceUsd: val } : p));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Annual Renewal Fee ($ USD)</label>
+                  <input
+                    type="number"
+                    value={plan.annualRenewalUsd}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setMembershipPlans(prev => prev.map((p, i) => i === idx ? { ...p, annualRenewalUsd: val } : p));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Max CRM Leads Allowed</label>
+                  <input
+                    type="number"
+                    value={plan.maxCrmLeads}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setMembershipPlans(prev => prev.map((p, i) => i === idx ? { ...p, maxCrmLeads: val } : p));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold font-mono"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </form>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CORPORATE LEADS MANAGEMENT (BOOK 7 §2)                                    */}
+      {/* ========================================================================= */}
+      {activeTab === 'corporate_leads' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20 mb-2">
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Corporate Lead Distribution Engine</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Central Inbound Enterprise Leads Pipeline</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Leads captured from the global corporate website. Assign high-value enterprise prospects directly to qualified network leaders.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="p-4">Contact Name</th>
+                    <th className="p-4">Company Entity</th>
+                    <th className="p-4">Inbound Source</th>
+                    <th className="p-4">Assigned Leader</th>
+                    <th className="p-4">Stage</th>
+                    <th className="p-4 text-right">Assignment Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {corporateLeads.map((lead) => (
+                    <tr key={lead.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-4">
+                        <p className="font-bold text-white">{lead.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{lead.email}</p>
+                      </td>
+                      <td className="p-4 font-bold text-white">
+                        {lead.company}
+                      </td>
+                      <td className="p-4 text-slate-400">
+                        {lead.source}
+                      </td>
+                      <td className="p-4 font-bold text-indigo-400">
+                        {lead.assignedTo}
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          {lead.stage}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => {
+                            const leader = prompt('Assign this corporate lead to member ID/Name:', 'Marcus Vance');
+                            if (leader) {
+                              lead.assignedTo = leader;
+                              showToast(`Lead assigned to ${leader}!`);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition-all"
+                        >
+                          Reassign Leader
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1674,6 +2253,201 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+      {/* DIRECT ADMIN WALLET ADJUSTMENT MODAL */}
+      {selectedUserForWalletAdj && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-700 shadow-2xl space-y-5 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600/30 text-emerald-400 flex items-center justify-center">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Direct Wallet Balance Adjustment</h3>
+                  <p className="text-[11px] text-slate-400">Target: <b className="text-white">{selectedUserForWalletAdj.name}</b></p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedUserForWalletAdj(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <span className="text-slate-400">Current User Balance:</span>
+              <span className="font-mono font-black text-emerald-400 text-sm">
+                ${selectedUserForWalletAdj.walletBalance.toFixed(2)} EVO
+              </span>
+            </div>
+
+            <form onSubmit={handleExecuteWalletAdjustment} className="space-y-4">
+              {/* Type Switcher */}
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setAdjType('credit')}
+                  className={`py-2 rounded-lg font-bold text-xs transition-all ${
+                    adjType === 'credit' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  + Credit Funds (Deposit)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdjType('debit')}
+                  className={`py-2 rounded-lg font-bold text-xs transition-all ${
+                    adjType === 'debit' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  - Debit Funds (Charge)
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Adjustment Amount ($ EVO)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={adjAmount}
+                  onChange={(e) => setAdjAmount(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Reason / Note for Ledger Audit Trail</label>
+                <input
+                  type="text"
+                  required
+                  value={adjReason}
+                  onChange={(e) => setAdjReason(e.target.value)}
+                  placeholder="e.g. Compensation settlement, bonus credit, manual bank transfer"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForWalletAdj(null)}
+                  className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`px-5 py-2.5 rounded-xl font-bold text-white shadow-md flex items-center gap-1.5 ${
+                    adjType === 'credit' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'
+                  }`}
+                >
+                  <span>Execute {adjType === 'credit' ? 'Credit' : 'Debit'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PRODUCT MODERATION MODAL */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-700 shadow-2xl space-y-5 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-sm font-black text-white">Edit Product & Override Affiliate Commission</h3>
+              <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProductEdit} className="space-y-4">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Product Title</label>
+                <input
+                  type="text"
+                  value={editingProduct.title}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Price ($ USD)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={editingProduct.price}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Affiliate Commission (1-100%)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={Math.round((editingProduct.affiliateCommissionRate ?? 0.1) * 100)}
+                    onChange={(e) => {
+                      const pct = Math.max(1, Math.min(100, parseInt(e.target.value) || 10));
+                      setEditingProduct({ ...editingProduct, affiliateCommissionRate: pct / 100 });
+                    }}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-indigo-400 font-bold font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Category</label>
+                  <select
+                    value={editingProduct.category}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                  >
+                    <option value="SaaS & Source Code">SaaS & Source Code</option>
+                    <option value="Courses & Masterclasses">Courses & Masterclasses</option>
+                    <option value="E-Books & Guides">E-Books & Guides</option>
+                    <option value="Templates & Prompts">Templates & Prompts</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Visibility Status</label>
+                  <select
+                    value={editingProduct.status}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, status: e.target.value as any })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                  >
+                    <option value="active">Active (Public)</option>
+                    <option value="paused">Paused / Draft</option>
+                    <option value="archived">Hidden / Archived</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-md"
+                >
+                  Save Product Override
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

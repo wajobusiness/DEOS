@@ -189,7 +189,7 @@ export interface WalletTransaction {
   description: string;
   amount: number;
   currency: 'USDT' | 'EVO' | 'DEOS' | 'USD';
-  status: 'Completed' | 'Pending' | 'Failed' | 'Processing';
+  status: 'Completed' | 'Pending' | 'Failed' | 'Processing' | 'Pending_Approval' | 'Rejected';
   date: string;
   time: string;
 }
