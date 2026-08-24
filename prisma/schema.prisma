@@ -101,6 +101,16 @@ model Member {
   leads               Lead[]
   site                MemberSite?
   kyc                 KYCVerification?
+  payments            Payment[]
+  payouts             Payout[]
+  marketing           MarketingIntegration[]
+  trackingEvents      TrackingEvent[]
+  campaigns           AdvertisingCampaign[]
+  chatbots            AIChatbot[]
+  knowledgeBases      AIKnowledgeBase[]
+  aiCredits           AICreditLedger[]
+  createdCourses      Course[]             @relation("CreatorCourses")
+  enrollments         CourseEnrollment[]
 
   @@index([sponsorId])
   @@index([placementParentId])
@@ -241,6 +251,8 @@ model Lead {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
+  attributions    LeadSourceAttribution[]
+
   @@index([ownerType])
   @@index([ownerId])
   @@index([assignedTo])
@@ -275,4 +287,223 @@ model AuditLog {
   @@index([impactCategory])
   @@index([createdAt])
 }
+
+// ----------------------------------------------------
+// 7. Centralized Payment Gateway Engine (Book 19)
+// ----------------------------------------------------
+model PaymentGateway {
+  id              String         @id @default(cuid())
+  name            String
+  provider        String         // paystack, kuda, stripe, crypto_trc20, bank_transfer
+  status          String         @default("active")
+  isLive          Boolean        @default(false)
+  configuration   Json           // Encrypted credentials & webhook signing keys
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  payments        Payment[]
+  payouts         Payout[]
+}
+
+model Payment {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  gatewayId       String
+  gateway         PaymentGateway @relation(fields: [gatewayId], references: [id])
+  amount          Decimal        @db.Decimal(12, 2)
+  currency        String         @default("USD")
+  tokenAmount     Decimal?       @db.Decimal(12, 2) // EVO Tokens credited
+  status          String         @default("pending") // pending, completed, failed, refunded
+  reference       String         @unique
+  verifiedAt      DateTime?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([gatewayId])
+  @@index([status])
+  @@index([reference])
+}
+
+model WebhookLog {
+  id              String         @id @default(cuid())
+  gateway         String
+  eventType       String
+  payload         Json
+  signature       String
+  processed       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+
+  @@index([gateway])
+  @@index([eventType])
+}
+
+model Payout {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  amount          Decimal        @db.Decimal(12, 2)
+  destination     Json           // Account number, bank code, or crypto address
+  gatewayId       String
+  gateway         PaymentGateway @relation(fields: [gatewayId], references: [id])
+  status          String         @default("pending") // pending, processing, completed, rejected
+  reference       String         @unique
+  processedAt     DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([gatewayId])
+  @@index([status])
+}
+
+// ----------------------------------------------------
+// 8. Marketing Intelligence & Advertising Layer (Book 18)
+// ----------------------------------------------------
+model MarketingIntegration {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  platform        String         // meta, google_analytics, tiktok, linkedin, snapchat
+  accountId       String?
+  pixelId         String?
+  apiToken        String?
+  status          String         @default("active")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+}
+
+model TrackingEvent {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  eventName       String         // PageView, Lead, InitiateCheckout, Purchase
+  source          String         // meta_ads, google_ads, tiktok, organic
+  visitorId       String
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([eventName])
+  @@index([createdAt])
+}
+
+model AdvertisingCampaign {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  name            String
+  platform        String         // meta, google, tiktok
+  budget          Decimal?       @db.Decimal(10, 2)
+  status          String         @default("draft") // draft, active, paused, completed
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+}
+
+model LeadSourceAttribution {
+  id              String         @id @default(cuid())
+  leadId          String
+  lead            Lead           @relation(fields: [leadId], references: [id])
+  source          String
+  campaign        String?
+  medium          String?
+  term            String?
+  content         String?
+  createdAt       DateTime       @default(now())
+
+  @@index([leadId])
+}
+
+// ----------------------------------------------------
+// 9. AI Business Intelligence Center (Book 17)
+// ----------------------------------------------------
+model AIChatbot {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  botName         String
+  welcomeMessage  String
+  promptContext   String         @db.Text
+  knowledgeBaseId String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model AIKnowledgeBase {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  name            String
+  sourceType      String         // url, document, faq, product_catalog
+  contentPayload  String         @db.Text
+  status          String         @default("trained")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model AICreditLedger {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  toolType        String         // content_creator, image_studio, chatbot, lead_scoring
+  creditsConsumed Int
+  outputSnippet   String?        @db.Text
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([toolType])
+}
+
+// ----------------------------------------------------
+// 10. Global Academy & Courses (Book 8)
+// ----------------------------------------------------
+model Course {
+  id              String         @id @default(cuid())
+  creatorId       String?
+  creator         Member?        @relation("CreatorCourses", fields: [creatorId], references: [id])
+  title           String
+  slug            String         @unique
+  category        String
+  difficulty      String         @default("Beginner")
+  description     String         @db.Text
+  price           Decimal        @default(0.00) @db.Decimal(10, 2) // In EVO Token
+  imageUrl        String
+  lessonsCount    Int            @default(1)
+  isPlatformCourse Boolean       @default(true)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  enrollments     CourseEnrollment[]
+
+  @@index([category])
+  @@index([creatorId])
+}
+
+model CourseEnrollment {
+  id              String         @id @default(cuid())
+  userId          String
+  member          Member         @relation(fields: [userId], references: [id])
+  courseId        String
+  course          Course         @relation(fields: [courseId], references: [id])
+  progressPercent Int            @default(0)
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([courseId])
+}
+
 

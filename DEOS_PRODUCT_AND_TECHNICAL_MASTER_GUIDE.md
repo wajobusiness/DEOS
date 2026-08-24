@@ -614,3 +614,43 @@ CREATE TABLE "payouts" (
 );
 ```
 
+---
+
+## 15. Technical Architecture Master Blueprint
+
+### 15.1 Governance Principle for Future Developers & AI Agents
+This section establishes the binding architectural philosophy that governs all future development, refactoring, and AI-driven extensions of the Eviona Ecosystem.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                 ONE GLOBAL DIGITAL ENTREPRENEUR ECOSYSTEM                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  [ GLOBAL PLATFORM INFRASTRUCTURE (SHARED CORE) ]                           │
+│  • Global Marketplace: Shared product catalog, sellers, ratings             │
+│  • Global Affiliate System: Cross-product promotion, referral tracking      │
+│  • Global MLM Binary Network: Single global binary tree & spillover         │
+│  • Global Academy: Platform-certified masterclasses & creator courses       │
+│  • Global AI Intelligence Layer: Centralized LLM cluster, contextual co-pilot│
+│  • Global Payment & Wallet Engine: Centralized multi-rail payment routing   │
+│  • Fixed-Value EVO Utility Token Economy: $1.00 USD = 1.00 EVO             │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  [ PERSONAL USER / TENANT MODULES (ISOLATED WORKSPACES) ]                   │
+│  • Dynamic Landing Page: username.eviona.com with custom domain mapping    │
+│  • Personal CRM: Isolated leads, pipelines, interaction transcripts         │
+│  • Personal Email Marketing: Drip sequences, broadcast campaigns            │
+│  • Marketing Intelligence Center: Tenant pixel configuration & CAPI         │
+│  • Custom AI Chatbots & Knowledge Bases: Tenant-isolated vectors & FAQs     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 15.2 Hybrid Multi-Tenancy Invariants
+1. **Never Silo Global Commerce:** Do not attach `tenant_id` to marketplace products or the MLM binary tree. Products belong to `sellers` and courses belong to `creators`, and all users can buy, sell, and promote across the single global ecosystem.
+2. **Strictly Isolate Private Tenant Assets:** Leads, CRM interaction logs, email sequences, custom landing page layouts, and private AI chatbot transcripts must be strictly scoped by `member_id` with Row-Level Security (RLS).
+3. **Decouple Payment Rails via Payment Gateway Engine:** No platform module may integrate directly with Stripe, Paystack, Kuda, or TRON RPC nodes. All monetary flow routes through `PaymentGatewayEngine`, which credits the immutable ledger in EVO Tokens and triggers internal events.
+4. **Enforce Role-Based Access Control (RBAC):** Normal members never see admin routes, menus, or switcher widgets. The `/backoffice` portal is accessible only to verified `super_admin`, `admin`, and `support_staff` roles.
+
+

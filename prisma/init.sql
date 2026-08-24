@@ -267,3 +267,158 @@ ALTER TABLE "Lead" ADD CONSTRAINT "Lead_memberId_fkey" FOREIGN KEY ("memberId") 
 -- AddForeignKey
 ALTER TABLE "KYCVerification" ADD CONSTRAINT "KYCVerification_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+-- 7. Payment Gateway Engine Tables
+CREATE TABLE "PaymentGateway" (
+    "id" TEXT PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "isLive" BOOLEAN NOT NULL DEFAULT false,
+    "configuration" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "Payment" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "gatewayId" TEXT NOT NULL REFERENCES "PaymentGateway"("id"),
+    "amount" DECIMAL(12,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "tokenAmount" DECIMAL(12,2),
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "reference" TEXT UNIQUE NOT NULL,
+    "verifiedAt" TIMESTAMP(3),
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "WebhookLog" (
+    "id" TEXT PRIMARY KEY,
+    "gateway" TEXT NOT NULL,
+    "eventType" TEXT NOT NULL,
+    "payload" JSONB NOT NULL,
+    "signature" TEXT NOT NULL,
+    "processed" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "Payout" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "amount" DECIMAL(12,2) NOT NULL,
+    "destination" JSONB NOT NULL,
+    "gatewayId" TEXT NOT NULL REFERENCES "PaymentGateway"("id"),
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "reference" TEXT UNIQUE NOT NULL,
+    "processedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Marketing Intelligence Layer Tables
+CREATE TABLE "MarketingIntegration" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "platform" TEXT NOT NULL,
+    "accountId" TEXT,
+    "pixelId" TEXT,
+    "apiToken" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "TrackingEvent" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "eventName" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "AdvertisingCampaign" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "name" TEXT NOT NULL,
+    "platform" TEXT NOT NULL,
+    "budget" DECIMAL(10,2),
+    "status" TEXT NOT NULL DEFAULT 'draft',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "LeadSourceAttribution" (
+    "id" TEXT PRIMARY KEY,
+    "leadId" TEXT NOT NULL REFERENCES "Lead"("id"),
+    "source" TEXT NOT NULL,
+    "campaign" TEXT,
+    "medium" TEXT,
+    "term" TEXT,
+    "content" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. AI Business Intelligence Tables
+CREATE TABLE "AIChatbot" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "botName" TEXT NOT NULL,
+    "welcomeMessage" TEXT NOT NULL,
+    "promptContext" TEXT NOT NULL,
+    "knowledgeBaseId" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "AIKnowledgeBase" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "name" TEXT NOT NULL,
+    "sourceType" TEXT NOT NULL,
+    "contentPayload" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'trained',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "AICreditLedger" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "toolType" TEXT NOT NULL,
+    "creditsConsumed" INTEGER NOT NULL,
+    "outputSnippet" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Global Academy Tables
+CREATE TABLE "Course" (
+    "id" TEXT PRIMARY KEY,
+    "creatorId" TEXT REFERENCES "Member"("id"),
+    "title" TEXT NOT NULL,
+    "slug" TEXT UNIQUE NOT NULL,
+    "category" TEXT NOT NULL,
+    "difficulty" TEXT NOT NULL DEFAULT 'Beginner',
+    "description" TEXT NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "imageUrl" TEXT NOT NULL,
+    "lessonsCount" INTEGER NOT NULL DEFAULT 1,
+    "isPlatformCourse" BOOLEAN NOT NULL DEFAULT true,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE "CourseEnrollment" (
+    "id" TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "Member"("id"),
+    "courseId" TEXT NOT NULL REFERENCES "Course"("id"),
+    "progressPercent" INTEGER NOT NULL DEFAULT 0,
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
