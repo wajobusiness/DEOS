@@ -159,7 +159,7 @@ export interface Member {
   plan: PlanTier;
   role: UserRole;
   status: 'active' | 'suspended' | 'pending' | 'banned';
-  memberSince: string;
+  memberSince?: string;
   renewalDate: string;
   rank: string;
   nextRank: string;

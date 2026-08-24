@@ -48,7 +48,11 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Coins
+  Coins,
+  Edit3,
+  Phone,
+  Share2,
+  User
 } from 'lucide-react';
 import {
   initialKYCList,
@@ -327,6 +331,86 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   useEffect(() => {
     fetchLiveUsers();
   }, []);
+
+  // Selected User for Detailed Inspection & Direct Edit Studio
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<any | null>(null);
+  const [userEditForm, setUserEditForm] = useState<any>({});
+  const [isEditUserMode, setIsEditUserMode] = useState<boolean>(false);
+  const [isSavingUser, setIsSavingUser] = useState<boolean>(false);
+  const [userModalTab, setUserModalTab] = useState<'profile' | 'subscription' | 'network' | 'finances'>('profile');
+
+  const handleOpenUserDetails = (user: any) => {
+    const live = userRegistryEngine.getUserById(user.id) || user;
+    setSelectedUserForDetails(live);
+    setUserEditForm({
+      id: live.id,
+      memberCode: live.memberCode || live.id,
+      name: live.name || '',
+      email: live.email || '',
+      phone: live.phone || '',
+      country: live.country || 'Global',
+      avatar: live.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      plan: live.plan || 'launch',
+      role: live.role || 'member',
+      status: live.status || 'active',
+      sponsorId: live.sponsorId || 'EVO-ID-000001',
+      sponsorName: live.sponsorName || 'System Root',
+      binaryPlacementLeg: live.binaryPlacementLeg || 'auto',
+      walletBalance: live.walletBalance || 0,
+      tokenBalance: live.tokenBalance || 0,
+      binaryLeftVolume: live.binaryLeftVolume || 0,
+      binaryRightVolume: live.binaryRightVolume || 0,
+      activeReferrals: live.activeReferrals || 0,
+      hasCompletedOnboarding: live.hasCompletedOnboarding !== false,
+      joinedDate: live.joinedDate || 'Recently',
+      renewalDate: live.renewalDate || '1 Year',
+    });
+    setIsEditUserMode(false);
+    setUserModalTab('profile');
+  };
+
+  const handleSaveUserDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userEditForm.id) return;
+
+    setIsSavingUser(true);
+    try {
+      let sponsorName = userEditForm.sponsorName;
+      if (userEditForm.sponsorId) {
+        const sp = userRegistryEngine.getUserById(userEditForm.sponsorId);
+        if (sp) sponsorName = sp.name;
+      }
+
+      const updatedFields = {
+        name: userEditForm.name.trim(),
+        email: userEditForm.email.trim().toLowerCase(),
+        phone: userEditForm.phone.trim(),
+        country: userEditForm.country.trim(),
+        avatar: userEditForm.avatar,
+        plan: userEditForm.plan as PlanTier,
+        role: userEditForm.role as UserRole,
+        status: userEditForm.status as any,
+        sponsorId: userEditForm.sponsorId || null,
+        sponsorName,
+        binaryPlacementLeg: userEditForm.binaryPlacementLeg,
+        walletBalance: parseFloat(userEditForm.walletBalance) || 0,
+        tokenBalance: parseFloat(userEditForm.tokenBalance) || 0,
+        binaryLeftVolume: parseInt(userEditForm.binaryLeftVolume) || 0,
+        binaryRightVolume: parseInt(userEditForm.binaryRightVolume) || 0,
+        hasCompletedOnboarding: Boolean(userEditForm.hasCompletedOnboarding),
+      };
+
+      await userRegistryEngine.updateUser(userEditForm.id, updatedFields);
+      logAdminAction('User Account Information Updated', `Admin updated full details for user: ${updatedFields.name} (${userEditForm.id})`);
+      showToast(`User ${updatedFields.name} updated successfully in master database!`);
+      setSelectedUserForDetails(null);
+      await fetchLiveUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save user updates');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
 
   // Payouts & Corporate Leads
   const [payoutList, setPayoutList] = useState<PayoutRequest[]>(initialPayoutQueue);
@@ -1336,8 +1420,17 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                     {paginatedUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="p-4">
-                          <p className="font-bold text-white text-sm">{user.name}</p>
-                          <p className="text-[11px] text-indigo-400 font-mono font-bold">{user.id}</p>
+                          <button
+                            onClick={() => handleOpenUserDetails(user)}
+                            className="text-left group flex flex-col"
+                            title="Click to view and edit full user details"
+                          >
+                            <p className="font-bold text-white text-sm group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                              <span>{user.name}</span>
+                              <Edit3 className="w-3 h-3 text-slate-500 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </p>
+                            <p className="text-[11px] text-indigo-400 font-mono font-bold">{user.id}</p>
+                          </button>
                         </td>
                         <td className="p-4">
                           <p className="text-white font-medium">{user.email}</p>
@@ -1389,15 +1482,23 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                         </td>
                         <td className="p-4 text-right space-x-2">
                           <button
+                            onClick={() => handleOpenUserDetails(user)}
+                            className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold shadow-xs transition-colors inline-flex items-center gap-1"
+                            title="Inspect complete details and edit information"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Details & Edit</span>
+                          </button>
+                          <button
                             onClick={() => setSelectedUserForWalletAdj(user)}
-                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-colors inline-flex items-center gap-1"
                             title="Credit or Debit User Wallet Directly"
                           >
                             💰 Adjust Funds
                           </button>
                           <button
                             onClick={() => handleImpersonate(user)}
-                            className="px-2.5 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold shadow-xs transition-colors"
                             title="Audited View As User"
                           >
                             View as User
@@ -2522,6 +2623,396 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 >
                   Save Product Override
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* USER DETAILS & DIRECT EDIT STUDIO MODAL */}
+      {selectedUserForDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-2xl bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-xs">
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-950/90 border-b border-slate-800 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-indigo-500/50 shadow-md shrink-0 bg-slate-800">
+                  <img
+                    src={userEditForm.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                    alt={userEditForm.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">{userEditForm.name || 'Member Details'}</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      {userEditForm.plan}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                      userEditForm.status === 'active'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {userEditForm.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">
+                    ID: <b className="text-indigo-400">{userEditForm.id}</b> • Role: <b className="text-slate-200 capitalize">{userEditForm.role}</b> • Joined: {userEditForm.joinedDate}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsEditUserMode(!isEditUserMode)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
+                    isEditUserMode
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>{isEditUserMode ? 'Editing Mode' : 'Enable Edit'}</span>
+                </button>
+                <button
+                  onClick={() => setSelectedUserForDetails(null)}
+                  className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs inside Modal */}
+            <div className="px-6 pt-3 pb-0 bg-slate-950/40 border-b border-slate-800 flex items-center gap-2 overflow-x-auto">
+              {[
+                { id: 'profile', label: 'Personal & Profile', icon: User },
+                { id: 'subscription', label: 'Membership & Role', icon: ShieldCheck },
+                { id: 'network', label: 'Affiliate & Binary Matrix', icon: Network },
+                { id: 'finances', label: 'Treasury & Wallets', icon: Wallet },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setUserModalTab(tab.id as any)}
+                  className={`px-4 py-2.5 rounded-t-xl font-bold flex items-center gap-2 border-b-2 transition-all text-xs ${
+                    userModalTab === tab.id
+                      ? 'border-indigo-500 text-white bg-slate-900/90'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Modal Body / Tab Content */}
+            <form onSubmit={handleSaveUserDetails} className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* TAB 1: PERSONAL & PROFILE */}
+              {userModalTab === 'profile' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Full Legal Name</label>
+                      <input
+                        type="text"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.name || ''}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold disabled:opacity-60 outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.email || ''}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, email: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white disabled:opacity-60 outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        disabled={!isEditUserMode}
+                        placeholder="+1 (555) 000-0000"
+                        value={userEditForm.phone || ''}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, phone: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white disabled:opacity-60 outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Country of Residence</label>
+                      <input
+                        type="text"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.country || ''}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, country: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white disabled:opacity-60 outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1">Avatar Image URL</label>
+                    <input
+                      type="url"
+                      disabled={!isEditUserMode}
+                      value={userEditForm.avatar || ''}
+                      onChange={(e) => setUserEditForm({ ...userEditForm, avatar: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs disabled:opacity-60 outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: MEMBERSHIP & ROLE */}
+              {userModalTab === 'subscription' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Membership Plan Tier</label>
+                      <select
+                        disabled={!isEditUserMode}
+                        value={userEditForm.plan || 'launch'}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, plan: e.target.value as PlanTier })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold disabled:opacity-60 outline-none"
+                      >
+                        <option value="launch">LAUNCH TIER ($100 USD • 100 BV)</option>
+                        <option value="growth">GROWTH TIER ($300 USD • 300 BV)</option>
+                        <option value="legacy">LEGACY TIER ($500 USD • 500 BV)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Platform Role (RBAC)</label>
+                      <select
+                        disabled={!isEditUserMode}
+                        value={userEditForm.role || 'member'}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, role: e.target.value as UserRole })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-indigo-400 font-bold disabled:opacity-60 outline-none"
+                      >
+                        <option value="member">Member (Regular Entrepreneur)</option>
+                        <option value="support_staff">Support Staff (Ticket Agent)</option>
+                        <option value="admin">Administrator (Moderation)</option>
+                        <option value="super_admin">Super Administrator (Full System)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Account Status</label>
+                      <select
+                        disabled={!isEditUserMode}
+                        value={userEditForm.status || 'active'}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, status: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold disabled:opacity-60 outline-none"
+                      >
+                        <option value="active">Active (Full Access)</option>
+                        <option value="pending">Pending Verification</option>
+                        <option value="suspended">Suspended (Locked Out)</option>
+                        <option value="banned">Banned (Permanent Blacklist)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Annual Subscription Renewal Date</label>
+                      <input
+                        type="text"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.renewalDate || ''}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, renewalDate: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white disabled:opacity-60 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white">Onboarding Questionnaire Completed</h4>
+                      <p className="text-[11px] text-slate-500">If unchecked, user is directed to the 7-question onboarding setup upon login.</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      disabled={!isEditUserMode}
+                      checked={userEditForm.hasCompletedOnboarding === true}
+                      onChange={(e) => setUserEditForm({ ...userEditForm, hasCompletedOnboarding: e.target.checked })}
+                      className="w-5 h-5 accent-indigo-600 rounded cursor-pointer disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: AFFILIATE & BINARY MATRIX */}
+              {userModalTab === 'network' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Direct Sponsor ID (Upline)</label>
+                      <input
+                        type="text"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.sponsorId || ''}
+                        onChange={(e) => {
+                          const newSponsorId = e.target.value;
+                          const found = userRegistryEngine.getUserById(newSponsorId);
+                          setUserEditForm({
+                            ...userEditForm,
+                            sponsorId: newSponsorId,
+                            sponsorName: found ? found.name : userEditForm.sponsorName,
+                          });
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-indigo-400 font-mono font-bold disabled:opacity-60 outline-none"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">Sponsor Name: <b>{userEditForm.sponsorName || 'System Root'}</b></p>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Preferred Placement Leg</label>
+                      <select
+                        disabled={!isEditUserMode}
+                        value={userEditForm.binaryPlacementLeg || 'auto'}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, binaryPlacementLeg: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold disabled:opacity-60 outline-none"
+                      >
+                        <option value="auto">Auto-Balanced (Weaker Leg Placement)</option>
+                        <option value="left">Force Left Team Branch</option>
+                        <option value="right">Force Right Team Branch</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Binary Left Volume (Left BV)</label>
+                      <input
+                        type="number"
+                        disabled={!isEditUserMode}
+                        min="0"
+                        value={userEditForm.binaryLeftVolume || 0}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, binaryLeftVolume: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-indigo-400 font-mono font-bold disabled:opacity-60 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Binary Right Volume (Right BV)</label>
+                      <input
+                        type="number"
+                        disabled={!isEditUserMode}
+                        min="0"
+                        value={userEditForm.binaryRightVolume || 0}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, binaryRightVolume: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-purple-400 font-mono font-bold disabled:opacity-60 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Direct Referrals List Preview */}
+                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-white">Direct Referrals Sponsored</h4>
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono font-bold">
+                        {userRegistryEngine.getDirectReferrals(userEditForm.id).length} Recruits
+                      </span>
+                    </div>
+
+                    {userRegistryEngine.getDirectReferrals(userEditForm.id).length === 0 ? (
+                      <p className="text-slate-500 text-[11px]">This user has not directly recruited any downline members yet.</p>
+                    ) : (
+                      <div className="divide-y divide-slate-800/60 max-h-32 overflow-y-auto">
+                        {userRegistryEngine.getDirectReferrals(userEditForm.id).map(ref => (
+                          <div key={ref.id} className="py-1.5 flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-slate-300">{ref.name} ({ref.id})</span>
+                            <span className="text-slate-500 font-mono">{ref.plan.toUpperCase()} • ${(ref.walletBalance || 0).toFixed(2)} EVO</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: TREASURY & WALLETS */}
+              {userModalTab === 'finances' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Available Wallet Balance ($ EVO)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.walletBalance || 0}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, walletBalance: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-emerald-400 font-mono font-bold text-sm disabled:opacity-60 outline-none"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">Directly sets the user's available spending & withdrawal balance.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Platform Token Balance (EVO Token)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={!isEditUserMode}
+                        value={userEditForm.tokenBalance || 0}
+                        onChange={(e) => setUserEditForm({ ...userEditForm, tokenBalance: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-indigo-400 font-mono font-bold text-sm disabled:opacity-60 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="font-bold text-white">Need an Audited Balance Adjustment?</h4>
+                      <p className="text-[11px] text-indigo-200">Use the Treasury Ledger studio to execute credit/debit with an audit log reason.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUserForDetails(null);
+                        setSelectedUserForWalletAdj(selectedUserForDetails);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shrink-0"
+                    >
+                      Open Treasury Adjuster
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForDetails(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+                >
+                  Close
+                </button>
+
+                {isEditUserMode && (
+                  <button
+                    type="submit"
+                    disabled={isSavingUser}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2"
+                  >
+                    {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>{isSavingUser ? 'Saving to Database...' : 'Save User Updates'}</span>
+                  </button>
+                )}
               </div>
             </form>
           </div>

@@ -275,14 +275,40 @@ export const userRegistryEngine = {
       updatedAt: new Date().toISOString(),
     };
 
+    // If wallet balance was updated, sync isolated balance key
+    if (typeof updates.walletBalance === 'number') {
+      localStorage.setItem(`eviona_user_${users[idx].id}_balance`, Number(updates.walletBalance).toFixed(2));
+      localStorage.setItem(`eviona_user_${users[idx].email.toLowerCase()}_balance`, Number(updates.walletBalance).toFixed(2));
+    }
+
     this.saveUsers(users);
+
+    // Synchronize active session if current logged-in user is updated
+    try {
+      const activeRaw = localStorage.getItem('eviona_active_member_profile');
+      if (activeRaw) {
+        const parsed = JSON.parse(activeRaw);
+        if (parsed.id === users[idx].id || parsed.email === users[idx].email) {
+          const updatedActive = {
+            ...parsed,
+            ...this.toMember(users[idx]),
+          };
+          localStorage.setItem('eviona_active_member_profile', JSON.stringify(updatedActive));
+        }
+      }
+    } catch {}
 
     try {
       await supabase.from('Member').update({
         name: users[idx].name,
+        email: users[idx].email,
+        phone: users[idx].phone,
+        country: users[idx].country,
+        avatarUrl: users[idx].avatar,
         plan: users[idx].plan,
         role: users[idx].role,
         status: users[idx].status,
+        sponsorId: users[idx].sponsorId,
         walletBalance: users[idx].walletBalance,
         binaryLeftVolume: users[idx].binaryLeftVolume,
         binaryRightVolume: users[idx].binaryRightVolume,
