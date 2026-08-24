@@ -63,6 +63,8 @@ import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { adminApprovalEngine, DepositApprovalRequest, WithdrawalApprovalRequest } from '../engine/adminApprovalEngine';
 import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { adminStoreData, MembershipPlanConfig } from '../engine/adminStoreData';
+import { userRegistryEngine, RegisteredUser } from '../engine/userRegistryEngine';
+import { binaryPlacementEngine } from '../engine/binaryPlacementEngine';
 import { Product, PlanTier } from '../types';
 import { UserRole, Member, ViewType } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -258,55 +260,63 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   // Live User Management State
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [usersPerPage, setUsersPerPage] = useState<number>(10);
+  const [usersList, setUsersList] = useState<any[]>(() => userRegistryEngine.getAllUsers());
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const fetchLiveUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      // 1. Fetch live registered users from Supabase Member table
-      const { data, error } = await supabase
-        .from('Member')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // 1. Get authoritative multi-user master list
+      const masterUsers = userRegistryEngine.getAllUsers();
 
-      if (data && data.length > 0 && !error) {
-        const mapped = data.map((m: any) => ({
-          id: m.id || m.member_code || `EVO-${Math.floor(1000 + Math.random() * 9000)}`,
-          name: m.name || m.full_name || 'Registered Entrepreneur',
-          email: m.email || 'user@evionaecosystem.com',
-          role: m.role || (m.email?.includes('admin') ? 'super_admin' : 'member'),
-          plan: m.plan || 'launch',
-          status: m.status || 'active',
-          walletBalance: typeof m.wallet_balance === 'number' ? m.wallet_balance : (typeof m.walletBalance === 'number' ? m.walletBalance : 0.0),
-          binaryVolume: typeof m.binary_volume === 'number' ? m.binary_volume : (typeof m.binaryVolume === 'number' ? m.binaryVolume : 0),
-          activeReferrals: typeof m.active_referrals === 'number' ? m.active_referrals : (typeof m.activeReferrals === 'number' ? m.activeReferrals : 0),
-          joinedDate: m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently',
-        }));
-        setUsersList(mapped);
-      } else {
-        // 2. If table is empty or newly connected, populate from current active session cache
-        const activeUserCached = localStorage.getItem('eviona_active_member_profile');
-        if (activeUserCached) {
-          try {
-            const parsed = JSON.parse(activeUserCached);
-            setUsersList([
-              {
-                id: parsed.id,
-                name: parsed.name,
-                email: parsed.email,
-                role: parsed.role || 'super_admin',
-                plan: parsed.plan || 'legacy',
-                status: parsed.status || 'active',
-                walletBalance: parsed.walletBalance || 0.0,
-                binaryVolume: parsed.binaryVolume || 0,
-                activeReferrals: parsed.activeReferrals || 0,
-                joinedDate: parsed.memberSince || 'Today',
-              }
-            ]);
-          } catch {}
+      // 2. Fetch live registered users from Supabase Member table if available
+      try {
+        const { data, error } = await supabase
+          .from('Member')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (data && data.length > 0 && !error) {
+          for (const m of data) {
+            const exists = masterUsers.find(u => u.id === m.id || u.email.toLowerCase() === (m.email || '').toLowerCase());
+            if (!exists) {
+              masterUsers.push({
+                id: m.id || m.member_code || `EVO-${Math.floor(1000 + Math.random() * 9000)}`,
+                memberCode: m.member_code || m.id,
+                name: m.name || m.full_name || 'Entrepreneur',
+                email: m.email || '',
+                phone: m.phone || '',
+                country: m.country || 'Global',
+                avatar: m.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                plan: m.plan || 'launch',
+                role: m.role || 'member',
+                status: m.status || 'active',
+                sponsorId: m.sponsor_id || 'EVO-ID-000001',
+                sponsorName: 'Eviona Sponsor',
+                binaryPlacementLeg: 'auto',
+                walletBalance: Number(m.wallet_balance || m.walletBalance || 0),
+                tokenBalance: Number(m.wallet_balance || m.walletBalance || 0),
+                binaryLeftVolume: Number(m.binary_volume_left || m.binaryLeftVolume || 0),
+                binaryRightVolume: Number(m.binary_volume_right || m.binaryRightVolume || 0),
+                activeReferrals: Number(m.active_referrals || 0),
+                joinedDate: m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+                renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                hasCompletedOnboarding: true,
+                createdAt: m.created_at || new Date().toISOString(),
+                updatedAt: m.updated_at || new Date().toISOString(),
+              });
+            }
+          }
+          userRegistryEngine.saveUsers(masterUsers);
         }
+      } catch (err) {
+        console.warn('Supabase database sync check notice:', err);
       }
+
+      setUsersList([...masterUsers]);
     } catch (err) {
       console.warn('Live user fetch notification:', err);
     } finally {
@@ -1225,79 +1235,117 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
       {/* ========================================================================= */}
       {/* 7. USER DIRECTORY & RBAC                                                  */}
       {/* ========================================================================= */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                placeholder="Search live users by name, email, or member ID..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
-              />
-            </div>
+      {activeTab === 'users' && (() => {
+        const filteredUsers = usersList.filter((u) => {
+          const matchesSearch =
+            u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+            u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+            u.id.toLowerCase().includes(userSearch.toLowerCase()) ||
+            (u.sponsorId && u.sponsorId.toLowerCase().includes(userSearch.toLowerCase())) ||
+            (u.phone && u.phone.includes(userSearch));
+          const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+          const matchesPlan = planFilter === 'all' || u.plan === planFilter;
+          return matchesSearch && matchesRole && matchesPlan;
+        });
 
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Live DB: <b className="text-white">{usersList.length} Users</b></span>
+        const totalUsers = filteredUsers.length;
+        const totalPages = Math.max(1, Math.ceil(totalUsers / usersPerPage));
+        const paginatedUsers = filteredUsers.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
+
+        return (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, phone, ID, or sponsor ID..."
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+                />
               </div>
 
-              <button
-                onClick={fetchLiveUsers}
-                disabled={isLoadingUsers}
-                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
-                title="Sync and query live users from database"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-                <span>{isLoadingUsers ? 'Syncing...' : 'Refresh DB'}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Database: <b className="text-white">{usersList.length} Total Members</b></span>
+                </div>
 
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 outline-none"
-              >
-                <option value="all">All Roles</option>
-                <option value="member">Member</option>
-                <option value="support_staff">Support Staff</option>
-                <option value="admin">Administrator</option>
-                <option value="super_admin">Super Administrator</option>
-              </select>
+                <button
+                  onClick={fetchLiveUsers}
+                  disabled={isLoadingUsers}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                  title="Sync and query live users from database"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                  <span>{isLoadingUsers ? 'Syncing...' : 'Refresh DB'}</span>
+                </button>
+
+                <select
+                  value={planFilter}
+                  onChange={(e) => {
+                    setPlanFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 outline-none"
+                >
+                  <option value="all">All Plans</option>
+                  <option value="launch">Launch ($100)</option>
+                  <option value="growth">Growth ($300)</option>
+                  <option value="legacy">Legacy ($500)</option>
+                </select>
+
+                <select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 outline-none"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="member">Member</option>
+                  <option value="support_staff">Support Staff</option>
+                  <option value="admin">Administrator</option>
+                  <option value="super_admin">Super Administrator</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Role</th>
-                    <th className="p-4">Plan</th>
-                    <th className="p-4">Wallet Balance</th>
-                    <th className="p-4">Binary BV</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {usersList
-                    .filter((u) => {
-                      const matchesSearch =
-                        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-                        u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-                        u.id.toLowerCase().includes(userSearch.toLowerCase());
-                      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-                      return matchesSearch && matchesRole;
-                    })
-                    .map((user) => (
+            <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">User ID & Name</th>
+                      <th className="p-4">Email & Phone</th>
+                      <th className="p-4">Sponsor / Referrer</th>
+                      <th className="p-4">Role</th>
+                      <th className="p-4">Plan Tier</th>
+                      <th className="p-4">Registration Date</th>
+                      <th className="p-4">Wallet Balance</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Administrative Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {paginatedUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="p-4">
-                          <p className="font-bold text-white">{user.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">{user.email} • {user.id}</p>
+                          <p className="font-bold text-white text-sm">{user.name}</p>
+                          <p className="text-[11px] text-indigo-400 font-mono font-bold">{user.id}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-white font-medium">{user.email}</p>
+                          <p className="text-[10px] text-slate-500 font-mono">{user.phone || 'No phone recorded'}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="font-bold text-slate-200">{user.sponsorName || 'Eviona Global'}</p>
+                          <p className="text-[10px] text-indigo-400 font-mono">{user.sponsorId || 'ROOT'}</p>
                         </td>
                         <td className="p-4">
                           <select
@@ -1322,18 +1370,18 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                             <option value="legacy">LEGACY ($500)</option>
                           </select>
                         </td>
-                        <td className="p-4 font-mono font-bold text-emerald-400">
-                          ${user.walletBalance.toFixed(2)}
+                        <td className="p-4 text-slate-400 text-[11px]">
+                          {user.joinedDate || 'Recently'}
                         </td>
-                        <td className="p-4 font-mono text-slate-300">
-                          {user.binaryVolume.toLocaleString()} BV
+                        <td className="p-4 font-mono font-bold text-emerald-400 text-sm">
+                          ${(user.walletBalance || 0).toFixed(2)} EVO
                         </td>
                         <td className="p-4">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
                               user.status === 'active'
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-rose-500/20 text-rose-400'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                             }`}
                           >
                             {user.status}
@@ -1342,21 +1390,21 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                         <td className="p-4 text-right space-x-2">
                           <button
                             onClick={() => setSelectedUserForWalletAdj(user)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-xs transition-colors"
                             title="Credit or Debit User Wallet Directly"
                           >
-                            Adjust Funds
+                            💰 Adjust Funds
                           </button>
                           <button
                             onClick={() => handleImpersonate(user)}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold shadow-xs transition-colors"
+                            className="px-2.5 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-bold shadow-xs transition-colors"
                             title="Audited View As User"
                           >
                             View as User
                           </button>
                           <button
                             onClick={() => handleToggleUserStatus(user.id)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors ${
                               user.status === 'active'
                                 ? 'bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300'
                                 : 'bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300'
@@ -1367,12 +1415,40 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                         </td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+                <div>
+                  Showing <b>{totalUsers > 0 ? (currentPage - 1) * usersPerPage + 1 : 0}</b> to <b>{Math.min(currentPage * usersPerPage, totalUsers)}</b> of <b>{totalUsers}</b> registered users
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-200 font-bold border border-slate-800"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono font-bold">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-200 font-bold border border-slate-800"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* TREASURY & FINANCIAL APPROVALS (DEPOSITS, WITHDRAWALS & BALANCES)         */}

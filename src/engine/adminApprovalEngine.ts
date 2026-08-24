@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { marketplaceEngine } from './marketplaceEngine';
 import { eventsEngine } from './eventsEngine';
 import { websiteBuilderEngine } from './websiteBuilderEngine';
+import { userRegistryEngine } from './userRegistryEngine';
 
 export interface DepositApprovalRequest {
   id: string;
@@ -152,6 +153,12 @@ export const adminApprovalEngine = {
     const newBal = currentBal + req.amount;
     localStorage.setItem(userBalanceKey, newBal.toFixed(2));
     localStorage.setItem(userEmailBalanceKey, newBal.toFixed(2));
+
+    // Update user registry master record
+    userRegistryEngine.updateUser(req.userId, {
+      walletBalance: newBal,
+      tokenBalance: newBal,
+    });
 
     // 2. Append/Update transaction in user's ledger
     const userLedgerKey = `eviona_user_${req.userId}_ledger`;
@@ -321,6 +328,12 @@ export const adminApprovalEngine = {
     localStorage.setItem(userBalanceKey, newBal.toFixed(2));
     localStorage.setItem(userEmailBalanceKey, newBal.toFixed(2));
 
+    // Update user registry master record
+    userRegistryEngine.updateUser(req.userId, {
+      walletBalance: newBal,
+      tokenBalance: newBal,
+    });
+
     // Update in user ledger with refund note
     const userLedgerKey = `eviona_user_${req.userId}_ledger`;
     try {
@@ -356,6 +369,12 @@ export const adminApprovalEngine = {
     localStorage.setItem(userBalanceKey, newBal.toFixed(2));
     localStorage.setItem(userEmailBalanceKey, newBal.toFixed(2));
 
+    // Update master user registry
+    userRegistryEngine.updateUser(targetUserId, {
+      walletBalance: newBal,
+      tokenBalance: newBal,
+    });
+
     // Record in user ledger
     const userLedgerKey = `eviona_user_${targetUserId}_ledger`;
     try {
@@ -385,6 +404,14 @@ export const adminApprovalEngine = {
       // Update in Supabase
       await supabase.from('Member').update(updates).eq('id', userId);
     } catch {}
+
+    // Update in master user registry
+    userRegistryEngine.updateUser(userId, {
+      name: updates.name,
+      role: updates.role,
+      plan: updates.plan,
+      status: updates.status,
+    });
 
     // Update active member cache if matching
     try {

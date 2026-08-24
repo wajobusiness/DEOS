@@ -158,7 +158,7 @@ export interface Member {
   avatar: string;
   plan: PlanTier;
   role: UserRole;
-  status: 'active' | 'suspended' | 'banned';
+  status: 'active' | 'suspended' | 'pending' | 'banned';
   memberSince: string;
   renewalDate: string;
   rank: string;

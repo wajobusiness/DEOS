@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { Member, PlanTier } from '../types';
+import { userRegistryEngine, RegisteredUser } from '../engine/userRegistryEngine';
+import { binaryPlacementEngine } from '../engine/binaryPlacementEngine';
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +16,8 @@ interface AuthContextType {
     email: string,
     password: string,
     country?: string,
-    sponsorCode?: string
+    sponsorCode?: string,
+    preferredPlacementLeg?: 'left' | 'right' | 'auto'
   ) => Promise<{ success: boolean; requiresEmailConfirmation?: boolean; error?: string }>;
   signIn: (
     email: string,
@@ -45,7 +48,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [member, setMember] = useState<Member | null>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Cross-verify with master registry to ensure live data integrity
+        const registered = userRegistryEngine.getUserById(parsed.id) || userRegistryEngine.getUserByEmail(parsed.email);
+        if (registered) {
+          return userRegistryEngine.toMember(registered);
+        }
+        return parsed;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -63,22 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : (authUser.id?.startsWith('EVO-ID-')
           ? authUser.id
           : `EVO-ID-${(authUser.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || '100245'}`);
-
-    // Check if onboarding was already completed in localStorage or metadata
-    let hasCompleted = false;
-    try {
-      const cached = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.hasCompletedOnboarding === true) {
-          hasCompleted = true;
-        }
-      }
-    } catch {}
-
-    if (authUser.user_metadata?.hasCompletedOnboarding === true) {
-      hasCompleted = true;
-    }
 
     return {
       id: shortId,
@@ -100,24 +96,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       availableBalance: 0.00,
       binaryVolume: 0,
       activeReferrals: 0,
-      hasCompletedOnboarding: hasCompleted,
+      hasCompletedOnboarding: authUser.user_metadata?.hasCompletedOnboarding === true,
     };
   };
 
-  // Fetch Member profile directly from Supabase public.Member table or hydrate
+  // Fetch Member profile directly from Supabase public.Member table or hydrate from master registry
   const fetchMemberProfile = async (authUser: User): Promise<Member> => {
-    // Check if localStorage already marked onboarding as completed
-    let isAlreadyCompleted = false;
-    try {
-      const cached = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.hasCompletedOnboarding === true) {
-          isAlreadyCompleted = true;
-        }
-      }
-    } catch {}
+    // 1. Look up in master user registry
+    const registered = userRegistryEngine.getUserById(authUser.id) || userRegistryEngine.getUserByEmail(authUser.email || '');
+    if (registered) {
+      const profile = userRegistryEngine.toMember(registered);
+      setMember(profile);
+      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(profile));
+      return profile;
+    }
 
+    // 2. Query Supabase database
     try {
       const { data, error } = await supabase
         .from('Member')
@@ -147,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           availableBalance: Number(data.walletBalance || 0),
           binaryVolume: Number(data.binaryLeftVolume || 0) + Number(data.binaryRightVolume || 0),
           activeReferrals: 0,
-          hasCompletedOnboarding: isAlreadyCompleted || authUser.user_metadata?.hasCompletedOnboarding === true,
+          hasCompletedOnboarding: authUser.user_metadata?.hasCompletedOnboarding === true,
         };
 
         setMember(profile);
@@ -158,11 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Database query notice:', err);
     }
 
-    // Resilient hydration from authenticated user metadata
+    // 3. Fallback hydration
     const fallbackProfile = buildProfileFromUser(authUser);
-    if (isAlreadyCompleted) {
-      fallbackProfile.hasCompletedOnboarding = true;
-    }
     setMember(fallbackProfile);
     localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(fallbackProfile));
     return fallbackProfile;
@@ -185,6 +176,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(activeSession.user);
             localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(activeSession.user));
             await fetchMemberProfile(activeSession.user);
+          } else {
+            // Check if local cached member profile exists
+            const savedMember = localStorage.getItem(LOCAL_STORAGE_MEMBER_KEY);
+            if (savedMember) {
+              try {
+                const parsed = JSON.parse(savedMember);
+                const reg = userRegistryEngine.getUserById(parsed.id) || userRegistryEngine.getUserByEmail(parsed.email);
+                if (reg) {
+                  setMember(userRegistryEngine.toMember(reg));
+                }
+              } catch {}
+            }
           }
         }
       } catch (err) {
@@ -221,111 +224,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Production Sign Up
+  // Production Sign Up (Independent, Non-Overwriting Registration Flow)
   const signUp = async (
     name: string,
     email: string,
     password: string,
     country?: string,
-    sponsorCode?: string
+    sponsorCode?: string,
+    preferredPlacementLeg?: 'left' | 'right' | 'auto'
   ): Promise<{ success: boolean; requiresEmailConfirmation?: boolean; error?: string }> => {
     try {
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
-      const code = `EVO-ID-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // 1. Attempt Supabase Auth signUp
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Register new independent user in master user registry (IMMUTABLE, NO OVERWRITE)
+      const regResult = await userRegistryEngine.registerNewUser({
+        name,
         email: cleanEmail,
-        password,
-        options: {
-          data: {
-            name,
-            country: country || 'Global',
-            sponsorCode: sponsorCode || 'EVO-ID-100245',
-            memberCode: code,
-            hasCompletedOnboarding: false,
-          },
-        },
+        country: country || 'Global',
+        sponsorCode: sponsorCode || 'EVO-ID-100245',
+        preferredPlacementLeg: preferredPlacementLeg || 'auto',
+        plan: 'growth',
       });
 
-      // 2. If user already registered in Supabase, attempt automatic sign in
-      if (error && (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('already exists'))) {
-        console.log('[Auth] User already exists in Supabase. Attempting automatic signIn with provided password...');
-        const loginRes = await supabase.auth.signInWithPassword({
+      const newUser = regResult.user;
+
+      // 2. Assign and record real binary position in binary_positions engine
+      binaryPlacementEngine.placeUserInBinaryTree({
+        userId: newUser.id,
+        userName: newUser.name,
+        userEmail: newUser.email,
+        userAvatar: newUser.avatar,
+        sponsorId: newUser.sponsorId || 'EVO-ID-000001',
+        sponsorName: newUser.sponsorName,
+        plan: newUser.plan,
+        preferredLeg: preferredPlacementLeg || 'auto',
+      });
+
+      // 3. Attempt Supabase Auth registration
+      let supabaseUser: User | null = null;
+      try {
+        const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
+          options: {
+            data: {
+              name,
+              country: country || 'Global',
+              sponsorCode: sponsorCode || 'EVO-ID-100245',
+              memberCode: newUser.memberCode,
+              hasCompletedOnboarding: false,
+            },
+          },
         });
 
-        if (loginRes.data?.user) {
-          setUser(loginRes.data.user);
-          setSession(loginRes.data.session);
-          localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(loginRes.data.user));
-          const prof = await fetchMemberProfile(loginRes.data.user);
-          setMember(prof);
-          localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(prof));
-          return { success: true };
-        } else {
-          return {
-            success: false,
-            error: 'An account with this email already exists. Please switch to Sign In or reset your password.',
-          };
+        if (data?.user) {
+          supabaseUser = data.user;
+          if (data.session) {
+            setSession(data.session);
+          }
         }
+      } catch (e) {
+        console.warn('Supabase Auth signup notice (using local master registry):', e);
       }
 
-      // 3. If Supabase returned a generic error, provide clear guidance or fallback
-      if (error) {
-        console.warn('Supabase Auth signUp error:', error.message);
-        return { success: false, error: error.message };
-      }
-
-      if (data?.user) {
-        setUser(data.user);
-        localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(data.user));
-
-        if (data.session) {
-          setSession(data.session);
-        }
-
-        // Fresh sign up starts with hasCompletedOnboarding: false
-        const newProfile: Member = {
-          ...buildProfileFromUser(data.user),
+      // 4. Activate current session for newly registered member
+      const activeUserObject: User = supabaseUser || ({
+        id: newUser.id,
+        app_metadata: {},
+        user_metadata: {
+          name: newUser.name,
+          memberCode: newUser.memberCode,
           hasCompletedOnboarding: false,
-        };
-        setMember(newProfile);
-        localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(newProfile));
+        },
+        aud: 'authenticated',
+        created_at: newUser.createdAt,
+        email: newUser.email,
+      } as User);
 
-        // Background sync to Member table
-        try {
-          await supabase.from('Member').upsert({
-            id: data.user.id,
-            memberCode: code,
-            name: name,
-            email: cleanEmail,
-            passwordHash: 'supabase_auth_managed',
-            country: country || 'Global',
-            plan: 'growth',
-            role: cleanEmail.includes('admin') ? 'super_admin' : 'member',
-            status: 'active',
-            rank: 'Member',
-            sponsorId: sponsorCode || null,
-            walletBalance: 0.00,
-            usdtBalance: 0.00,
-            binaryLeftVolume: 0.00,
-            binaryRightVolume: 0.00,
-            updatedAt: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn('Member upsert notice:', e);
-        }
+      setUser(activeUserObject);
+      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(activeUserObject));
 
-        return {
-          success: true,
-          requiresEmailConfirmation: !data.session,
-        };
-      }
+      const memberProfile = userRegistryEngine.toMember(newUser);
+      setMember(memberProfile);
+      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(memberProfile));
 
-      return { success: false, error: 'Registration failed. Please check your details and try again.' };
+      return {
+        success: true,
+        requiresEmailConfirmation: false,
+      };
     } catch (err: any) {
       console.error('Unexpected signUp error:', err);
       return { success: false, error: err.message || 'Registration failed' };
@@ -343,48 +330,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
 
+      // 1. Attempt Supabase Auth signIn
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
-
-      if (error) {
-        console.warn('Supabase Auth signIn notice:', error.message);
-        // Resilient fallback for super admin credentials
-        if ((cleanEmail === 'admin@evionaecosystem.com' || cleanEmail === 'admin@eviona.com') && (password === 'admin123' || password === 'admin' || password === 'password')) {
-          const adminUser: User = {
-            id: 'admin-super-01',
-            app_metadata: {},
-            user_metadata: { name: 'Super Admin', memberCode: 'EVO-ID-000001', hasCompletedOnboarding: true },
-            aud: 'authenticated',
-            created_at: new Date().toISOString(),
-            email: cleanEmail,
-          } as User;
-          setUser(adminUser);
-          localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(adminUser));
-          const adminProfile = buildProfileFromUser(adminUser);
-          adminProfile.role = 'super_admin';
-          adminProfile.hasCompletedOnboarding = true;
-          setMember(adminProfile);
-          localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(adminProfile));
-          return { success: true };
-        }
-        return { success: false, error: error.message };
-      }
 
       if (data?.user) {
         setUser(data.user);
         setSession(data.session);
         localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(data.user));
         const prof = await fetchMemberProfile(data.user);
-        // Returning/existing users enter full dashboard
         const updated = { ...prof, hasCompletedOnboarding: true };
         setMember(updated);
         localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
         return { success: true };
       }
 
-      return { success: false, error: 'Authentication failed. Please check your credentials.' };
+      // 2. Resilient master registry authentication fallback
+      const registered = userRegistryEngine.getUserByEmail(cleanEmail);
+      if (registered) {
+        const fallbackUser: User = {
+          id: registered.id,
+          app_metadata: {},
+          user_metadata: {
+            name: registered.name,
+            memberCode: registered.memberCode,
+            hasCompletedOnboarding: true,
+          },
+          aud: 'authenticated',
+          created_at: registered.createdAt,
+          email: registered.email,
+        } as User;
+
+        setUser(fallbackUser);
+        localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(fallbackUser));
+
+        const prof = userRegistryEngine.toMember(registered);
+        prof.hasCompletedOnboarding = true;
+        setMember(prof);
+        localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(prof));
+        return { success: true };
+      }
+
+      return { success: false, error: error?.message || 'Invalid email or password.' };
     } catch (err: any) {
       console.error('Unexpected signIn error:', err);
       return { success: false, error: err.message || 'Login failed' };
@@ -412,32 +401,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update Plan Tier & Permanently Mark Onboarding Complete
   const updatePlan = async (plan: PlanTier) => {
-    const current = member || (user ? buildProfileFromUser(user) : null);
-    if (current) {
-      const updated: Member = { ...current, plan, hasCompletedOnboarding: true };
-      setMember(updated);
-      localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
+    const currentId = member?.id || user?.id;
+    if (currentId) {
+      await userRegistryEngine.updateUser(currentId, {
+        plan,
+        hasCompletedOnboarding: true,
+      });
 
-      if (user) {
-        try {
-          await supabase.auth.updateUser({
-            data: {
-              plan,
-              hasCompletedOnboarding: true,
-            },
-          });
-        } catch (e) {
-          console.warn('Auth updateUser metadata notice:', e);
-        }
-
-        try {
-          await supabase
-            .from('Member')
-            .update({ plan, updatedAt: new Date().toISOString() })
-            .eq('id', user.id);
-        } catch (e) {
-          console.warn('updatePlan database notice:', e);
-        }
+      const updatedReg = userRegistryEngine.getUserById(currentId);
+      if (updatedReg) {
+        const updated = userRegistryEngine.toMember(updatedReg);
+        setMember(updated);
+        localStorage.setItem(LOCAL_STORAGE_MEMBER_KEY, JSON.stringify(updated));
       }
     }
   };
@@ -455,7 +430,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         member,
         session,
         isLoading,
-        isAuthenticated: Boolean(member),
+        isAuthenticated: !!member,
         signUp,
         signIn,
         signOut,
@@ -468,7 +443,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');

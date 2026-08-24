@@ -26,68 +26,28 @@ export const initialBinaryTree: TreeNode = {
   id: 'EVO-ID-100245',
   name: 'John Doe',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  role: 'You (Director)',
+  role: 'You (GROWTH)',
   leg: 'root',
   status: 'active',
-  bv: 24560,
+  bv: 0,
   children: [
     {
-      id: 'EVO-L1',
-      name: 'Lisa Brown',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-      role: 'Left Leg (128)',
+      id: 'vacant_left_EVO-ID-100245',
+      name: '+ Open Left Slot',
+      avatar: '',
+      role: 'Available Position',
       leg: 'left',
-      status: 'active',
-      bv: 12280,
-      children: [
-        {
-          id: 'EVO-L2A',
-          name: 'Samuel K.',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-          role: 'Active Member',
-          leg: 'left',
-          status: 'active',
-          bv: 6140
-        },
-        {
-          id: 'EVO-L2B',
-          name: 'Ruth A.',
-          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-          role: 'Active Member',
-          leg: 'right',
-          status: 'active',
-          bv: 6140
-        }
-      ]
+      status: 'inactive',
+      bv: 0,
     },
     {
-      id: 'EVO-R1',
-      name: 'Grace John',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-      role: 'Right Leg (128)',
+      id: 'vacant_right_EVO-ID-100245',
+      name: '+ Open Right Slot',
+      avatar: '',
+      role: 'Available Position',
       leg: 'right',
-      status: 'active',
-      bv: 12280,
-      children: [
-        {
-          id: 'EVO-R2A',
-          name: 'Emeka O.',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-          role: 'Active Member',
-          leg: 'left',
-          status: 'active',
-          bv: 6140
-        },
-        {
-          id: 'EVO-R2B',
-          name: 'Joy C.',
-          avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-          role: 'Active Member',
-          leg: 'right',
-          status: 'active',
-          bv: 6140
-        }
-      ]
+      status: 'inactive',
+      bv: 0,
     }
   ]
 };

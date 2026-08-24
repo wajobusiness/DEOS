@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Network,
   Users,
@@ -23,46 +23,61 @@ import {
   ExternalLink,
   QrCode
 } from 'lucide-react';
-import { initialBinaryTree } from '../store/mockData';
 import { TreeNode, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
 import { useAuth } from '../context/AuthContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
-import { calculateBinaryCommission, getDirectReferralBonus, findSpilloverSlot } from '../engine/binaryEngine';
+import { calculateBinaryCommission, getDirectReferralBonus } from '../engine/binaryEngine';
+import { binaryPlacementEngine } from '../engine/binaryPlacementEngine';
+import { userRegistryEngine } from '../engine/userRegistryEngine';
 
 export const BinaryNetwork: React.FC = () => {
   const { walletBalance, creditCommission } = useWallet();
   const { member } = useAuth();
   const { commissions } = usePlatformSettings();
 
-  const [treeData, setTreeData] = useState<TreeNode>(initialBinaryTree);
-  const [selectedNode, setSelectedNode] = useState<TreeNode>(initialBinaryTree);
-  const [calcBv, setCalcBv] = useState<number>(5000);
-  const [preferredPlacement, setPreferredPlacement] = useState<'balanced' | 'left' | 'right'>('balanced');
-  const [showNodeModal, setShowNodeModal] = useState(false);
-  const [showSponsorModal, setShowSponsorModal] = useState(false);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
-
   // Short EVO-ID standard for current member
   const rawId = member?.id || 'EVO-ID-100245';
   const memberCode = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
 
-  // Dynamic Binary Volume State
-  const [leftBV, setLeftBV] = useState(14500);
-  const [rightBV, setRightBV] = useState(11200);
+  // Root view user (Super Admin can switch to view any user's tree)
+  const [viewRootId, setViewRootId] = useState<string>(memberCode);
+  const [treeData, setTreeData] = useState<TreeNode>(() => binaryPlacementEngine.buildBinaryTreeForUser(viewRootId));
+  const [networkStats, setNetworkStats] = useState(() => binaryPlacementEngine.getNetworkStatistics(viewRootId));
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+  const [calcBv, setCalcBv] = useState<number>(5000);
+  const [showNodeModal, setShowNodeModal] = useState(false);
+  const [showSponsorModal, setShowSponsorModal] = useState(false);
+  const [sponsorPrefLeg, setSponsorPrefLeg] = useState<'auto' | 'left' | 'right'>('auto');
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
+  // Settlement feedback
   const [isSettling, setIsSettling] = useState(false);
   const [lastSettlementNotice, setLastSettlementNotice] = useState<string | null>(null);
 
   // Sponsor Downline Form State
   const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPlan, setNewMemberPlan] = useState<PlanTier>('growth');
-  const [newMemberPlacement, setNewMemberPlacement] = useState<'auto' | 'left' | 'right'>('auto');
+  const [isSubmittingSponsor, setIsSubmittingSponsor] = useState(false);
+
+  // Refresh live tree data whenever viewRootId or member changes
+  const refreshTree = () => {
+    const updatedTree = binaryPlacementEngine.buildBinaryTreeForUser(viewRootId);
+    const updatedStats = binaryPlacementEngine.getNetworkStatistics(viewRootId);
+    setTreeData(updatedTree);
+    setNetworkStats(updatedStats);
+  };
+
+  useEffect(() => {
+    refreshTree();
+  }, [viewRootId, member]);
 
   // SuperAdmin configured rate
   const binaryRatePct = commissions.binaryCommissionRatePct || 10;
-  const weakerBV = Math.min(leftBV, rightBV);
-  const carryForwardBV = Math.abs(leftBV - rightBV);
+  const weakerBV = networkStats.weakerBV;
+  const carryForwardBV = networkStats.carryForwardBV;
   const weeklyCommission = calculateBinaryCommission(weakerBV, binaryRatePct);
 
   // Binary Direct Placement Links
@@ -77,6 +92,12 @@ export const BinaryNetwork: React.FC = () => {
   };
 
   const handleSelectNode = (node: TreeNode) => {
+    if (node.status === 'inactive' || node.name.includes('+ Open')) {
+      // Clicked on vacant slot -> Open fast sponsor modal for this specific leg
+      setSponsorPrefLeg(node.leg === 'left' ? 'left' : 'right');
+      setShowSponsorModal(true);
+      return;
+    }
     setSelectedNode(node);
     setShowNodeModal(true);
   };
@@ -100,73 +121,78 @@ export const BinaryNetwork: React.FC = () => {
         `Binary Settlement: ${binaryRatePct}% on ${matched.toLocaleString()} BV Weaker-Leg Match`
       );
 
-      // Deduct matched volume, leaving carryforward
-      setLeftBV(prev => prev - matched);
-      setRightBV(prev => prev - matched);
+      // Deduct matched volume from user's record
+      const currentReg = userRegistryEngine.getUserById(viewRootId);
+      if (currentReg) {
+        userRegistryEngine.updateUser(currentReg.id, {
+          binaryLeftVolume: Math.max(0, (currentReg.binaryLeftVolume || 0) - matched),
+          binaryRightVolume: Math.max(0, (currentReg.binaryRightVolume || 0) - matched),
+        });
+      }
+
       setIsSettling(false);
+      refreshTree();
 
       setLastSettlementNotice(
-        `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet at ${binaryRatePct}% rate (Ref: ${tx.id}). Carried forward: ${Math.abs(leftBV - rightBV).toLocaleString()} BV.`
+        `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet at ${binaryRatePct}% rate (Ref: ${tx.id}). Carried forward: ${carryForwardBV.toLocaleString()} BV.`
       );
       setTimeout(() => setLastSettlementNotice(null), 7000);
     }, 600);
   };
 
-  // Sponsor New Downline Member & Award Direct Bonus
-  const handleSponsorMember = (e: React.FormEvent) => {
+  // Sponsor New Downline Member & Record Real Database Placement
+  const handleSponsorMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberName.trim()) return;
+    if (!newMemberName.trim() || !newMemberEmail.trim()) return;
 
-    const targetLeg: 'left' | 'right' = newMemberPlacement === 'auto'
-      ? (leftBV <= rightBV ? 'left' : 'right')
-      : newMemberPlacement;
+    setIsSubmittingSponsor(true);
+    try {
+      // 1. Create real independent user in registry (No overwrite)
+      const reg = await userRegistryEngine.registerNewUser({
+        name: newMemberName,
+        email: newMemberEmail,
+        country: 'Global',
+        plan: newMemberPlan,
+        sponsorCode: memberCode,
+        preferredPlacementLeg: sponsorPrefLeg,
+      });
 
-    const bvAmount = newMemberPlan === 'launch' ? 100 : newMemberPlan === 'growth' ? 300 : 500;
-    const directBonus = getDirectReferralBonus(newMemberPlan, commissions);
+      if (reg.success) {
+        // 2. Place user in binary tree
+        binaryPlacementEngine.placeUserInBinaryTree({
+          userId: reg.user.id,
+          userName: reg.user.name,
+          userEmail: reg.user.email,
+          userAvatar: reg.user.avatar,
+          sponsorId: memberCode,
+          sponsorName: member?.name || 'Eviona Leader',
+          plan: newMemberPlan,
+          preferredLeg: sponsorPrefLeg,
+        });
 
-    // Credit direct referral bonus to wallet
-    const tx = creditCommission(
-      directBonus,
-      'direct_referral_bonus',
-      `Direct Referral Bonus — ${newMemberName} (${newMemberPlan.toUpperCase()} Plan)`
-    );
+        // 3. Award Direct Referral Bonus to sponsor's wallet
+        const directBonus = getDirectReferralBonus(newMemberPlan, commissions);
+        const tx = creditCommission(
+          directBonus,
+          'direct_referral_bonus',
+          `Direct Referral Bonus — ${reg.user.name} (${newMemberPlan.toUpperCase()} Plan)`
+        );
 
-    // Update leg volume
-    if (targetLeg === 'left') {
-      setLeftBV(prev => prev + bvAmount);
-    } else {
-      setRightBV(prev => prev + bvAmount);
-    }
+        setShowSponsorModal(false);
+        setNewMemberName('');
+        setNewMemberEmail('');
+        refreshTree();
 
-    // Insert node into tree visual
-    const newNode: TreeNode = {
-      id: `EVO-ID-${Math.floor(100000 + Math.random() * 900000)}`,
-      name: newMemberName,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      role: 'Member',
-      leg: targetLeg,
-      status: 'active',
-      bv: bvAmount,
-      directBonusEarned: directBonus,
-      children: [],
-    };
-
-    setTreeData(prev => {
-      const cloned = JSON.parse(JSON.stringify(prev));
-      const targetChild = cloned.children?.find((c: any) => c.leg === targetLeg);
-      if (targetChild) {
-        if (!targetChild.children) targetChild.children = [];
-        targetChild.children.push(newNode);
+        setLastSettlementNotice(
+          `New Member ${reg.user.name} placed in your binary network! +$${directBonus.toFixed(2)} EVO Direct Bonus credited to your wallet (Ref: ${tx.id}).`
+        );
+        setTimeout(() => setLastSettlementNotice(null), 7000);
       }
-      return cloned;
-    });
-
-    setShowSponsorModal(false);
-    setNewMemberName('');
-    setLastSettlementNotice(
-      `New Member ${newMemberName} placed on ${targetLeg.toUpperCase()} Leg! +$${directBonus.toFixed(2)} EVO Direct Bonus credited to your wallet (Ref: ${tx.id}).`
-    );
-    setTimeout(() => setLastSettlementNotice(null), 7000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to place new member.');
+    } finally {
+      setIsSubmittingSponsor(false);
+    }
   };
 
   return (
@@ -179,10 +205,10 @@ export const BinaryNetwork: React.FC = () => {
             <span>{binaryRatePct}% Flat Binary Network Engine</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Binary Hierarchy & Carryforward Volume
+            Binary Hierarchy & Downline Volume
           </h2>
           <p className="text-xs text-indigo-200">
-            Guaranteed {binaryRatePct}% weaker-leg commission with indefinite carryforward and automated spillover distribution. Connected directly to your live Eviona Wallet.
+            Real database-driven binary network. Guaranteed {binaryRatePct}% weaker-leg payout with indefinite volume carryforward and automated spillover distribution.
           </p>
         </div>
 
@@ -220,6 +246,34 @@ export const BinaryNetwork: React.FC = () => {
         </div>
       )}
 
+      {/* Super Admin Tree Root Switcher */}
+      {member?.role === 'super_admin' && (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-300">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-400" />
+            <span><b>Admin Network Inspector:</b> Viewing tree root node for</span>
+            <select
+              value={viewRootId}
+              onChange={(e) => setViewRootId(e.target.value)}
+              className="px-3 py-1 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold outline-none"
+            >
+              {userRegistryEngine.getAllUsers().map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.id}) — {u.plan.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => setViewRootId(memberCode)}
+            className="px-3 py-1 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-[11px]"
+          >
+            Reset to My Root
+          </button>
+        </div>
+      )}
+
       {/* Direct Binary Sponsor Links Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -251,360 +305,319 @@ export const BinaryNetwork: React.FC = () => {
                 type="text"
                 readOnly
                 value={autoJoinLink}
-                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+                className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600 truncate outline-none"
               />
             </div>
             <button
-              onClick={() => handleCopy(autoJoinLink, 'auto-link')}
-              className="w-full mt-2 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              onClick={() => handleCopy(autoJoinLink, 'auto')}
+              className="w-full mt-2 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
             >
-              {copiedLink === 'auto-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink === 'auto-link' ? 'Copied Link!' : 'Copy Auto Link'}</span>
+              {copiedLink === 'auto' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'auto' ? 'Copied Link!' : 'Copy Auto Link'}</span>
             </button>
           </div>
 
-          {/* Left Power Leg Link */}
+          {/* Left Leg Link */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-slate-900">Left Power Leg Link</span>
-                <Badge variant="blue" size="sm">Left Leg</Badge>
+                <span className="text-xs font-bold text-slate-900">Direct Left Leg Link</span>
+                <Badge variant="blue" size="sm">Left Leg ({networkStats.leftBV.toLocaleString()} BV)</Badge>
               </div>
-              <p className="text-[11px] text-slate-500 mb-2">Forces registration directly onto your left branch.</p>
+              <p className="text-[11px] text-slate-500 mb-2">Forces placement onto your left team branch.</p>
               <input
                 type="text"
                 readOnly
                 value={leftJoinLink}
-                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+                className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600 truncate outline-none"
               />
             </div>
             <button
-              onClick={() => handleCopy(leftJoinLink, 'left-link')}
-              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              onClick={() => handleCopy(leftJoinLink, 'left')}
+              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
             >
-              {copiedLink === 'left-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink === 'left-link' ? 'Copied Link!' : 'Copy Left Leg Link'}</span>
+              {copiedLink === 'left' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'left' ? 'Copied Link!' : 'Copy Left Leg Link'}</span>
             </button>
           </div>
 
-          {/* Right Pay Leg Link */}
+          {/* Right Leg Link */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-slate-900">Right Pay Leg Link</span>
-                <Badge variant="purple" size="sm">Right Leg</Badge>
+                <span className="text-xs font-bold text-slate-900">Direct Right Leg Link</span>
+                <Badge variant="emerald" size="sm">Right Leg ({networkStats.rightBV.toLocaleString()} BV)</Badge>
               </div>
-              <p className="text-[11px] text-slate-500 mb-2">Forces registration directly onto your right branch.</p>
+              <p className="text-[11px] text-slate-500 mb-2">Forces placement onto your right team branch.</p>
               <input
                 type="text"
                 readOnly
                 value={rightJoinLink}
-                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+                className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600 truncate outline-none"
               />
             </div>
             <button
-              onClick={() => handleCopy(rightJoinLink, 'right-link')}
-              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              onClick={() => handleCopy(rightJoinLink, 'right')}
+              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
             >
-              {copiedLink === 'right-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink === 'right-link' ? 'Copied Link!' : 'Copy Right Leg Link'}</span>
+              {copiedLink === 'right' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'right' ? 'Copied Link!' : 'Copy Right Leg Link'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* 5 KPI Metric Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Live Wallet</span>
-            <Wallet className="w-5 h-5 text-indigo-600" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">${walletBalance.toFixed(2)}</h3>
-          <p className="text-xs text-emerald-600 font-semibold mt-1">1:1 EVO Token</p>
+      {/* Network Stats KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+          <span className="text-xs text-slate-500 font-bold">Left Leg Team</span>
+          <p className="text-2xl font-black text-indigo-600">{networkStats.leftBV.toLocaleString()} BV</p>
+          <span className="text-[11px] text-slate-400 font-medium">{networkStats.leftCount} active members</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Left Leg Power</span>
-            <Users className="w-5 h-5 text-blue-600" />
-          </div>
-          <h3 className="text-2xl font-black text-blue-600">{leftBV.toLocaleString()} BV</h3>
-          <p className="text-xs text-slate-400 mt-1">Volume Accumulating</p>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+          <span className="text-xs text-slate-500 font-bold">Right Leg Team</span>
+          <p className="text-2xl font-black text-purple-600">{networkStats.rightBV.toLocaleString()} BV</p>
+          <span className="text-[11px] text-slate-400 font-medium">{networkStats.rightCount} active members</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Right Leg Pay</span>
-            <Users className="w-5 h-5 text-purple-600" />
-          </div>
-          <h3 className="text-2xl font-black text-purple-600">{rightBV.toLocaleString()} BV</h3>
-          <p className="text-xs text-slate-400 mt-1">Volume Accumulating</p>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+          <span className="text-xs text-slate-500 font-bold">Weaker Leg Match</span>
+          <p className="text-2xl font-black text-emerald-600">{weakerBV.toLocaleString()} BV</p>
+          <span className="text-[11px] text-slate-400 font-medium">Eligible for 10% match</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Weaker Matched</span>
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-          </div>
-          <h3 className="text-2xl font-black text-emerald-600">{weakerBV.toLocaleString()} BV</h3>
-          <p className="text-xs text-emerald-600 font-semibold mt-1">{binaryRatePct}% Rate Applied</p>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+          <span className="text-xs text-slate-500 font-bold">Total Downlines</span>
+          <p className="text-2xl font-black text-slate-900">{networkStats.totalMembers} Members</p>
+          <span className="text-[11px] text-slate-400 font-medium">Direct & spillover placed</span>
         </div>
+      </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Binary Bonus Status</span>
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          </div>
+      {/* Interactive Binary Tree Visualization Canvas */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
-            <Badge variant="emerald" size="sm">Qualified (2:1 Active)</Badge>
-            <p className="text-[10px] text-slate-400 mt-1.5">Direct left & right active</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid: Tree Canvas (8 cols) + Binary Controls & Calculator (4 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Interactive Binary Tree Canvas */}
-        <div className="lg:col-span-8 bg-white rounded-3xl p-6 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h3 className="text-base font-black text-slate-900">Interactive Binary Network Tree</h3>
-              <p className="text-xs text-slate-500">Visual hierarchy with spillover placement & real-time BV calculation</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSponsorModal(true)}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-indigo-600/30"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Sponsor Member</span>
-              </button>
-              <button
-                onClick={() => setSelectedNode(treeData)}
-                className="p-2 px-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Center Root</span>
-              </button>
-            </div>
+            <h3 className="text-lg font-black text-slate-900">Live Binary Tree Hierarchy</h3>
+            <p className="text-xs text-slate-500">
+              Interactive genealogical hierarchy. Click any member to inspect downlines or click <b>+ Open Slot</b> to place a new recruit.
+            </p>
           </div>
 
-          {/* Tree Diagram Visual Canvas */}
-          <div className="p-6 sm:p-8 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col items-center justify-center relative min-h-[460px] text-white">
-            {/* Level 1: Root Node */}
-            <div
-              onClick={() => handleSelectNode(treeData)}
-              className={`p-4 rounded-2xl bg-slate-800 border-2 cursor-pointer transition-all shadow-xl flex items-center gap-3 ${
-                selectedNode.id === treeData.id ? 'border-indigo-500 ring-4 ring-indigo-500/20 bg-indigo-950/40' : 'border-slate-700 hover:border-indigo-400'
-              }`}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setSponsorPrefLeg('auto');
+                setShowSponsorModal(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all"
             >
-              <img src={treeData.avatar} alt={treeData.name} className="w-10 h-10 rounded-full object-cover border border-indigo-400" />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-white text-xs">{treeData.name}</p>
-                  <Badge variant="purple" size="sm">Root</Badge>
-                </div>
-                <p className="text-[10px] text-indigo-300 font-mono font-bold">{(leftBV + rightBV).toLocaleString()} BV • {memberCode}</p>
-              </div>
-            </div>
+              <UserPlus className="w-4 h-4" />
+              <span>Sponsor New Downline</span>
+            </button>
 
-            {/* Connecting SVG Lines */}
-            <div className="w-48 h-8 border-b-2 border-l-2 border-r-2 border-indigo-500/40 my-1 rounded-b-lg" />
-
-            {/* Level 2: Left & Right Child Nodes */}
-            <div className="grid grid-cols-2 gap-8 w-full max-w-lg">
-              {treeData.children?.map((child, idx) => (
-                <div key={child.id} className="flex flex-col items-center">
-                  <div
-                    onClick={() => handleSelectNode(child)}
-                    className={`w-full p-3 rounded-2xl bg-slate-800 border-2 cursor-pointer transition-all shadow-lg flex items-center gap-2.5 ${
-                      selectedNode.id === child.id ? 'border-indigo-500 ring-4 ring-indigo-500/20 bg-indigo-950/40' : 'border-slate-700 hover:border-indigo-400'
-                    }`}
-                  >
-                    <img src={child.avatar} alt={child.name} className="w-8 h-8 rounded-full object-cover" />
-                    <div className="min-w-0">
-                      <p className="font-bold text-white text-[11px] truncate">{child.name}</p>
-                      <div className="flex items-center gap-1">
-                        <span className={`text-[9px] font-bold uppercase ${idx === 0 ? 'text-blue-400' : 'text-purple-400'}`}>
-                          {idx === 0 ? 'Left Leg' : 'Right Leg'}
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-mono font-bold">• {idx === 0 ? leftBV : rightBV} BV</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Connecting Mini Lines */}
-                  <div className="w-24 h-6 border-b border-l border-r border-slate-700 my-1 rounded-b" />
-
-                  {/* Level 3: Leaf Sub-Nodes */}
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    {child.children?.map((subChild) => (
-                      <div
-                        key={subChild.id}
-                        onClick={() => handleSelectNode(subChild)}
-                        className={`p-2 rounded-xl bg-slate-800/90 border cursor-pointer text-center text-xs transition-all ${
-                          selectedNode.id === subChild.id ? 'border-indigo-500 bg-indigo-950/50 font-bold' : 'border-slate-700 hover:border-indigo-400'
-                        }`}
-                      >
-                        <p className="font-bold text-white text-[10px] truncate">{subChild.name}</p>
-                        <p className="text-[9px] text-indigo-300 font-mono">{subChild.bv} BV</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Tree Helper Note */}
-            <div className="mt-8 text-[11px] text-slate-400 text-center flex items-center gap-1.5">
-              <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-              <span>Click on any node in the matrix to inspect Business Volume, sponsor ancestry, and spillover status.</span>
-            </div>
+            <button
+              onClick={refreshTree}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+              title="Refresh tree from live database"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Right Panel: Binary Settings & Calculator (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Preferred Placement Toggle */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Preferred Spillover Placement
-            </h4>
+        {/* Tree Container */}
+        <div className="overflow-x-auto py-8">
+          <div className="min-w-[650px] flex flex-col items-center space-y-8">
+            {/* Level 0: Root Node */}
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => handleSelectNode(treeData)}
+                className="group p-4 rounded-2xl bg-gradient-to-tr from-indigo-900 to-slate-900 border-2 border-indigo-500 text-white shadow-xl hover:scale-105 transition-all text-center w-48 relative"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-white/40 shadow-xs">
+                  <img src={treeData.avatar} alt={treeData.name} className="w-full h-full object-cover" />
+                </div>
+                <h4 className="font-black text-xs text-white truncate">{treeData.name}</h4>
+                <p className="text-[10px] text-indigo-300 font-mono">{treeData.id}</p>
+                <span className="mt-1 inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                  {treeData.bv.toLocaleString()} BV Total
+                </span>
+              </button>
 
-            <div className="grid grid-cols-3 gap-2 text-xs font-bold">
-              {[
-                { id: 'balanced', label: 'Auto' },
-                { id: 'left', label: 'Force Left' },
-                { id: 'right', label: 'Force Right' },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setPreferredPlacement(opt.id as any);
-                    alert(`Spillover placement preference set to ${opt.label}!`);
-                  }}
-                  className={`py-2 rounded-xl border transition-all ${
-                    preferredPlacement === opt.id
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {/* Connecting Line from Root */}
+              {treeData.children && treeData.children.length > 0 && (
+                <div className="w-0.5 h-8 bg-slate-300 mt-2" />
+              )}
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-[11px] text-slate-600">
-              Spillover automatically cascades new registrations down your preferred power leg to the first open leaf position.
-            </div>
-          </div>
+            {/* Level 1: Left & Right Teams */}
+            {treeData.children && treeData.children.length > 0 && (
+              <div className="relative w-full max-w-2xl">
+                {/* Horizontal Spanning Branch Line */}
+                <div className="absolute -top-6 left-1/4 right-1/4 h-0.5 bg-slate-300" />
 
-          {/* Real-time Commission Calculator (Powered by SuperAdmin Setting) */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
-            <div className="flex items-center gap-2">
-              <Calculator className="w-4 h-4 text-indigo-600" />
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                {binaryRatePct}% Binary Bonus Calculator
-              </h4>
-            </div>
+                <div className="grid grid-cols-2 gap-8">
+                  {treeData.children.map((child, idx) => {
+                    const isVacant = child.status === 'inactive' || child.name.includes('+ Open');
+                    return (
+                      <div key={child.id || idx} className="flex flex-col items-center">
+                        <button
+                          onClick={() => handleSelectNode(child)}
+                          className={`group p-4 rounded-2xl border text-center w-48 transition-all hover:scale-105 ${
+                            isVacant
+                              ? 'border-2 border-dashed border-slate-300 bg-slate-50/80 text-slate-400 hover:border-indigo-400 hover:bg-indigo-50/40'
+                              : 'bg-white border-slate-200 shadow-md text-slate-900'
+                          }`}
+                        >
+                          {isVacant ? (
+                            <div className="py-2 space-y-1">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center mx-auto mb-1">
+                                <UserPlus className="w-4 h-4" />
+                              </div>
+                              <span className="text-xs font-bold text-slate-700 block">{child.name}</span>
+                              <span className="text-[10px] text-indigo-600 font-extrabold">Click to Sponsor</span>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-1 border border-slate-200 shadow-xs">
+                                <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
+                              </div>
+                              <h4 className="font-bold text-xs text-slate-900 truncate">{child.name}</h4>
+                              <p className="text-[10px] text-slate-400 font-mono">{child.id}</p>
+                              <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                                {child.leg.toUpperCase()} LEG • {child.bv} BV
+                              </span>
+                            </div>
+                          )}
+                        </button>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Weaker Leg Business Volume (BV)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={calcBv}
-                    onChange={(e) => setCalcBv(Number(e.target.value))}
-                    step="500"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 outline-none focus:border-indigo-500"
-                  />
-                  <span className="absolute right-3 top-2.5 text-slate-400 font-bold">BV</span>
+                        {/* Level 2 Sub-children */}
+                        {child.children && child.children.length > 0 && (
+                          <div className="mt-4 flex flex-col items-center space-y-4 w-full">
+                            <div className="w-0.5 h-6 bg-slate-300" />
+                            <div className="grid grid-cols-2 gap-3 w-full">
+                              {child.children.map((subChild, sIdx) => {
+                                const isSubVacant = subChild.status === 'inactive' || subChild.name.includes('+ Open');
+                                return (
+                                  <button
+                                    key={subChild.id || sIdx}
+                                    onClick={() => handleSelectNode(subChild)}
+                                    className={`p-2.5 rounded-xl border text-center transition-all hover:scale-105 ${
+                                      isSubVacant
+                                        ? 'border border-dashed border-slate-300 bg-slate-50 text-slate-400 text-[10px]'
+                                        : 'bg-white border-slate-200 shadow-xs text-slate-800 text-xs'
+                                    }`}
+                                  >
+                                    <span className="font-bold block truncate text-[11px]">{subChild.name}</span>
+                                    <span className="text-[9px] text-slate-400 font-mono block">{subChild.bv} BV</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Weekly Payout ({binaryRatePct}% Rate):</p>
-                <h3 className="text-2xl font-black text-emerald-700">
-                  ${calculateBinaryCommission(calcBv, binaryRatePct).toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs font-bold">EVO</span>
-                </h3>
-                <p className="text-[10px] text-emerald-700 font-medium">Converted at 1:1 USD standard into your wallet.</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Sponsor Member Modal */}
+      {/* SPONSOR NEW DOWNLINE MEMBER MODAL */}
       {showSponsorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5 text-xs">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Sponsor New Downline Member</h3>
-              <button onClick={() => setShowSponsorModal(false)} className="text-slate-400 hover:text-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Sponsor Downline Recruit</h3>
+                  <p className="text-[11px] text-slate-500">Sponsor: <b className="text-slate-800">{memberCode}</b></p>
+                </div>
+              </div>
+              <button onClick={() => setShowSponsorModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSponsorMember} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSponsorMember} className="space-y-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">New Member Full Name</label>
+                <label className="block text-slate-700 font-bold mb-1">New Member Full Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. David Adeleke"
+                  placeholder="e.g. Sarah Jenkins"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Membership Plan Purchased</label>
+                <label className="block text-slate-700 font-bold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="sarah@business.com"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Membership Package</label>
                 <select
                   value={newMemberPlan}
-                  onChange={(e) => setNewMemberPlan(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                  onChange={(e) => setNewMemberPlan(e.target.value as PlanTier)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
                 >
-                  <option value="launch">Launch Tier ($100 → 100 BV • ${getDirectReferralBonus('launch', commissions)} Direct Bonus)</option>
-                  <option value="growth">Growth Tier ($300 → 300 BV • ${getDirectReferralBonus('growth', commissions)} Direct Bonus)</option>
-                  <option value="legacy">Legacy Tier ($500 → 500 BV • ${getDirectReferralBonus('legacy', commissions)} Direct Bonus)</option>
+                  <option value="launch">Launch Tier ($100 USD • 100 BV)</option>
+                  <option value="growth">Growth Tier ($300 USD • 300 BV)</option>
+                  <option value="legacy">Legacy Tier ($500 USD • 500 BV)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Placement Leg</label>
-                <select
-                  value={newMemberPlacement}
-                  onChange={(e) => setNewMemberPlacement(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                >
-                  <option value="auto">Auto-Balance (Place in Weaker Leg)</option>
-                  <option value="left">Left Leg (Power Branch)</option>
-                  <option value="right">Right Leg (Pay Branch)</option>
-                </select>
-              </div>
-
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-emerald-900">
-                ⚡ Sponsoring this member will instantly credit your wallet with a <b>${getDirectReferralBonus(newMemberPlan, commissions)}.00 Direct Bonus</b> in EVO Tokens.
+                <label className="block text-slate-700 font-bold mb-1">Binary Placement Leg</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['auto', 'left', 'right'] as const).map((leg) => (
+                    <button
+                      key={leg}
+                      type="button"
+                      onClick={() => setSponsorPrefLeg(leg)}
+                      className={`py-2 rounded-xl border text-center font-bold text-xs uppercase transition-all ${
+                        sponsorPrefLeg === leg
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-xs'
+                          : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+                      }`}
+                    >
+                      {leg}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowSponsorModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
+                  className="px-4 py-2.5 rounded-xl text-slate-500 hover:text-slate-700 font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
+                  disabled={isSubmittingSponsor}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold shadow-md flex items-center gap-1.5"
                 >
-                  <span>Place Member & Credit Bonus</span>
+                  <span>{isSubmittingSponsor ? 'Placing Downline...' : 'Place in Binary Tree'}</span>
                 </button>
               </div>
             </form>
@@ -612,37 +625,37 @@ export const BinaryNetwork: React.FC = () => {
         </div>
       )}
 
-      {/* Node Detail Drawer Modal */}
-      {showNodeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <img src={selectedNode.avatar} alt={selectedNode.name} className="w-10 h-10 rounded-full object-cover" />
-                <div>
-                  <h3 className="text-base font-black text-slate-900">{selectedNode.name}</h3>
-                  <p className="text-xs text-slate-500">{selectedNode.role}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowNodeModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+      {/* NODE INSPECTOR MODAL */}
+      {showNodeModal && selectedNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 text-xs text-left">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <h4 className="font-bold text-slate-900">Member Downline Profile</h4>
+              <button onClick={() => setShowNodeModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Node ID</span>
-                <span className="font-mono font-bold text-slate-900">{selectedNode.id}</span>
+            <div className="text-center space-y-1">
+              <div className="w-14 h-14 rounded-full overflow-hidden mx-auto border-2 border-indigo-500 shadow-md">
+                <img src={selectedNode.avatar} alt={selectedNode.name} className="w-full h-full object-cover" />
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Binary Leg</span>
-                <span className="font-bold text-indigo-600 capitalize">{selectedNode.leg} Leg</span>
+              <h3 className="font-black text-sm text-slate-900">{selectedNode.name}</h3>
+              <p className="text-[10px] text-slate-400 font-mono">{selectedNode.id}</p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Placement Leg:</span>
+                <span className="font-bold text-indigo-600 uppercase">{selectedNode.leg}</span>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Contributed BV</span>
-                <span className="font-black text-emerald-600">{selectedNode.bv.toLocaleString()} BV</span>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Node Volume:</span>
+                <span className="font-mono font-bold text-emerald-600">{selectedNode.bv} BV</span>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Direct Bonus</span>
-                <span className="font-black text-purple-600">${selectedNode.directBonusEarned || 120}.00</span>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status:</span>
+                <span className="font-bold text-emerald-600 uppercase">{selectedNode.status}</span>
               </div>
             </div>
 
@@ -650,7 +663,7 @@ export const BinaryNetwork: React.FC = () => {
               onClick={() => setShowNodeModal(false)}
               className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
             >
-              Close Node Details
+              Close Inspector
             </button>
           </div>
         </div>
