@@ -48,7 +48,7 @@ export const SellersDashboard: React.FC = () => {
       buyerEmail: 'sarah.j@growthbrand.com',
       amountUsd: 49.00,
       netSellerEarned: 26.95, // 55% after 40% affiliate & 10% platform fee
-      promoterAttributed: 'EVO100245 (Direct Organic)',
+      promoterAttributed: 'EVO-ID-100245 (Direct Organic)',
       date: 'Today, 10:45 AM',
       status: 'Settled',
     },
@@ -58,7 +58,7 @@ export const SellersDashboard: React.FC = () => {
       buyerEmail: 'michael.b@techconsult.org',
       amountUsd: 149.00,
       netSellerEarned: 81.95,
-      promoterAttributed: 'EVO902144 (Affiliate)',
+      promoterAttributed: 'EVO-ID-902144 (Affiliate)',
       date: 'Yesterday, 04:20 PM',
       status: 'Settled',
     },

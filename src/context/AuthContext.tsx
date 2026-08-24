@@ -53,12 +53,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Helper to build a clean Member object from user identity
+  // Helper to build a clean Member object from user identity with short EVO-ID standard
   const buildProfileFromUser = (authUser: { id: string; email?: string; user_metadata?: any; created_at?: string }): Member => {
     const metaName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Entrepreneur';
     const metaCountry = authUser.user_metadata?.country || 'Global';
-    const metaSponsor = authUser.user_metadata?.sponsorCode || 'EVO100245';
-    const memberCode = authUser.user_metadata?.memberCode || `EVO${Math.floor(100000 + Math.random() * 900000)}`;
+    const rawCode = authUser.user_metadata?.memberCode;
+    const shortId = rawCode
+      ? (rawCode.startsWith('EVO-ID-') ? rawCode : `EVO-ID-${rawCode.replace(/^EVO-?I?D?-?/i, '')}`)
+      : (authUser.id?.startsWith('EVO-ID-')
+          ? authUser.id
+          : `EVO-ID-${(authUser.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || '100245'}`);
 
     // Check if onboarding was already completed in localStorage or metadata
     let hasCompleted = false;
@@ -77,7 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return {
-      id: authUser.id,
+      id: shortId,
+      memberCode: shortId,
       name: metaName,
       email: authUser.email || 'entrepreneur@evionaecosystem.com',
       phone: authUser.user_metadata?.phone || '',
@@ -227,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const cleanEmail = email.trim().toLowerCase();
-      const code = `EVO${Math.floor(100000 + Math.random() * 900000)}`;
+      const code = `EVO-ID-${Math.floor(100000 + Math.random() * 900000)}`;
 
       // 1. Attempt Supabase Auth signUp
       const { data, error } = await supabase.auth.signUp({
@@ -237,7 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             name,
             country: country || 'Global',
-            sponsorCode: sponsorCode || 'EVO100245',
+            sponsorCode: sponsorCode || 'EVO-ID-100245',
             memberCode: code,
             hasCompletedOnboarding: false,
           },
@@ -350,7 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const adminUser: User = {
             id: 'admin-super-01',
             app_metadata: {},
-            user_metadata: { name: 'Super Admin', memberCode: 'EVO000001', hasCompletedOnboarding: true },
+            user_metadata: { name: 'Super Admin', memberCode: 'EVO-ID-000001', hasCompletedOnboarding: true },
             aud: 'authenticated',
             created_at: new Date().toISOString(),
             email: cleanEmail,

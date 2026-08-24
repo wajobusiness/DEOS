@@ -1,7 +1,8 @@
 import { Member, TreeNode, WalletTransaction, Product, Lead, Deal, Course, EventItem, TeamMember, SystemStatus } from '../types';
 
 export const currentUser: Member = {
-  id: 'EVO100245',
+  id: 'EVO-ID-100245',
+  memberCode: 'EVO-ID-100245',
   name: 'John Doe',
   email: 'john.doe@evionaecosystem.com',
   phone: '+234 801 234 5678',
@@ -22,7 +23,7 @@ export const currentUser: Member = {
 };
 
 export const initialBinaryTree: TreeNode = {
-  id: 'EVO100245',
+  id: 'EVO-ID-100245',
   name: 'John Doe',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   role: 'You (Director)',
@@ -190,7 +191,7 @@ export const initialLeads: Lead[] = [
     company: 'TechFlow Inc.',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'EVO100245',
+    ownerId: 'EVO-ID-100245',
     ownerName: 'John Doe',
     source: 'Website Form (johnsonagency.com)',
     status: 'New',
@@ -207,7 +208,7 @@ export const initialLeads: Lead[] = [
     company: 'Bright Solutions',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'EVO100245',
+    ownerId: 'EVO-ID-100245',
     ownerName: 'John Doe',
     source: 'Facebook Ad Campaign',
     status: 'Contacted',
@@ -224,7 +225,7 @@ export const initialLeads: Lead[] = [
     company: 'Davis Consulting',
     leadSource: 'member_landing_page',
     ownerType: 'member',
-    ownerId: 'EVO100245',
+    ownerId: 'EVO-ID-100245',
     ownerName: 'John Doe',
     source: 'LinkedIn Direct',
     status: 'Qualified',

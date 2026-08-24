@@ -74,12 +74,14 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     dashboard,
     navigation,
     features,
+    commissions,
     updateBranding,
     updateTheme,
     updateHomepage,
     updateDashboard,
     updateNavigation,
     updateFeatures,
+    updateCommissions,
   } = usePlatformSettings();
 
   const [activeTab, setActiveTab] = useState<
@@ -110,6 +112,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   const [dashboardForm, setDashboardForm] = useState(dashboard);
   const [navigationForm, setNavigationForm] = useState(navigation);
   const [featuresForm, setFeaturesForm] = useState(features);
+  const [commissionsForm, setCommissionsForm] = useState(commissions);
+
+  // Commission Simulator State
+  const [simSalePrice, setSimSalePrice] = useState(100);
+  const [simBVMatch, setSimBVMatch] = useState(5000);
+
+  useEffect(() => {
+    setCommissionsForm(commissions);
+  }, [commissions]);
 
   // Live User Management State
   const [userSearch, setUserSearch] = useState('');
@@ -299,6 +310,16 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     showToast(`User role updated to ${newRole} in live database!`);
   };
 
+  const handleSaveCommissions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateCommissions(commissionsForm);
+    logAdminAction(
+      'Commissions Configuration Updated',
+      `Updated binary matching: ${commissionsForm.binaryCommissionRatePct}%, affiliate: ${commissionsForm.affiliateCommissionRatePct}%, upline: ${commissionsForm.uplineOverrideRatePct}%`
+    );
+    showToast('Global Commission & MLM Binary percentages saved and deployed platform-wide!');
+  };
+
   const handleImpersonate = (user: any) => {
     logAdminAction('User Impersonation Triggered', `Admin viewing platform as user: ${user.email} (${user.id})`);
     if (onImpersonateUser) {
@@ -427,7 +448,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
             { id: 'marketplace', label: 'Marketplace Moderation', icon: Store },
             { id: 'corporate_leads', label: 'Corporate Leads (Book 7)', icon: Building2 },
             { id: 'treasury', label: 'Treasury & Payouts', icon: Wallet },
-            { id: 'binary_rules', label: 'Binary MLM Engine', icon: Network },
+            { id: 'binary_rules', label: 'Commissions & Binary MLM', icon: Network },
             { id: 'system', label: 'System Flags & Coin', icon: Settings },
           ].map((tab) => (
             <button
@@ -1203,6 +1224,327 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
             </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. COMMISSIONS & MLM BINARY ENGINE MASTER CONTROL                         */}
+      {/* ========================================================================= */}
+      {activeTab === 'binary_rules' && (
+        <form onSubmit={handleSaveCommissions} className="max-w-4xl space-y-6 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20 mb-2">
+                <Network className="w-3.5 h-3.5" />
+                <span>SuperAdmin Financial Governance</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Global Commission Percentages & MLM Binary Rules</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Configure platform-wide weaker-leg binary payout rates, direct product affiliate commissions, sponsor upline overrides, direct plan bonuses, and platform fees.
+              </p>
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md flex items-center gap-2 shrink-0"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save & Publish Rules</span>
+            </button>
+          </div>
+
+          {/* Section 1: Binary MLM Compensation Engine */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+              <Network className="w-4 h-4" />
+              <span>1. Binary MLM Compensation Engine</span>
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Weaker-Leg Binary Match Payout</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 font-mono font-bold text-sm">
+                    {commissionsForm.binaryCommissionRatePct}% Flat
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="30"
+                  step="1"
+                  value={commissionsForm.binaryCommissionRatePct}
+                  onChange={(e) => setCommissionsForm({ ...commissionsForm, binaryCommissionRatePct: Number(e.target.value) })}
+                  className="w-full accent-indigo-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>1% Min</span>
+                  <span>10% (Default)</span>
+                  <span>30% Max</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Weekly payout percentage awarded on matched weaker-leg Business Volume (BV) with 1:1 USD EVO token settlement.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 flex flex-col justify-between">
+                <div>
+                  <span className="font-bold text-white block mb-1">Volume Carryforward Policy</span>
+                  <span className="text-[11px] text-slate-400 block mb-3">
+                    Unmatched Business Volume on the stronger leg carries forward indefinitely to the next settlement cycle.
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Zero Flushing • Indefinite Carryforward Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Direct Affiliate & Upline Overrides */}
+          <div className="space-y-4 pt-2">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span>2. Direct Affiliate System & Upline Overrides</span>
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Default Product Affiliate Rate</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 font-mono font-bold text-sm">
+                    {commissionsForm.affiliateCommissionRatePct}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="80"
+                  step="1"
+                  value={commissionsForm.affiliateCommissionRatePct}
+                  onChange={(e) => setCommissionsForm({ ...commissionsForm, affiliateCommissionRatePct: Number(e.target.value) })}
+                  className="w-full accent-rose-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>5% Min</span>
+                  <span>40% (Default)</span>
+                  <span>80% Max</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Standard promoter commission earned on digital marketplace sales when an affiliate link is used.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Sponsor Upline Override Rate</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-mono font-bold text-sm">
+                    {commissionsForm.uplineOverrideRatePct}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="15"
+                  step="1"
+                  value={commissionsForm.uplineOverrideRatePct}
+                  onChange={(e) => setCommissionsForm({ ...commissionsForm, uplineOverrideRatePct: Number(e.target.value) })}
+                  className="w-full accent-purple-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>0%</span>
+                  <span>3% (Default)</span>
+                  <span>15% Max</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Percentage of promoter commission routed upwards to the direct sponsor as leadership override.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Direct Plan Referral Bonuses */}
+          <div className="space-y-4 pt-2">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              <span>3. Direct Plan Referral Bonuses ($ EVO Tokens)</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Launch Plan Bonus ($100 Sub)</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={commissionsForm.launchDirectBonusUsd}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, launchDirectBonusUsd: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-emerald-400">EVO</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: $25.00 (100 BV)</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Growth Plan Bonus ($300 Sub)</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={commissionsForm.growthDirectBonusUsd}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, growthDirectBonusUsd: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-emerald-400">EVO</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: $75.00 (300 BV)</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Legacy Plan Bonus ($500 Sub)</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-bold">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={commissionsForm.legacyDirectBonusUsd}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, legacyDirectBonusUsd: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-emerald-400">EVO</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: $125.00 (500 BV)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Platform Marketplace Fees */}
+          <div className="space-y-4 pt-2">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <Sliders className="w-4 h-4" />
+              <span>4. Platform Marketplace Fees & Direct Sales Split</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Promoter Sale Platform Fee</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    step="1"
+                    value={commissionsForm.platformMarketplaceFeePct}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, platformMarketplaceFeePct: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-indigo-400">%</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: 10% on affiliate sales</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Direct Sale Platform Fee</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    value={commissionsForm.directSalePlatformFeePct}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, directSalePlatformFeePct: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-indigo-400">%</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: 2% on seller direct sales</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-white block">Direct Sale Upline Bonus</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={commissionsForm.directSaleUplineBonusPct}
+                    onChange={(e) => setCommissionsForm({ ...commissionsForm, directSaleUplineBonusPct: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-sm outline-none focus:border-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-indigo-400">%</span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">Default: 1% to seller upline</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Real-Time Simulation Sandbox */}
+          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
+              Live Split Math Simulator (Based on Active Parameters)
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Sample Product Sale: ${simSalePrice}.00</span>
+                  <span className="text-[10px] text-slate-400">Promoter Sale Breakdown</span>
+                </div>
+                <div className="space-y-1 font-mono text-[11px] pt-1">
+                  <div className="flex justify-between text-rose-400 font-bold">
+                    <span>Promoter Net ({(commissionsForm.affiliateCommissionRatePct * (1 - commissionsForm.uplineOverrideRatePct / 100)).toFixed(1)}%):</span>
+                    <span>+${(simSalePrice * (commissionsForm.affiliateCommissionRatePct / 100) * (1 - commissionsForm.uplineOverrideRatePct / 100)).toFixed(2)} EVO</span>
+                  </div>
+                  <div className="flex justify-between text-purple-400">
+                    <span>Upline Override ({commissionsForm.uplineOverrideRatePct}% of com):</span>
+                    <span>+${(simSalePrice * (commissionsForm.affiliateCommissionRatePct / 100) * (commissionsForm.uplineOverrideRatePct / 100)).toFixed(2)} EVO</span>
+                  </div>
+                  <div className="flex justify-between text-indigo-400">
+                    <span>Platform Fee ({commissionsForm.platformMarketplaceFeePct}%):</span>
+                    <span>+${(simSalePrice * (commissionsForm.platformMarketplaceFeePct / 100)).toFixed(2)} EVO</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-400 font-bold border-t border-slate-800 pt-1">
+                    <span>Seller Net Payout:</span>
+                    <span>+${(simSalePrice * (1 - (commissionsForm.platformMarketplaceFeePct + commissionsForm.affiliateCommissionRatePct) / 100)).toFixed(2)} EVO</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white">Sample Weekly BV Match: {simBVMatch.toLocaleString()} BV</span>
+                  <span className="text-[10px] text-slate-400">Binary Settlement</span>
+                </div>
+                <div className="space-y-1 font-mono text-[11px] pt-1">
+                  <div className="flex justify-between text-indigo-400 font-bold">
+                    <span>Rate Applied:</span>
+                    <span>{commissionsForm.binaryCommissionRatePct}% Flat Rate</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-400 font-extrabold text-sm border-t border-slate-800 pt-2">
+                    <span>Weekly Member Payout:</span>
+                    <span>${(simBVMatch * (commissionsForm.binaryCommissionRatePct / 100)).toFixed(2)} EVO</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 flex justify-end">
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save & Publish Live Commission Rules</span>
+            </button>
+          </div>
+        </form>
       )}
 
       {/* ========================================================================= */}

@@ -39,13 +39,38 @@ export function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [activeReferralCode, setActiveReferralCode] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('eviona_active_ref') || 'EVO-ID-100245';
+    } catch {
+      return 'EVO-ID-100245';
+    }
+  });
 
-  // Handle URL Routing (/backoffice and Email Verification Callbacks)
+  // Handle URL Routing (/backoffice, /join, Affiliate Links, and Email Verification Callbacks)
   useEffect(() => {
     const handleUrlRouting = () => {
       const pathname = window.location.pathname;
       const hash = window.location.hash;
       const search = window.location.search;
+
+      // Parse Query Params for ?ref=EVO-ID-... and &leg=...
+      const rawQuery = search || (hash.includes('?') ? `?${hash.split('?')[1]}` : '');
+      const urlParams = new URLSearchParams(rawQuery);
+      const refParam = urlParams.get('ref');
+      const legParam = urlParams.get('leg');
+
+      if (refParam) {
+        sessionStorage.setItem('eviona_active_ref', refParam);
+        setActiveReferralCode(refParam);
+        if (legParam) {
+          sessionStorage.setItem('eviona_active_leg', legParam);
+        }
+        if (pathname.includes('/join') || hash.includes('join') || search.includes('ref=')) {
+          setAuthModalMode('register');
+          setIsAuthModalOpen(true);
+        }
+      }
 
       // Handle Backoffice Route
       if (pathname.startsWith('/backoffice') || hash.startsWith('#/backoffice')) {
@@ -137,6 +162,7 @@ export function App() {
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
             initialMode={authModalMode}
+            defaultSponsorCode={activeReferralCode}
             onSuccess={() => {
               setCurrentView('dashboard');
             }}
@@ -161,6 +187,7 @@ export function App() {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           initialMode={authModalMode}
+          defaultSponsorCode={activeReferralCode}
           onSuccess={() => {
             setCurrentView('dashboard');
           }}
@@ -186,7 +213,8 @@ export function App() {
 
   // 4. Authenticated Full Operating System Shell (User Dashboard, Wallet, CRM, etc.)
   const activeMember = member || {
-    id: 'EVO_ACTIVE',
+    id: 'EVO-ID-ACTIVE',
+    memberCode: 'EVO-ID-ACTIVE',
     name: 'Entrepreneur',
     email: 'entrepreneur@evionaecosystem.com',
     phone: '',

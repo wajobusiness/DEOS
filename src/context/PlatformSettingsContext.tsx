@@ -6,6 +6,7 @@ import {
   DashboardConfigSettings,
   NavigationMenuConfig,
   SystemFeatureSettings,
+  CommissionSettings,
   ViewType,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -17,12 +18,14 @@ export interface PlatformSettingsState {
   dashboard: DashboardConfigSettings;
   navigation: NavigationMenuConfig;
   features: SystemFeatureSettings;
+  commissions: CommissionSettings;
   updateBranding: (branding: Partial<PlatformBrandingSettings>) => Promise<void>;
   updateTheme: (theme: Partial<PlatformThemeSettings>) => Promise<void>;
   updateHomepage: (homepage: Partial<HomepageContentSettings>) => Promise<void>;
   updateDashboard: (dashboard: Partial<DashboardConfigSettings>) => Promise<void>;
   updateNavigation: (navigation: Partial<NavigationMenuConfig>) => Promise<void>;
   updateFeatures: (features: Partial<SystemFeatureSettings>) => Promise<void>;
+  updateCommissions: (commissions: Partial<CommissionSettings>) => Promise<void>;
   resetToDefaults: () => void;
 }
 
@@ -143,7 +146,19 @@ const DEFAULT_FEATURES: SystemFeatureSettings = {
   defaultCoinRateUsd: 1.0,
 };
 
-const STORAGE_KEY = 'eviona_platform_settings_v3';
+const DEFAULT_COMMISSIONS: CommissionSettings = {
+  binaryCommissionRatePct: 10,
+  affiliateCommissionRatePct: 40,
+  uplineOverrideRatePct: 3,
+  launchDirectBonusUsd: 25,
+  growthDirectBonusUsd: 75,
+  legacyDirectBonusUsd: 125,
+  platformMarketplaceFeePct: 10,
+  directSalePlatformFeePct: 2,
+  directSaleUplineBonusPct: 1,
+};
+
+const STORAGE_KEY = 'eviona_platform_settings_v4';
 
 const PlatformSettingsContext = createContext<PlatformSettingsState | undefined>(undefined);
 
@@ -202,6 +217,15 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     }
   });
 
+  const [commissions, setCommissions] = useState<CommissionSettings>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_commissions`);
+      return saved ? { ...DEFAULT_COMMISSIONS, ...JSON.parse(saved) } : DEFAULT_COMMISSIONS;
+    } catch {
+      return DEFAULT_COMMISSIONS;
+    }
+  });
+
   // Inject Theme CSS variables into Document Root
   useEffect(() => {
     try {
@@ -237,6 +261,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
           if (cfg.dashboard) setDashboard((prev) => ({ ...prev, ...cfg.dashboard }));
           if (cfg.navigation) setNavigation((prev) => ({ ...prev, ...cfg.navigation }));
           if (cfg.features) setFeatures((prev) => ({ ...prev, ...cfg.features }));
+          if (cfg.commissions) setCommissions((prev) => ({ ...prev, ...cfg.commissions }));
         }
       } catch (err) {
         console.warn('PlatformSetting table sync note:', err);
@@ -261,42 +286,49 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     const updated = { ...branding, ...newBranding };
     setBranding(updated);
     localStorage.setItem(`${STORAGE_KEY}_branding`, JSON.stringify(updated));
-    await persistToDatabase({ branding: updated, theme, homepage, dashboard, navigation, features });
+    await persistToDatabase({ branding: updated, theme, homepage, dashboard, navigation, features, commissions });
   };
 
   const updateTheme = async (newTheme: Partial<PlatformThemeSettings>) => {
     const updated = { ...theme, ...newTheme };
     setTheme(updated);
     localStorage.setItem(`${STORAGE_KEY}_theme`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme: updated, homepage, dashboard, navigation, features });
+    await persistToDatabase({ branding, theme: updated, homepage, dashboard, navigation, features, commissions });
   };
 
   const updateHomepage = async (newHomepage: Partial<HomepageContentSettings>) => {
     const updated = { ...homepage, ...newHomepage };
     setHomepage(updated);
     localStorage.setItem(`${STORAGE_KEY}_homepage`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage: updated, dashboard, navigation, features });
+    await persistToDatabase({ branding, theme, homepage: updated, dashboard, navigation, features, commissions });
   };
 
   const updateDashboard = async (newDashboard: Partial<DashboardConfigSettings>) => {
     const updated = { ...dashboard, ...newDashboard };
     setDashboard(updated);
     localStorage.setItem(`${STORAGE_KEY}_dashboard`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard: updated, navigation, features });
+    await persistToDatabase({ branding, theme, homepage, dashboard: updated, navigation, features, commissions });
   };
 
   const updateNavigation = async (newNavigation: Partial<NavigationMenuConfig>) => {
     const updated = { ...navigation, ...newNavigation };
     setNavigation(updated);
     localStorage.setItem(`${STORAGE_KEY}_navigation`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard, navigation: updated, features });
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation: updated, features, commissions });
   };
 
   const updateFeatures = async (newFeatures: Partial<SystemFeatureSettings>) => {
     const updated = { ...features, ...newFeatures };
     setFeatures(updated);
     localStorage.setItem(`${STORAGE_KEY}_features`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features: updated });
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features: updated, commissions });
+  };
+
+  const updateCommissions = async (newCommissions: Partial<CommissionSettings>) => {
+    const updated = { ...commissions, ...newCommissions };
+    setCommissions(updated);
+    localStorage.setItem(`${STORAGE_KEY}_commissions`, JSON.stringify(updated));
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features, commissions: updated });
   };
 
   const resetToDefaults = () => {
@@ -306,12 +338,14 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     setDashboard(DEFAULT_DASHBOARD);
     setNavigation(DEFAULT_NAVIGATION);
     setFeatures(DEFAULT_FEATURES);
+    setCommissions(DEFAULT_COMMISSIONS);
     localStorage.removeItem(`${STORAGE_KEY}_branding`);
     localStorage.removeItem(`${STORAGE_KEY}_theme`);
     localStorage.removeItem(`${STORAGE_KEY}_homepage`);
     localStorage.removeItem(`${STORAGE_KEY}_dashboard`);
     localStorage.removeItem(`${STORAGE_KEY}_navigation`);
     localStorage.removeItem(`${STORAGE_KEY}_features`);
+    localStorage.removeItem(`${STORAGE_KEY}_commissions`);
   };
 
   return (
@@ -323,12 +357,14 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
         dashboard,
         navigation,
         features,
+        commissions,
         updateBranding,
         updateTheme,
         updateHomepage,
         updateDashboard,
         updateNavigation,
         updateFeatures,
+        updateCommissions,
         resetToDefaults,
       }}
     >

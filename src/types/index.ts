@@ -134,8 +134,21 @@ export interface SystemFeatureSettings {
   defaultCoinRateUsd: number;
 }
 
+export interface CommissionSettings {
+  binaryCommissionRatePct: number; // e.g. 10
+  affiliateCommissionRatePct: number; // e.g. 40
+  uplineOverrideRatePct: number; // e.g. 3
+  launchDirectBonusUsd: number; // e.g. 25
+  growthDirectBonusUsd: number; // e.g. 75
+  legacyDirectBonusUsd: number; // e.g. 125
+  platformMarketplaceFeePct: number; // e.g. 10
+  directSalePlatformFeePct: number; // e.g. 2
+  directSaleUplineBonusPct: number; // e.g. 1
+}
+
 export interface Member {
   id: string;
+  memberCode?: string;
   name: string;
   email: string;
   phone: string;

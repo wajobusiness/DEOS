@@ -20,19 +20,27 @@ export interface SplitCommissionResult {
 }
 
 /**
- * 10% Flat Binary Commission calculation on weaker-leg Business Volume (BV)
- * Governed strictly by Book 4 §7 (v1.1)
+ * Dynamic Binary Commission calculation on weaker-leg Business Volume (BV)
+ * SuperAdmin controlled (default 10% Flat Rate)
  */
-export function calculateBinaryCommission(weakerLegBV: number): number {
-  return Number((weakerLegBV * 0.10).toFixed(2));
+export function calculateBinaryCommission(weakerLegBV: number, ratePct: number = 10): number {
+  const safePct = Math.max(0, ratePct || 10);
+  return Number((weakerLegBV * (safePct / 100)).toFixed(2));
 }
 
 /**
  * Direct Referral Bonus based on purchased plan tier
- * Launch: $25 | Growth: $75 | Legacy: $125
- * Governed by Book 4 §6
+ * SuperAdmin configurable: Launch ($25) | Growth ($75) | Legacy ($125)
  */
-export function getDirectReferralBonus(plan: PlanTier): number {
+export function getDirectReferralBonus(
+  plan: PlanTier,
+  customBonuses?: { launchDirectBonusUsd?: number; growthDirectBonusUsd?: number; legacyDirectBonusUsd?: number }
+): number {
+  if (customBonuses) {
+    if (plan === 'launch' && typeof customBonuses.launchDirectBonusUsd === 'number') return customBonuses.launchDirectBonusUsd;
+    if (plan === 'growth' && typeof customBonuses.growthDirectBonusUsd === 'number') return customBonuses.growthDirectBonusUsd;
+    if (plan === 'legacy' && typeof customBonuses.legacyDirectBonusUsd === 'number') return customBonuses.legacyDirectBonusUsd;
+  }
   switch (plan) {
     case 'launch': return 25.00;
     case 'growth': return 75.00;
@@ -101,12 +109,23 @@ export function calculateSplitCommission(sponsorPlan: PlanTier, referredPlan: Pl
  */
 export function calculateMarketplaceFeeSplit(
   salePrice: number,
-  promoterRate?: number | null
+  promoterRate?: number | null,
+  customOverrides?: {
+    platformMarketplaceFeePct?: number;
+    directSalePlatformFeePct?: number;
+    directSaleUplineBonusPct?: number;
+    uplineOverrideRatePct?: number;
+  }
 ): MarketplaceSplitResult {
+  const directPlatformFeePct = (customOverrides?.directSalePlatformFeePct ?? 2) / 100;
+  const directUplineBonusPct = (customOverrides?.directSaleUplineBonusPct ?? 1) / 100;
+  const promoterPlatformFeePct = (customOverrides?.platformMarketplaceFeePct ?? 10) / 100;
+  const uplineOverridePct = (customOverrides?.uplineOverrideRatePct ?? 3) / 100;
+
   // If no promoter link is used (Direct Sale, Book 5 §8a)
   if (promoterRate === undefined || promoterRate === null || promoterRate === 0) {
-    const platformFee = Number((salePrice * 0.02).toFixed(2));
-    const sellerUplineBonus = Number((salePrice * 0.01).toFixed(2));
+    const platformFee = Number((salePrice * directPlatformFeePct).toFixed(2));
+    const sellerUplineBonus = Number((salePrice * directUplineBonusPct).toFixed(2));
     const sellerPayoutNet = Number((salePrice - platformFee - sellerUplineBonus).toFixed(2));
 
     return {
@@ -122,10 +141,10 @@ export function calculateMarketplaceFeeSplit(
   }
 
   // Promoter Sale Case
-  const boundedRate = Math.min(Math.max(promoterRate, 0.10), 0.60);
-  const platformFee = Number((salePrice * 0.10).toFixed(2));
+  const boundedRate = Math.min(Math.max(promoterRate, 0.05), 0.90);
+  const platformFee = Number((salePrice * promoterPlatformFeePct).toFixed(2));
   const promoterCommissionGross = Number((salePrice * boundedRate).toFixed(2));
-  const uplineOverride = Number((promoterCommissionGross * 0.03).toFixed(2));
+  const uplineOverride = Number((promoterCommissionGross * uplineOverridePct).toFixed(2));
   const promoterCommissionNet = Number((promoterCommissionGross - uplineOverride).toFixed(2));
   const sellerPayoutNet = Number((salePrice - platformFee - promoterCommissionGross).toFixed(2));
 

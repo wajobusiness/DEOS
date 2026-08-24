@@ -395,7 +395,7 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
                 try {
                   const rail: PaymentProviderType = paymentMethod === 'usdt' ? 'crypto_trc20' : paymentMethod === 'paystack' ? 'paystack' : 'bank_transfer';
                   await paymentGateway.finalizePayment(rail, generatedRef, {
-                    userId: 'EVO100245',
+                    userId: 'EVO-ID-100245',
                     amountUsd: amountUSD,
                     purpose: 'wallet_deposit',
                   });

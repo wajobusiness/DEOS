@@ -24,6 +24,7 @@ import {
 import { Member } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { calculateMarketplaceFeeSplit, getDirectReferralBonus } from '../engine/binaryEngine';
 
 interface PartnerCenterProps {
@@ -32,6 +33,8 @@ interface PartnerCenterProps {
 
 export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => {
   const { walletBalance, creditCommission } = useWallet();
+  const { commissions } = usePlatformSettings();
+
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [selectedProductSlug, setSelectedProductSlug] = useState('ai-prompts-mastery');
   const [showQRModal, setShowQRModal] = useState(false);
@@ -45,7 +48,15 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const [isSimulating, setIsSimulating] = useState(false);
   const [lastCreditNotice, setLastCreditNotice] = useState<string | null>(null);
 
-  const memberCode = currentUser.id || 'EVO100245';
+  // Dynamic SuperAdmin configured rates
+  const affRatePct = commissions.affiliateCommissionRatePct || 40;
+  const binaryRatePct = commissions.binaryCommissionRatePct || 10;
+  const uplineRatePct = commissions.uplineOverrideRatePct || 3;
+
+  // Short EVO-ID standard for current member
+  const rawId = currentUser.id || 'EVO-ID-100245';
+  const memberCode = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
+
   const referralLink = `https://evionaecosystem.com/join?ref=${memberCode}`;
   const websiteEmbeddedLink = `https://johnsonagency.com/#join?ref=${memberCode}`;
   const productAffiliateLink = `https://evionaecosystem.com/marketplace/${selectedProductSlug}?ref=${memberCode}`;
@@ -86,7 +97,7 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
       let type: any = 'promoter_commission';
 
       if (simType === 'plan') {
-        earnedAmount = getDirectReferralBonus(selectedPlan);
+        earnedAmount = getDirectReferralBonus(selectedPlan, commissions);
         desc = `Direct Referral Bonus — ${selectedPlan.toUpperCase()} Plan Signup`;
         type = 'direct_referral_bonus';
       } else {
@@ -98,9 +109,12 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
         };
 
         const prod = productPrices[selectedProductSlug] || { title: 'Marketplace Product', price: 49.00 };
-        const split = calculateMarketplaceFeeSplit(prod.price, 0.40);
+        const split = calculateMarketplaceFeeSplit(prod.price, affRatePct / 100, {
+          platformMarketplaceFeePct: commissions.platformMarketplaceFeePct,
+          uplineOverrideRatePct: commissions.uplineOverrideRatePct,
+        });
         earnedAmount = split.promoterCommissionNet;
-        desc = `40% Affiliate Commission — ${prod.title}`;
+        desc = `${affRatePct}% Affiliate Commission — ${prod.title}`;
         type = 'promoter_commission';
       }
 
@@ -117,7 +131,7 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const marketingSwipes = [
     {
       title: 'WhatsApp / Telegram Direct Message',
-      content: `Hey! I just launched my all-in-one digital entrepreneur system with Eviona. You get a complete business website, CRM, AI marketing tools, and a 10% binary network compensation model. Check it out here: ${referralLink}`,
+      content: `Hey! I just launched my all-in-one digital entrepreneur system with Eviona. You get a complete business website, CRM, AI marketing tools, and a ${binaryRatePct}% binary network compensation model. Check it out here: ${referralLink}`,
     },
     {
       title: 'Email Invitation Template',
@@ -135,10 +149,10 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
             <span>Affiliate & Partner Center Engine</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Share Your Link. Earn 40% Direct + 10% Binary.
+            Share Your Link. Earn {affRatePct}% Direct + {binaryRatePct}% Binary.
           </h2>
           <p className="text-xs text-indigo-200">
-            Earn instant 40% direct affiliate rewards, 3% sponsor overrides, and direct referral bonuses automatically credited to your live Eviona Wallet.
+            Earn instant {affRatePct}% direct affiliate rewards, {uplineRatePct}% sponsor overrides, and direct referral bonuses automatically credited to your live Eviona Wallet.
           </p>
         </div>
 
@@ -196,104 +210,90 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
-          <span className="text-xs font-bold text-slate-400 uppercase">Affiliate Split Invariant</span>
-          <h3 className="text-2xl font-black text-purple-600 mt-1">40% Flat</h3>
-          <p className="text-xs text-slate-400 mt-1">+3% Upline Override</p>
+          <span className="text-xs font-bold text-slate-400 uppercase">Affiliate Rate</span>
+          <h3 className="text-2xl font-black text-purple-600 mt-1">{affRatePct}% Direct</h3>
+          <p className="text-xs text-slate-400 mt-1">+{uplineRatePct}% Sponsor Override</p>
         </div>
       </div>
 
-      {/* Referral Links Generator Card */}
+      {/* Main Referral Links Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Main Platform Link */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4 flex flex-col justify-between">
+        {/* Platform Master Referral Link */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Primary Platform Referral Link
-              </h4>
-              <Badge variant="purple" size="sm">Direct Signup</Badge>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Universal Referral Link
+              </span>
+              <Badge variant="purple" size="sm">ID: {memberCode}</Badge>
             </div>
-
-            <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <input
-                type="text"
-                readOnly
-                value={referralLink}
-                className="flex-1 bg-transparent text-xs font-mono font-bold text-slate-800 outline-none"
-              />
-              <button
-                onClick={() => handleCopy(referralLink, 'primary')}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>{copiedLink === 'primary' ? 'Copied!' : 'Copy'}</span>
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-2">
-              Sends prospects to the official Eviona registration page with your sponsor ID ({memberCode}) automatically bound.
+            <h3 className="text-base font-black text-slate-900">Your Platform Referral Link</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Direct people to join the Eviona Ecosystem under your sponsorship. All signups are automatically attributed to your downline.
             </p>
+
+            <div className="mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-700 flex items-center justify-between gap-2">
+              <span className="truncate">{referralLink}</span>
+            </div>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => handleCopy(referralLink, 'master')}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm shadow-indigo-600/30"
+            >
+              {copiedLink === 'master' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedLink === 'master' ? 'Copied Link!' : 'Copy Referral Link'}</span>
+            </button>
             <button
               onClick={() => setShowQRModal(true)}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5"
+              className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5"
+              title="Show QR Code"
             >
               <QrCode className="w-4 h-4" />
-              <span>Show QR Code</span>
             </button>
-            <span className="text-[10px] text-slate-400 font-mono">Cookie: 90-day attribution</span>
           </div>
         </div>
 
-        {/* Product-Specific Affiliate Link Generator */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4 flex flex-col justify-between">
+        {/* Dynamic Product Affiliate Link Generator */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Marketplace Product Affiliate Link
-              </h4>
-              <Badge variant="emerald" size="sm">40% Reward</Badge>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Product Affiliate Generator
+              </span>
+              <Badge variant="emerald" size="sm">Earn {affRatePct}% Net</Badge>
             </div>
+            <h3 className="text-base font-black text-slate-900">Promote Specific Marketplace Products</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Generate direct affiliate links for courses, templates, and software in the marketplace.
+            </p>
 
-            <div className="space-y-2">
+            <div className="mt-3 space-y-2">
               <select
                 value={selectedProductSlug}
                 onChange={(e) => setSelectedProductSlug(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
               >
-                <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00 - 40% Comm)</option>
-                <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00 - 40% Comm)</option>
-                <option value="ecom-automation-funnel">E-Commerce High-Converting Funnel ($79.00 - 40% Comm)</option>
-                <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00 - 40% Comm)</option>
+                <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00)</option>
+                <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00)</option>
+                <option value="ecom-automation-funnel">E-Commerce Automation Funnel ($79.00)</option>
+                <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00)</option>
               </select>
 
-              <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200">
-                <input
-                  type="text"
-                  readOnly
-                  value={productAffiliateLink}
-                  className="flex-1 bg-transparent text-xs font-mono font-bold text-slate-800 outline-none"
-                />
-                <button
-                  onClick={() => handleCopy(productAffiliateLink, 'product')}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedLink === 'product' ? 'Copied!' : 'Copy'}</span>
-                </button>
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-700 truncate">
+                {productAffiliateLink}
               </div>
             </div>
-
-            <p className="text-[11px] text-slate-500 mt-2">
-              Customers purchasing through this link earn you an instant 40% direct reward credited in EVO Tokens.
-            </p>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-            <span className="text-[10px] text-emerald-600 font-bold">● Multi-rail checkout active</span>
-            <span className="text-[10px] text-slate-400 font-mono">Commission: 40% Direct</span>
-          </div>
+          <button
+            onClick={() => handleCopy(productAffiliateLink, 'product')}
+            className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+          >
+            {copiedLink === 'product' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedLink === 'product' ? 'Copied Product Link!' : 'Copy Product Affiliate Link'}</span>
+          </button>
         </div>
       </div>
 
@@ -318,89 +318,92 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
                   onClick={() => setSimType('product')}
                   className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                     simType === 'product'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-xs'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  Marketplace Product (40%)
+                  Digital Product Sale ({affRatePct}%)
                 </button>
                 <button
                   onClick={() => setSimType('plan')}
                   className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                     simType === 'plan'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-xs'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  Plan Referral ($25–$125)
+                  Direct Plan Referral
                 </button>
               </div>
             </div>
 
             {simType === 'plan' ? (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Referred Plan Tier</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Membership Plan Sold</label>
                 <select
                   value={selectedPlan}
                   onChange={(e) => setSelectedPlan(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
                 >
-                  <option value="launch">Launch Tier ($100/yr → $25.00 Direct Bonus)</option>
-                  <option value="growth">Growth Tier ($300/yr → $75.00 Direct Bonus)</option>
-                  <option value="legacy">Legacy Tier ($500/yr → $125.00 Direct Bonus)</option>
+                  <option value="launch">Launch Tier ($100 → ${getDirectReferralBonus('launch', commissions)} Direct Bonus)</option>
+                  <option value="growth">Growth Tier ($300 → ${getDirectReferralBonus('growth', commissions)} Direct Bonus)</option>
+                  <option value="legacy">Legacy Tier ($500 → ${getDirectReferralBonus('legacy', commissions)} Direct Bonus)</option>
                 </select>
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Select Promoted Product</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Marketplace Product</label>
                 <select
                   value={selectedProductSlug}
                   onChange={(e) => setSelectedProductSlug(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
                 >
-                  <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00 → $19.60 Commission)</option>
-                  <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00 → $59.60 Commission)</option>
-                  <option value="ecom-automation-funnel">E-Commerce High-Converting Funnel ($79.00 → $31.60 Commission)</option>
-                  <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00 → $39.60 Commission)</option>
+                  <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00)</option>
+                  <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00)</option>
+                  <option value="ecom-automation-funnel">E-Commerce Automation Funnel ($79.00)</option>
+                  <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00)</option>
                 </select>
               </div>
             )}
-          </div>
-
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-4">
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Reward Rate</span>
-                <span className="font-bold text-indigo-600">{simType === 'plan' ? 'Direct Tier Bonus' : '40% Flat Direct'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Settlement Target</span>
-                <span className="font-bold text-emerald-600">Eviona Wallet (Live Ledger)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Credited Unit</span>
-                <span className="font-bold text-slate-900">EVO Utility Token ($1.00 = 1.00 EVO)</span>
-              </div>
-            </div>
 
             <button
               onClick={handleSimulateConversion}
               disabled={isSimulating}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all disabled:opacity-50"
             >
-              <Play className="w-3.5 h-3.5" />
-              <span>{isSimulating ? 'Processing Commission...' : 'Trigger Conversion & Credit Wallet'}</span>
+              <Play className="w-4 h-4 fill-white" />
+              <span>{isSimulating ? 'Processing Double-Entry Credit...' : 'Trigger Conversion & Deposit to Wallet'}</span>
             </button>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">How Wallet Settlement Operates</span>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                When a customer purchases a product or membership through your link:
+              </p>
+              <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+                <li>Instant {affRatePct}% net affiliate commission or plan direct bonus credited.</li>
+                <li>{uplineRatePct}% leadership override routed upwards to your sponsor.</li>
+                <li>Immutable double-entry transaction record logged in your wallet ledger.</li>
+                <li>Earned EVO Tokens can be withdrawn immediately or spent in the marketplace.</li>
+              </ul>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold">
+              <span className="text-slate-500">Live Active Balance:</span>
+              <span className="text-emerald-600 font-mono text-sm">${walletBalance.toFixed(2)} EVO</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Marketing Swipes & Promotional Copy */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
+      {/* Marketing Resources & Copy Templates */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-4">
         <div>
-          <h3 className="text-base font-bold text-slate-900">Ready-To-Use Marketing Swipes</h3>
+          <h3 className="text-base font-bold text-slate-900">Pre-Written Promotional Copy (Swipes)</h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Copy and paste these high-converting templates into WhatsApp, Telegram, or Email campaigns.
+            Copy and share these high-converting messages directly with your audience on WhatsApp, Telegram, or email.
           </p>
         </div>
 
@@ -429,20 +432,28 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
         </div>
       </div>
 
-      {/* QR Code Modal */}
+      {/* QR Code Sharing Modal */}
       {showQRModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 shadow-2xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900">Your Referral QR Code</h3>
-            <div className="w-48 h-48 bg-slate-900 rounded-2xl mx-auto flex items-center justify-center p-4">
-              <QrCode className="w-40 h-40 text-white" />
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-center shadow-2xl border border-slate-200 space-y-4">
+            <h3 className="text-base font-bold text-slate-900">Scan to Join Eviona</h3>
+            <p className="text-xs text-slate-500">
+              Anyone who scans this QR code will register directly under your sponsor ID <b>{memberCode}</b>.
+            </p>
+
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex justify-center">
+              {/* Clean Canvas QR placeholder representation */}
+              <div className="w-48 h-48 bg-white p-3 rounded-xl border border-slate-200 flex flex-col items-center justify-center shadow-inner">
+                <QrCode className="w-32 h-32 text-slate-900" />
+                <span className="text-[10px] font-mono text-slate-500 mt-2 font-bold">{memberCode}</span>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 font-mono break-all">{referralLink}</p>
+
             <button
               onClick={() => setShowQRModal(false)}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
             >
-              Close
+              Close QR Code
             </button>
           </div>
         </div>

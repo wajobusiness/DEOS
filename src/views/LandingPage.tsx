@@ -73,7 +73,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const [leadName, setLeadName] = useState('');
   const [leadEmail, setLeadEmail] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
-  const [sponsorCode, setSponsorCode] = useState('EVO100245');
+  const [sponsorCode, setSponsorCode] = useState('EVO-ID-100245');
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
   const [isLeadCaptured, setIsLeadCaptured] = useState(false);
 

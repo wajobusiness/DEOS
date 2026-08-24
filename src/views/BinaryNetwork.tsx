@@ -16,22 +16,37 @@ import {
   ChevronRight,
   X,
   Play,
-  Wallet
+  Wallet,
+  Copy,
+  Check,
+  Share2,
+  ExternalLink,
+  QrCode
 } from 'lucide-react';
 import { initialBinaryTree } from '../store/mockData';
 import { TreeNode, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
+import { useAuth } from '../context/AuthContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { calculateBinaryCommission, getDirectReferralBonus, findSpilloverSlot } from '../engine/binaryEngine';
 
 export const BinaryNetwork: React.FC = () => {
   const { walletBalance, creditCommission } = useWallet();
+  const { member } = useAuth();
+  const { commissions } = usePlatformSettings();
+
   const [treeData, setTreeData] = useState<TreeNode>(initialBinaryTree);
   const [selectedNode, setSelectedNode] = useState<TreeNode>(initialBinaryTree);
   const [calcBv, setCalcBv] = useState<number>(5000);
   const [preferredPlacement, setPreferredPlacement] = useState<'balanced' | 'left' | 'right'>('balanced');
   const [showNodeModal, setShowNodeModal] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
+  // Short EVO-ID standard for current member
+  const rawId = member?.id || 'EVO-ID-100245';
+  const memberCode = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
 
   // Dynamic Binary Volume State
   const [leftBV, setLeftBV] = useState(14500);
@@ -44,16 +59,29 @@ export const BinaryNetwork: React.FC = () => {
   const [newMemberPlan, setNewMemberPlan] = useState<PlanTier>('growth');
   const [newMemberPlacement, setNewMemberPlacement] = useState<'auto' | 'left' | 'right'>('auto');
 
+  // SuperAdmin configured rate
+  const binaryRatePct = commissions.binaryCommissionRatePct || 10;
   const weakerBV = Math.min(leftBV, rightBV);
   const carryForwardBV = Math.abs(leftBV - rightBV);
-  const weeklyCommission = calculateBinaryCommission(weakerBV);
+  const weeklyCommission = calculateBinaryCommission(weakerBV, binaryRatePct);
+
+  // Binary Direct Placement Links
+  const autoJoinLink = `https://evionaecosystem.com/join?ref=${memberCode}&leg=auto`;
+  const leftJoinLink = `https://evionaecosystem.com/join?ref=${memberCode}&leg=left`;
+  const rightJoinLink = `https://evionaecosystem.com/join?ref=${memberCode}&leg=right`;
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(id);
+    setTimeout(() => setCopiedLink(null), 3000);
+  };
 
   const handleSelectNode = (node: TreeNode) => {
     setSelectedNode(node);
     setShowNodeModal(true);
   };
 
-  // Run 10% Flat Binary Settlement & Credit to Wallet
+  // Run Binary Settlement & Credit to Wallet at SuperAdmin configured rate
   const handleExecuteWeeklySettlement = () => {
     if (weakerBV <= 0) {
       alert('There is currently 0 weaker-leg BV to match for settlement.');
@@ -62,14 +90,14 @@ export const BinaryNetwork: React.FC = () => {
 
     setIsSettling(true);
     setTimeout(() => {
-      const payout = calculateBinaryCommission(weakerBV);
+      const payout = calculateBinaryCommission(weakerBV, binaryRatePct);
       const matched = weakerBV;
 
       // Credit commission to real wallet ledger
       const tx = creditCommission(
         payout,
         'binary_commission',
-        `Binary Settlement: 10% on ${matched.toLocaleString()} BV Weaker-Leg Match`
+        `Binary Settlement: ${binaryRatePct}% on ${matched.toLocaleString()} BV Weaker-Leg Match`
       );
 
       // Deduct matched volume, leaving carryforward
@@ -78,7 +106,7 @@ export const BinaryNetwork: React.FC = () => {
       setIsSettling(false);
 
       setLastSettlementNotice(
-        `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet (Ref: ${tx.id}). Carried forward: ${Math.abs(leftBV - rightBV).toLocaleString()} BV.`
+        `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet at ${binaryRatePct}% rate (Ref: ${tx.id}). Carried forward: ${Math.abs(leftBV - rightBV).toLocaleString()} BV.`
       );
       setTimeout(() => setLastSettlementNotice(null), 7000);
     }, 600);
@@ -94,7 +122,7 @@ export const BinaryNetwork: React.FC = () => {
       : newMemberPlacement;
 
     const bvAmount = newMemberPlan === 'launch' ? 100 : newMemberPlan === 'growth' ? 300 : 500;
-    const directBonus = getDirectReferralBonus(newMemberPlan);
+    const directBonus = getDirectReferralBonus(newMemberPlan, commissions);
 
     // Credit direct referral bonus to wallet
     const tx = creditCommission(
@@ -112,7 +140,7 @@ export const BinaryNetwork: React.FC = () => {
 
     // Insert node into tree visual
     const newNode: TreeNode = {
-      id: `EVO${Math.floor(100000 + Math.random() * 900000)}`,
+      id: `EVO-ID-${Math.floor(100000 + Math.random() * 900000)}`,
       name: newMemberName,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       role: 'Member',
@@ -148,20 +176,20 @@ export const BinaryNetwork: React.FC = () => {
         <div className="space-y-2 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>10% Flat Binary Network Engine</span>
+            <span>{binaryRatePct}% Flat Binary Network Engine</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
             Binary Hierarchy & Carryforward Volume
           </h2>
           <p className="text-xs text-indigo-200">
-            Guaranteed 10% flat weaker-leg commission with indefinite carryforward and automated spillover distribution. Connected directly to your live Eviona Wallet.
+            Guaranteed {binaryRatePct}% weaker-leg commission with indefinite carryforward and automated spillover distribution. Connected directly to your live Eviona Wallet.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center">
             <p className="text-2xl font-black text-white">${weeklyCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-indigo-200 uppercase font-bold">Matched Payout (10%)</p>
+            <p className="text-[10px] text-indigo-200 uppercase font-bold">Matched Payout ({binaryRatePct}%)</p>
             {weakerBV > 0 && (
               <button
                 onClick={handleExecuteWeeklySettlement}
@@ -191,6 +219,99 @@ export const BinaryNetwork: React.FC = () => {
           </span>
         </div>
       )}
+
+      {/* Direct Binary Sponsor Links Card */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold mb-1">
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Your Referral & Placement Links</span>
+            </div>
+            <h3 className="text-base font-black text-slate-900">Direct Binary Sponsor Links</h3>
+            <p className="text-xs text-slate-500">
+              Share your short ID (<b>{memberCode}</b>) link with prospective recruits. They will automatically be positioned on the designated leg.
+            </p>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-mono text-xs font-bold text-slate-700">
+            Sponsor ID: <span className="text-indigo-600 font-black">{memberCode}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Auto-Balanced Link */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-900">Auto-Balanced Link</span>
+                <Badge variant="purple" size="sm">Recommended</Badge>
+              </div>
+              <p className="text-[11px] text-slate-500 mb-2">Places new members into your weaker leg automatically.</p>
+              <input
+                type="text"
+                readOnly
+                value={autoJoinLink}
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+              />
+            </div>
+            <button
+              onClick={() => handleCopy(autoJoinLink, 'auto-link')}
+              className="w-full mt-2 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+            >
+              {copiedLink === 'auto-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'auto-link' ? 'Copied Link!' : 'Copy Auto Link'}</span>
+            </button>
+          </div>
+
+          {/* Left Power Leg Link */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-900">Left Power Leg Link</span>
+                <Badge variant="blue" size="sm">Left Leg</Badge>
+              </div>
+              <p className="text-[11px] text-slate-500 mb-2">Forces registration directly onto your left branch.</p>
+              <input
+                type="text"
+                readOnly
+                value={leftJoinLink}
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+              />
+            </div>
+            <button
+              onClick={() => handleCopy(leftJoinLink, 'left-link')}
+              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+            >
+              {copiedLink === 'left-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'left-link' ? 'Copied Link!' : 'Copy Left Leg Link'}</span>
+            </button>
+          </div>
+
+          {/* Right Pay Leg Link */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-slate-900">Right Pay Leg Link</span>
+                <Badge variant="purple" size="sm">Right Leg</Badge>
+              </div>
+              <p className="text-[11px] text-slate-500 mb-2">Forces registration directly onto your right branch.</p>
+              <input
+                type="text"
+                readOnly
+                value={rightJoinLink}
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all outline-none"
+              />
+            </div>
+            <button
+              onClick={() => handleCopy(rightJoinLink, 'right-link')}
+              className="w-full mt-2 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+            >
+              {copiedLink === 'right-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink === 'right-link' ? 'Copied Link!' : 'Copy Right Leg Link'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* 5 KPI Metric Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -227,7 +348,7 @@ export const BinaryNetwork: React.FC = () => {
             <DollarSign className="w-5 h-5 text-emerald-600" />
           </div>
           <h3 className="text-2xl font-black text-emerald-600">{weakerBV.toLocaleString()} BV</h3>
-          <p className="text-xs text-emerald-600 font-semibold mt-1">10% Flat Rate Locked</p>
+          <p className="text-xs text-emerald-600 font-semibold mt-1">{binaryRatePct}% Rate Applied</p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
@@ -284,7 +405,7 @@ export const BinaryNetwork: React.FC = () => {
                   <p className="font-bold text-white text-xs">{treeData.name}</p>
                   <Badge variant="purple" size="sm">Root</Badge>
                 </div>
-                <p className="text-[10px] text-indigo-300 font-mono font-bold">{(leftBV + rightBV).toLocaleString()} BV • {treeData.id}</p>
+                <p className="text-[10px] text-indigo-300 font-mono font-bold">{(leftBV + rightBV).toLocaleString()} BV • {memberCode}</p>
               </div>
             </div>
 
@@ -379,12 +500,12 @@ export const BinaryNetwork: React.FC = () => {
             </div>
           </div>
 
-          {/* Real-time 10% Flat Commission Calculator */}
+          {/* Real-time Commission Calculator (Powered by SuperAdmin Setting) */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
             <div className="flex items-center gap-2">
               <Calculator className="w-4 h-4 text-indigo-600" />
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                10% Binary Bonus Calculator
+                {binaryRatePct}% Binary Bonus Calculator
               </h4>
             </div>
 
@@ -406,9 +527,9 @@ export const BinaryNetwork: React.FC = () => {
               </div>
 
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Weekly Payout (10% Flat):</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Weekly Payout ({binaryRatePct}% Rate):</p>
                 <h3 className="text-2xl font-black text-emerald-700">
-                  ${calculateBinaryCommission(calcBv).toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs font-bold">EVO</span>
+                  ${calculateBinaryCommission(calcBv, binaryRatePct).toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs font-bold">EVO</span>
                 </h3>
                 <p className="text-[10px] text-emerald-700 font-medium">Converted at 1:1 USD standard into your wallet.</p>
               </div>
@@ -448,9 +569,9 @@ export const BinaryNetwork: React.FC = () => {
                   onChange={(e) => setNewMemberPlan(e.target.value as any)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
                 >
-                  <option value="launch">Launch Tier ($100 → 100 BV • $25 Direct Bonus)</option>
-                  <option value="growth">Growth Tier ($300 → 300 BV • $75 Direct Bonus)</option>
-                  <option value="legacy">Legacy Tier ($500 → 500 BV • $125 Direct Bonus)</option>
+                  <option value="launch">Launch Tier ($100 → 100 BV • ${getDirectReferralBonus('launch', commissions)} Direct Bonus)</option>
+                  <option value="growth">Growth Tier ($300 → 300 BV • ${getDirectReferralBonus('growth', commissions)} Direct Bonus)</option>
+                  <option value="legacy">Legacy Tier ($500 → 500 BV • ${getDirectReferralBonus('legacy', commissions)} Direct Bonus)</option>
                 </select>
               </div>
 
@@ -468,7 +589,7 @@ export const BinaryNetwork: React.FC = () => {
               </div>
 
               <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-emerald-900">
-                ⚡ Sponsoring this member will instantly credit your wallet with a <b>${getDirectReferralBonus(newMemberPlan)}.00 Direct Bonus</b> in EVO Tokens.
+                ⚡ Sponsoring this member will instantly credit your wallet with a <b>${getDirectReferralBonus(newMemberPlan, commissions)}.00 Direct Bonus</b> in EVO Tokens.
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

@@ -75,7 +75,7 @@ export const initialKYCList: KYCSubmission[] = [
 export const initialPayoutQueue: PayoutRequest[] = [
   {
     id: 'PAY-401',
-    memberId: 'EVO100245',
+    memberId: 'EVO-ID-100245',
     memberName: 'John Doe',
     amount: 3250.00,
     currency: 'USDT',
