@@ -14,7 +14,8 @@ import {
   Coins,
   RefreshCw
 } from 'lucide-react';
-import { ViewType } from '../types';
+import { ViewType, WalletTransaction } from '../types';
+import { paymentGateway, PaymentProviderType } from '../engine/paymentGatewayEngine';
 
 interface DepositFlowProps {
   onNavigate: (view: ViewType) => void;
@@ -26,6 +27,8 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
   const [amountUSD, setAmountUSD] = useState<number>(300);
   const [copied, setCopied] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState<number>(899); // 14:59
+  const [generatedRef, setGeneratedRef] = useState<string>(`TXN-${Date.now().toString().slice(-6)}`);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const coinRate = 1.00; // 1 EVO = $1.00 USD Utility Token
 
@@ -379,15 +382,31 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
         {currentStep === 5 && (
           <div className="py-12 text-center space-y-4 animate-fadeIn">
             <div className="w-16 h-16 rounded-full bg-indigo-50 border-4 border-indigo-600 border-t-transparent animate-spin mx-auto" />
-            <h3 className="text-xl font-bold text-slate-900">Confirming Blockchain Receipt...</h3>
+            <h3 className="text-xl font-bold text-slate-900">Reconciling Payment with Gateway...</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Scanning TRC20 network blocks for transaction confirmation. Crediting EVO Token immediately...
+              Scanning payment gateway logs and TRC20 blockchain blocks for reference <span className="font-mono font-bold text-indigo-600">{generatedRef}</span>.
             </p>
             <button
-              onClick={() => setCurrentStep(6)}
-              className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700"
+              disabled={isVerifying}
+              onClick={async () => {
+                setIsVerifying(true);
+                try {
+                  const rail: PaymentProviderType = paymentMethod === 'usdt' ? 'crypto_trc20' : paymentMethod === 'paystack' ? 'paystack' : 'bank_transfer';
+                  await paymentGateway.finalizePayment(rail, generatedRef, {
+                    userId: 'EVO100245',
+                    amountUsd: amountUSD,
+                    purpose: 'wallet_deposit',
+                  });
+                  setCurrentStep(6);
+                } catch (err: any) {
+                  alert(err.message || 'Payment reconciliation failed');
+                } finally {
+                  setIsVerifying(false);
+                }
+              }}
+              className="mt-4 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md"
             >
-              Simulate Instant Confirmation
+              {isVerifying ? 'Verifying on Ledger...' : 'Confirm Receipt & Credit EVO Tokens'}
             </button>
           </div>
         )}
@@ -402,14 +421,22 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
             <div>
               <h3 className="text-2xl font-black text-slate-900">Deposit Confirmed & Credited!</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Your wallet has been credited with <b>{(amountUSD / coinRate).toFixed(2)} EVO Token</b>.
+                Your wallet has been credited with <b>{(amountUSD / coinRate).toFixed(2)} EVO Token</b> ($1.00 = 1.00 EVO).
               </p>
             </div>
 
             <div className="max-w-xs mx-auto p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-left">
               <div className="flex justify-between">
                 <span className="text-slate-500">Transaction ID</span>
-                <span className="font-mono font-bold text-slate-900">TXN-9022</span>
+                <span className="font-mono font-bold text-slate-900">{generatedRef}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Amount USD</span>
+                <span className="font-bold text-slate-900">${amountUSD.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Tokens Credited</span>
+                <span className="font-bold text-purple-600">+{(amountUSD / coinRate).toFixed(2)} EVO</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Status</span>
