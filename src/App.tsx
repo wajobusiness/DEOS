@@ -375,7 +375,7 @@ export function App() {
           {currentView === 'academy' && <AcademyHub />}
           {currentView === 'events' && <EventsWebinars />}
           {currentView === 'team' && <TeamManagement />}
-          {currentView === 'settings' && <UserSettings currentUser={activeMember} />}
+          {currentView === 'settings' && <UserSettings currentUser={activeMember} onNavigate={handleNavigate} />}
           {currentView === 'support' && <SupportCommunity />}
           {currentView === 'analytics' && <AnalyticsOverview />}
         </main>
