@@ -16,12 +16,14 @@ import {
 } from 'lucide-react';
 import { ViewType, WalletTransaction } from '../types';
 import { paymentGateway, PaymentProviderType } from '../engine/paymentGatewayEngine';
+import { useWallet } from '../context/WalletContext';
 
 interface DepositFlowProps {
   onNavigate: (view: ViewType) => void;
 }
 
 export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
+  const { addDeposit } = useWallet();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [paymentMethod, setPaymentMethod] = useState<string>('usdt');
   const [amountUSD, setAmountUSD] = useState<number>(300);
@@ -397,6 +399,7 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
                     amountUsd: amountUSD,
                     purpose: 'wallet_deposit',
                   });
+                  await addDeposit(amountUSD, rail, generatedRef);
                   setCurrentStep(6);
                 } catch (err: any) {
                   alert(err.message || 'Payment reconciliation failed');

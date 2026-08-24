@@ -15,12 +15,12 @@ import {
   TrendingUp,
   AlertCircle,
   Building2,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
-import { initialTransactions } from '../store/mockData';
 import { Member, ViewType, WalletTransaction } from '../types';
 import { Badge } from '../components/common/Badge';
-import { paymentGateway } from '../engine/paymentGatewayEngine';
+import { useWallet } from '../context/WalletContext';
 
 interface WalletDashboardProps {
   currentUser: Member;
@@ -31,15 +31,13 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   currentUser,
   onNavigate,
 }) => {
+  const { walletBalance, tokenBalance, availableBalance, transactions, processWithdrawal, processP2PTransfer } = useWallet();
   const [filterType, setFilterType] = useState<string>('all');
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
-  // Dynamic Ledger Transactions State
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(initialTransactions);
-
   // Withdrawal Form State
-  const [withdrawAmount, setWithdrawAmount] = useState('250.00');
+  const [withdrawAmount, setWithdrawAmount] = useState('25.00');
   const [withdrawMethod, setWithdrawMethod] = useState<'USDT (TRC20)' | 'Bank Transfer' | 'Kuda Instant'>('USDT (TRC20)');
   const [withdrawAddress, setWithdrawAddress] = useState('TX9xZgHkM92pqWrtY8dKl9mTRC20Address');
   const [withdrawBankAcc, setWithdrawBankAcc] = useState('0928374102');
@@ -47,10 +45,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
 
   // P2P Transfer Form State
   const [transferRecipient, setTransferRecipient] = useState('');
-  const [transferAmount, setTransferAmount] = useState('50.00');
+  const [transferAmount, setTransferAmount] = useState('25.00');
   const [isTransferring, setIsTransferring] = useState(false);
 
-  // Handle Withdrawal Request via Payment Gateway Engine
+  // Handle Withdrawal Request via Wallet Engine
   const handleExecuteWithdrawal = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(withdrawAmount);
@@ -61,28 +59,8 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
 
     setIsWithdrawing(true);
     try {
-      const result = await paymentGateway.requestWithdrawal({
-        userId: currentUser.id,
-        amountUsd: amount,
-        method: withdrawMethod,
-        destination: {
-          cryptoAddress: withdrawMethod === 'USDT (TRC20)' ? withdrawAddress : undefined,
-          accountNumber: withdrawMethod !== 'USDT (TRC20)' ? withdrawBankAcc : undefined,
-        },
-      });
-
-      const newTx: WalletTransaction = {
-        id: result.reference,
-        type: 'withdrawal',
-        description: `Withdrawal via ${withdrawMethod}`,
-        amount: -amount,
-        currency: 'USD',
-        status: 'Processing',
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setTransactions(prev => [newTx, ...prev]);
+      const destination = withdrawMethod === 'USDT (TRC20)' ? { cryptoAddress: withdrawAddress } : { accountNumber: withdrawBankAcc };
+      const result = await processWithdrawal(amount, withdrawMethod, destination);
       setShowWithdrawModal(false);
       alert(result.message);
     } catch (err: any) {
@@ -104,29 +82,23 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
 
     setIsTransferring(true);
     setTimeout(() => {
-      const newTx: WalletTransaction = {
-        id: `TX-P2P-${Date.now().toString().slice(-6)}`,
-        type: 'coin_transfer',
-        description: `P2P Transfer to ${transferRecipient}`,
-        amount: -amount,
-        currency: 'EVO',
-        status: 'Completed',
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setTransactions(prev => [newTx, ...prev]);
+      const result = processP2PTransfer(amount, transferRecipient);
       setIsTransferring(false);
-      setShowTransferModal(false);
-      setTransferRecipient('');
-      alert(`Successfully transferred ${amount} EVO Tokens to ${transferRecipient}!`);
-    }, 800);
+      if (!result.success) {
+        alert(result.error || 'Transfer failed');
+      } else {
+        setShowTransferModal(false);
+        setTransferRecipient('');
+        alert(`Successfully transferred ${amount.toFixed(2)} EVO Tokens to ${transferRecipient}!`);
+      }
+    }, 400);
   };
 
   const filteredTransactions = transactions.filter(t => {
     if (filterType === 'all') return true;
-    if (filterType === 'commissions') return t.type.includes('commission') || t.type.includes('bonus');
+    if (filterType === 'commissions') return t.type.includes('commission') || t.type.includes('bonus') || t.type.includes('override');
     if (filterType === 'transfers') return t.type.includes('transfer') || t.type.includes('withdrawal');
+    if (filterType === 'deposits') return t.type === 'coin_deposit';
     return true;
   });
 
@@ -140,8 +112,8 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <Wallet className="w-5 h-5 text-indigo-400" />
           </div>
           <div className="my-3">
-            <h3 className="text-3xl font-black tracking-tight">${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-[10px] text-emerald-400 font-semibold mt-1">↑ +18.4% this month</p>
+            <h3 className="text-3xl font-black tracking-tight">${walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <p className="text-[10px] text-emerald-400 font-semibold mt-1">Live Available Funds</p>
           </div>
           <span className="text-[10px] text-slate-400">Fixed Model A Valuation ($1.00 = 1.00 EVO)</span>
         </div>
@@ -152,8 +124,8 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <Coins className="w-5 h-5 text-purple-600" />
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-black text-slate-900">{currentUser.tokenBalance.toLocaleString()} <span className="text-xs text-purple-600">EVO</span></h3>
-            <p className="text-[10px] text-slate-400 mt-1">Internal accounting utility currency</p>
+            <h3 className="text-2xl font-black text-slate-900">{tokenBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-purple-600">EVO</span></h3>
+            <p className="text-[10px] text-slate-400 mt-1">Internal utility credit</p>
           </div>
           <span className="text-[10px] text-indigo-600 font-bold">1:1 USD Fixed Utility Unit</span>
         </div>
@@ -164,7 +136,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <Badge variant="emerald" size="sm">Instant</Badge>
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-black text-slate-900">1,250.00 <span className="text-xs text-emerald-600">USDT</span></h3>
+            <h3 className="text-2xl font-black text-slate-900">{walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-emerald-600">USDT</span></h3>
             <p className="text-[10px] text-slate-400 mt-1">Directly withdrawable</p>
           </div>
           <span className="text-[10px] text-emerald-600 font-semibold">Ready for crypto payout</span>
@@ -176,10 +148,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <CheckCircle2 className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="my-3">
-            <h3 className="text-2xl font-black text-slate-900">${currentUser.availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-            <p className="text-[10px] text-slate-400 mt-1">Pending escrow: $250.00</p>
+            <h3 className="text-2xl font-black text-slate-900">${availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <p className="text-[10px] text-emerald-600 font-medium mt-1">100% Unlocked</p>
           </div>
-          <span className="text-[10px] text-slate-400">Unlocked capital</span>
+          <span className="text-[10px] text-slate-400">Available capital</span>
         </div>
       </div>
 
@@ -218,100 +190,139 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             <p className="text-xs text-slate-500 mt-0.5">Append-only double-entry ledger history (Book 0 Invariant §14).</p>
           </div>
 
-          <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-            {['all', 'commissions', 'transfers'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilterType(f)}
-                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
-                  filterType === f
-                    ? 'bg-white shadow-xs text-indigo-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'deposits', label: 'Deposits' },
+                { id: 'commissions', label: 'Commissions' },
+                { id: 'transfers', label: 'Withdrawals & P2P' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterType(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filterType === f.id
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-200">
-              <tr>
-                <th className="py-3.5 px-6">Transaction ID</th>
-                <th className="py-3.5 px-6">Description</th>
-                <th className="py-3.5 px-6">Amount</th>
-                <th className="py-3.5 px-6">Status</th>
-                <th className="py-3.5 px-6 text-right">Date & Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-4 px-6 font-mono font-bold text-slate-900">{tx.id}</td>
-                  <td className="py-4 px-6 font-bold text-slate-800">{tx.description}</td>
-                  <td className="py-4 px-6 font-black text-sm">
-                    <span className={tx.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                      {tx.amount >= 0 ? `+${tx.amount.toFixed(2)}` : tx.amount.toFixed(2)} {tx.currency}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <Badge variant={tx.status === 'Completed' ? 'emerald' : tx.status === 'Processing' ? 'purple' : 'warning'} size="sm">
-                      {tx.status}
-                    </Badge>
-                  </td>
-                  <td className="py-4 px-6 text-right text-slate-400">{tx.date} • {tx.time}</td>
+          {filteredTransactions.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                <Wallet className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">No Transactions Yet</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Your wallet ledger is active and ready. Deposits, marketplace sales, binary commissions, and payouts will be immutably recorded here.
+              </p>
+              <button
+                onClick={() => onNavigate('deposit')}
+                className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+              >
+                Make First Deposit
+              </button>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                <tr>
+                  <th className="p-4 pl-6">Reference ID</th>
+                  <th className="p-4">Type</th>
+                  <th className="p-4">Description</th>
+                  <th className="p-4">Date & Time</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 pr-6 text-right">Amount (EVO)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredTransactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4 pl-6 font-mono text-[11px] font-bold text-slate-900">{tx.id}</td>
+                    <td className="p-4 capitalize">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        {tx.type.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="p-4 text-slate-900 font-semibold">{tx.description}</td>
+                    <td className="p-4 text-slate-400 text-[11px]">{tx.date} • {tx.time}</td>
+                    <td className="p-4">
+                      <Badge
+                        variant={tx.status === 'Completed' ? 'emerald' : tx.status === 'Processing' ? 'purple' : 'warning'}
+                        size="sm"
+                      >
+                        {tx.status}
+                      </Badge>
+                    </td>
+                    <td className={`p-4 pr-6 text-right font-black text-sm ${tx.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {tx.amount > 0 ? `+${tx.amount.toFixed(2)}` : tx.amount.toFixed(2)} EVO
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Modal: Request Withdrawal */}
+      {/* Withdrawal Modal */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Request Payout / Withdrawal</h3>
-                <p className="text-xs text-slate-500">Processed through the Centralized Payment Gateway Engine.</p>
-              </div>
-              <button onClick={() => setShowWithdrawModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+              <h3 className="text-base font-bold text-slate-900">Request Fund Payout</h3>
+              <button onClick={() => setShowWithdrawModal(false)} className="p-1 text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <form onSubmit={handleExecuteWithdrawal} className="space-y-4 text-xs">
+            <form onSubmit={handleExecuteWithdrawal} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Payout Method / Rail</label>
-                <select
-                  value={withdrawMethod}
-                  onChange={(e) => setWithdrawMethod(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                >
-                  <option value="USDT (TRC20)">USDT (TRC-20 Blockchain Instant)</option>
-                  <option value="Bank Transfer">Bank Transfer (Paystack / EFT)</option>
-                  <option value="Kuda Instant">Kuda Business API (Instant Settlement)</option>
-                </select>
+                <label className="block font-bold text-slate-700 mb-1">Available Balance</label>
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-900 font-black text-sm">
+                  ${availableBalance.toFixed(2)} EVO Available
+                </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Amount ($ USD / EVO)</label>
+                <label className="block font-bold text-slate-700 mb-1">Amount to Withdraw (EVO / USD)</label>
                 <input
                   type="number"
                   step="0.01"
                   min="25"
+                  max={availableBalance}
                   required
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">Minimum withdrawal: $25.00</span>
+                <p className="text-[10px] text-slate-400 mt-1">Minimum withdrawal: $25.00 USD (25 EVO)</p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Payout Method</label>
+                <select
+                  value={withdrawMethod}
+                  onChange={(e) => setWithdrawMethod(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                >
+                  <option value="USDT (TRC20)">USDT (TRC20) — Instant Crypto Wallet</option>
+                  <option value="Bank Transfer">Direct Bank Transfer (Local EFT)</option>
+                  <option value="Kuda Instant">Kuda Microfinance Bank Instant</option>
+                </select>
               </div>
 
               {withdrawMethod === 'USDT (TRC20)' ? (
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Destination TRC20 Address</label>
+                  <label className="block font-bold text-slate-700 mb-1">TRC20 Wallet Address</label>
                   <input
                     type="text"
                     required
@@ -322,7 +333,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 </div>
               ) : (
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Destination Account Number</label>
+                  <label className="block font-bold text-slate-700 mb-1">Bank Account Number</label>
                   <input
                     type="text"
                     required
@@ -343,10 +354,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isWithdrawing}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
+                  disabled={isWithdrawing || availableBalance < 25}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold shadow-md shadow-emerald-600/30 flex items-center gap-2"
                 >
-                  {isWithdrawing ? 'Processing...' : 'Confirm Withdrawal'}
+                  {isWithdrawing ? 'Dispatching...' : 'Confirm Withdrawal'}
                 </button>
               </div>
             </form>
@@ -354,19 +365,18 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
         </div>
       )}
 
-      {/* Modal: Internal P2P Transfer */}
+      {/* P2P Transfer Modal */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">P2P Member Token Transfer</h3>
-                <p className="text-xs text-slate-500">Send EVO Tokens instantly to any verified member code or email.</p>
-              </div>
-              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+              <h3 className="text-base font-bold text-slate-900">Zero-Fee P2P Transfer</h3>
+              <button onClick={() => setShowTransferModal(false)} className="p-1 text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <form onSubmit={handleExecuteTransfer} className="space-y-4 text-xs">
+            <form onSubmit={handleExecuteTransfer} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Recipient Member ID or Email</label>
                 <input
@@ -384,11 +394,17 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 <input
                   type="number"
                   step="0.01"
+                  min="1"
+                  max={walletBalance}
                   required
                   value={transferAmount}
                   onChange={(e) => setTransferAmount(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
                 />
+              </div>
+
+              <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 text-purple-900 font-medium">
+                ⚡ P2P transfers between Eviona members are instant, cryptographic, and have <b>0% fees</b>.
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -401,10 +417,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isTransferring}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
+                  disabled={isTransferring || walletBalance <= 0}
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
                 >
-                  {isTransferring ? 'Sending Tokens...' : 'Send Funds (Zero Fee)'}
+                  {isTransferring ? 'Transferring...' : 'Send Tokens'}
                 </button>
               </div>
             </form>

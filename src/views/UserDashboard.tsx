@@ -31,6 +31,7 @@ import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
 import { LaunchWizardModal } from '../components/common/LaunchWizardModal';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { useWallet } from '../context/WalletContext';
 
 interface UserDashboardProps {
   currentUser: Member;
@@ -43,9 +44,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 }) => {
   const [showWizard, setShowWizard] = React.useState(false);
   const { branding, dashboard } = usePlatformSettings();
+  const { walletBalance } = useWallet();
 
-  // Dynamic user computations based on authenticated member profile
-  const totalEarnings = currentUser.walletBalance + (currentUser.binaryVolume * 0.10);
+  // Dynamic user computations based on authenticated member profile and live wallet balance
+  const totalEarnings = walletBalance + (currentUser.binaryVolume * 0.10);
   const binaryBV = currentUser.binaryVolume || 0;
   const directReferrals = currentUser.activeReferrals || 0;
   const subdomain = `${currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mybusiness'}.evionaecosystem.com`;
@@ -134,7 +136,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         />
         <MetricCard
           title="Wallet Balance"
-          value={`$${currentUser.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={`$${walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           subtitle="EVO Available"
           icon={Wallet}
           iconBg="bg-emerald-50"

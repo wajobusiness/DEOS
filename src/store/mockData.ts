@@ -14,11 +14,11 @@ export const currentUser: Member = {
   renewalDate: 'May 12, 2025',
   rank: 'Director',
   nextRank: 'Regional Director',
-  walletBalance: 3450.00,
-  tokenBalance: 2450.00,
-  availableBalance: 3200.00,
-  binaryVolume: 125000,
-  activeReferrals: 256,
+  walletBalance: 0.00,
+  tokenBalance: 0.00,
+  availableBalance: 0.00,
+  binaryVolume: 0,
+  activeReferrals: 0,
 };
 
 export const initialBinaryTree: TreeNode = {
@@ -91,58 +91,7 @@ export const initialBinaryTree: TreeNode = {
   ]
 };
 
-export const initialTransactions: WalletTransaction[] = [
-  {
-    id: 'TXN-9021',
-    type: 'binary_commission',
-    description: 'Binary Bonus - Balanced 10% Calculation',
-    amount: 250.00,
-    currency: 'USDT',
-    status: 'Completed',
-    date: 'May 16, 2025',
-    time: '10:24 AM'
-  },
-  {
-    id: 'TXN-9020',
-    type: 'promoter_commission',
-    description: 'Partner Commission - E-Commerce Blueprint (EVO Token)',
-    amount: 120.00,
-    currency: 'EVO',
-    status: 'Completed',
-    date: 'May 16, 2025',
-    time: '09:15 AM'
-  },
-  {
-    id: 'TXN-9019',
-    type: 'seller_payout',
-    description: 'Marketplace Sale - AI Business Mastery',
-    amount: 80.00,
-    currency: 'USDT',
-    status: 'Completed',
-    date: 'May 15, 2025',
-    time: '08:42 PM'
-  },
-  {
-    id: 'TXN-9018',
-    type: 'wallet_withdrawal',
-    description: 'Withdrawal to Bank Account (**** 5678)',
-    amount: -200.00,
-    currency: 'USDT',
-    status: 'Completed',
-    date: 'May 15, 2025',
-    time: '04:30 PM'
-  },
-  {
-    id: 'TXN-9017',
-    type: 'generation_bonus',
-    description: 'Generation Bonus - Level 2 Team Growth',
-    amount: 150.00,
-    currency: 'USDT',
-    status: 'Completed',
-    date: 'May 15, 2025',
-    time: '02:10 PM'
-  }
-];
+export const initialTransactions: WalletTransaction[] = [];
 
 export const initialProducts: Product[] = [
   {

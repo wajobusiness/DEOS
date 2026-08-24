@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Member, PlanTier, TreeNode, WalletTransaction, Product, Lead, Deal, Course, EventItem, TeamMember } from '../types';
-import { currentUser as defaultUser, initialBinaryTree, initialTransactions, initialProducts, initialLeads, initialDeals, initialCourses, initialEvents, initialTeamMembers } from './mockData';
+import { currentUser as defaultUser, initialBinaryTree, initialProducts, initialLeads, initialDeals, initialCourses, initialEvents, initialTeamMembers } from './mockData';
 
 export interface KYCSubmission {
   id: string;

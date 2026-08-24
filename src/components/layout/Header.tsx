@@ -7,10 +7,12 @@ import {
   Menu,
   ChevronDown,
   Globe,
-  Plus
+  Plus,
+  Wallet
 } from 'lucide-react';
 import { Member, ViewType } from '../../types';
 import { usePlatformSettings } from '../../context/PlatformSettingsContext';
+import { useWallet } from '../../context/WalletContext';
 
 interface HeaderProps {
   currentUser: Member;
@@ -28,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
 }) => {
   const { branding, dashboard } = usePlatformSettings();
+  const { walletBalance } = useWallet();
   const getPageTitle = (view: ViewType): string => {
     switch (view) {
       case 'dashboard': return 'Dashboard';
@@ -87,6 +90,16 @@ export const Header: React.FC<HeaderProps> = ({
           <kbd className="px-1.5 py-0.5 text-[10px] font-semibold bg-white rounded border border-slate-200 shadow-sm text-slate-600">
             ⌘K
           </kbd>
+        </button>
+
+        {/* Live Wallet Balance Pill */}
+        <button
+          onClick={() => onNavigate('wallet')}
+          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100/90 hover:bg-slate-200/80 text-slate-800 text-xs font-bold border border-slate-200 transition-colors"
+          title="View Wallet Ledger"
+        >
+          <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+          <span>${walletBalance.toFixed(2)} EVO</span>
         </button>
 
         {/* Deposit Quick Action */}

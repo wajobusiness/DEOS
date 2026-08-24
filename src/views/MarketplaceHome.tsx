@@ -49,6 +49,7 @@ import { Product, ViewType, Member } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
 import { AuthModal } from '../components/auth/AuthModal';
 import { Badge } from '../components/common/Badge';
+import { useWallet } from '../context/WalletContext';
 
 interface MarketplaceHomeProps {
   onNavigate: (view: ViewType) => void;
@@ -61,6 +62,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   isPublicGuest = false,
   currentUser,
 }) => {
+  const { walletBalance, processPurchase } = useWallet();
   // Navigation & Category Filters
   const [activeNavTab, setActiveNavTab] = useState<string>('Marketplace');
   const [activeSubTab, setActiveSubTab] = useState<'Featured' | 'Best Sellers' | 'Top Rated' | 'New Arrivals'>('Featured');
@@ -215,6 +217,15 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const handleProcessCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!checkoutEmail || cart.length === 0) return;
+
+    if (paymentMethod === 'wallet') {
+      const orderDesc = `Marketplace Order: ${cart.map((c) => c.title).join(', ')}`;
+      const result = processPurchase(cartTotal, orderDesc);
+      if (!result.success) {
+        alert(result.error || 'Insufficient wallet balance. Please deposit funds first.');
+        return;
+      }
+    }
 
     setCompletedOrder({
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
@@ -946,6 +957,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     >
                       <Wallet className="w-4 h-4 text-indigo-600" />
                       <span className="text-[10px]">Eviona Wallet</span>
+                      <span className="text-[9px] font-mono text-indigo-600">(${walletBalance.toFixed(2)})</span>
                     </button>
                   )}
 
