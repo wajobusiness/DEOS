@@ -475,3 +475,46 @@ export interface SystemStatus {
   status: 'Operational' | 'Degraded' | 'Outage';
   latency: string;
 }
+
+export interface PaymentGatewaySettings {
+  paystack: {
+    enabled: boolean;
+    mode: 'test' | 'live';
+    publicKey: string;
+    secretKey: string;
+    webhookSecret: string;
+    ngnExchangeRate: number;
+  };
+  cryptomus: {
+    enabled: boolean;
+    mode: 'test' | 'live';
+    merchantId: string;
+    paymentApiKey: string;
+    payoutApiKey?: string;
+    masterTrc20Address: string;
+  };
+  jvzoo: {
+    enabled: boolean;
+    ipnSecretKey: string;
+    apiKey: string;
+    defaultVendorId: string;
+  };
+  bankTransfer: {
+    enabled: boolean;
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    swiftCode: string;
+    routingNumber?: string;
+    currency: string;
+    manualApprovalRequired: boolean;
+    instructions: string;
+  };
+  stripe: {
+    enabled: boolean;
+    mode: 'test' | 'live';
+    publishableKey: string;
+    secretKey: string;
+    webhookSecret: string;
+  };
+}

@@ -8,10 +8,63 @@
  * route strictly through this engine with cryptographic verification and idempotency locks.
  */
 
-import { WalletTransaction } from '../types';
+import { WalletTransaction, PaymentGatewaySettings } from '../types';
 import { crmEngine } from './crmEngine';
 import { marketingEngine } from './marketingEngine';
 import { userRegistryEngine } from './userRegistryEngine';
+
+export const DEFAULT_GATEWAY_CONFIG: PaymentGatewaySettings = {
+  paystack: {
+    enabled: true,
+    mode: 'live',
+    publicKey: '',
+    secretKey: '',
+    webhookSecret: '',
+    ngnExchangeRate: 1550,
+  },
+  cryptomus: {
+    enabled: true,
+    mode: 'live',
+    merchantId: '',
+    paymentApiKey: '',
+    payoutApiKey: '',
+    masterTrc20Address: 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address',
+  },
+  jvzoo: {
+    enabled: true,
+    ipnSecretKey: '',
+    apiKey: '',
+    defaultVendorId: '',
+  },
+  bankTransfer: {
+    enabled: true,
+    bankName: 'Standard Chartered / Chase Global Custody',
+    accountName: 'Eviona Global Ecosystem Ltd',
+    accountNumber: '0928374102',
+    swiftCode: 'SCBLUS33',
+    routingNumber: '021000021',
+    currency: 'USD',
+    manualApprovalRequired: true,
+    instructions: 'Please include your unique reference code in the transfer description/memo field.',
+  },
+  stripe: {
+    enabled: false,
+    mode: 'test',
+    publishableKey: '',
+    secretKey: '',
+    webhookSecret: '',
+  },
+};
+
+export function getGatewaySettings(): PaymentGatewaySettings {
+  try {
+    const raw = localStorage.getItem('eviona_platform_settings_v4_gateways');
+    if (raw) {
+      return { ...DEFAULT_GATEWAY_CONFIG, ...JSON.parse(raw) };
+    }
+  } catch {}
+  return DEFAULT_GATEWAY_CONFIG;
+}
 
 export type PaymentProviderType = 
   | 'paystack' 
@@ -171,7 +224,8 @@ export class PaystackAdapter implements PaymentProviderAdapter {
   providerId: PaymentProviderType = 'paystack';
 
   async createPayment(params: CreatePaymentDTO, internalRef: string): Promise<PaymentIntentResponse> {
-    const rateNgn = 1550; // Dynamic market rate
+    const settings = getGatewaySettings();
+    const rateNgn = settings.paystack?.ngnExchangeRate || 1550; // Dynamic market rate from settings
     const amountNgn = params.amountUsd * rateNgn;
     const virtualAccNum = `99${Math.floor(10000000 + Math.random() * 90000000)}`;
 
@@ -210,7 +264,9 @@ export class PaystackAdapter implements PaymentProviderAdapter {
     const event = rawBody?.event || 'charge.success';
     const isSuccess = event === 'charge.success';
     const amountKobo = rawBody?.data?.amount || 0;
-    const amountUsd = amountKobo > 0 ? amountKobo / 100 / 1550 : 0;
+    const settings = getGatewaySettings();
+    const rateNgn = settings.paystack?.ngnExchangeRate || 1550;
+    const amountUsd = amountKobo > 0 ? amountKobo / 100 / rateNgn : 0;
     const providerTxId = rawBody?.data?.id?.toString() || rawBody?.data?.reference;
 
     return {
@@ -239,7 +295,8 @@ export class CryptomusAdapter implements PaymentProviderAdapter {
   providerId: PaymentProviderType = 'cryptomus';
 
   async createPayment(params: CreatePaymentDTO, internalRef: string): Promise<PaymentIntentResponse> {
-    const mockTrxAddress = 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address';
+    const settings = getGatewaySettings();
+    const depositAddress = settings.cryptomus?.masterTrc20Address || 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address';
     return {
       paymentId: `PAY-CR-${Date.now()}`,
       reference: internalRef,
@@ -250,10 +307,10 @@ export class CryptomusAdapter implements PaymentProviderAdapter {
       checkoutUrl: `https://pay.cryptomus.com/pay/${internalRef}`,
       cryptoDetails: {
         asset: 'USDT (TRC20)',
-        depositAddress: mockTrxAddress,
+        depositAddress: depositAddress,
         network: 'TRON TRC-20',
         amountFormatted: `${params.amountUsd.toFixed(2)} USDT`,
-        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${mockTrxAddress}`,
+        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${depositAddress}`,
         expiresInMinutes: 60,
       },
       createdAt: new Date().toISOString(),
@@ -310,6 +367,13 @@ export class BankTransferAdapter implements PaymentProviderAdapter {
   providerId: PaymentProviderType = 'bank_transfer';
 
   async createPayment(params: CreatePaymentDTO, internalRef: string): Promise<PaymentIntentResponse> {
+    const settings = getGatewaySettings();
+    const bankDetails = settings.bankTransfer || {
+      bankName: 'Standard Chartered / Chase Global Custody',
+      accountNumber: '0928374102',
+      accountName: 'Eviona Global Ecosystem Ltd',
+    };
+
     return {
       paymentId: `PAY-BNK-${Date.now()}`,
       reference: internalRef,
@@ -318,9 +382,9 @@ export class BankTransferAdapter implements PaymentProviderAdapter {
       paymentRail: 'bank_transfer',
       status: 'pending',
       accountDetails: {
-        bankName: 'Standard Chartered / Chase Global Custody',
-        accountNumber: '0928374102',
-        accountName: 'Eviona Global Ecosystem Ltd',
+        bankName: bankDetails.bankName,
+        accountNumber: bankDetails.accountNumber,
+        accountName: bankDetails.accountName,
         referenceCode: internalRef,
         expiresInMinutes: 1440, // 24 hours
       },

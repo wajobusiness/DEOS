@@ -7,6 +7,7 @@ import {
   NavigationMenuConfig,
   SystemFeatureSettings,
   CommissionSettings,
+  PaymentGatewaySettings,
   ViewType,
 } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -19,6 +20,7 @@ export interface PlatformSettingsState {
   navigation: NavigationMenuConfig;
   features: SystemFeatureSettings;
   commissions: CommissionSettings;
+  gateways: PaymentGatewaySettings;
   updateBranding: (branding: Partial<PlatformBrandingSettings>) => Promise<void>;
   updateTheme: (theme: Partial<PlatformThemeSettings>) => Promise<void>;
   updateHomepage: (homepage: Partial<HomepageContentSettings>) => Promise<void>;
@@ -26,8 +28,52 @@ export interface PlatformSettingsState {
   updateNavigation: (navigation: Partial<NavigationMenuConfig>) => Promise<void>;
   updateFeatures: (features: Partial<SystemFeatureSettings>) => Promise<void>;
   updateCommissions: (commissions: Partial<CommissionSettings>) => Promise<void>;
+  updateGateways: (gateways: Partial<PaymentGatewaySettings>) => Promise<void>;
   resetToDefaults: () => void;
 }
+
+const DEFAULT_GATEWAYS: PaymentGatewaySettings = {
+  paystack: {
+    enabled: true,
+    mode: 'live',
+    publicKey: '',
+    secretKey: '',
+    webhookSecret: '',
+    ngnExchangeRate: 1550,
+  },
+  cryptomus: {
+    enabled: true,
+    mode: 'live',
+    merchantId: '',
+    paymentApiKey: '',
+    payoutApiKey: '',
+    masterTrc20Address: 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address',
+  },
+  jvzoo: {
+    enabled: true,
+    ipnSecretKey: '',
+    apiKey: '',
+    defaultVendorId: '',
+  },
+  bankTransfer: {
+    enabled: true,
+    bankName: 'Standard Chartered / Chase Global Custody',
+    accountName: 'Eviona Global Ecosystem Ltd',
+    accountNumber: '0928374102',
+    swiftCode: 'SCBLUS33',
+    routingNumber: '021000021',
+    currency: 'USD',
+    manualApprovalRequired: true,
+    instructions: 'Please include your unique reference code in the transfer description/memo field.',
+  },
+  stripe: {
+    enabled: false,
+    mode: 'test',
+    publishableKey: '',
+    secretKey: '',
+    webhookSecret: '',
+  },
+};
 
 const DEFAULT_BRANDING: PlatformBrandingSettings = {
   platformName: 'Eviona Ecosystem',
@@ -226,6 +272,15 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     }
   });
 
+  const [gateways, setGateways] = useState<PaymentGatewaySettings>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_gateways`);
+      return saved ? { ...DEFAULT_GATEWAYS, ...JSON.parse(saved) } : DEFAULT_GATEWAYS;
+    } catch {
+      return DEFAULT_GATEWAYS;
+    }
+  });
+
   // Inject Theme CSS variables into Document Root
   useEffect(() => {
     try {
@@ -262,6 +317,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
           if (cfg.navigation) setNavigation((prev) => ({ ...prev, ...cfg.navigation }));
           if (cfg.features) setFeatures((prev) => ({ ...prev, ...cfg.features }));
           if (cfg.commissions) setCommissions((prev) => ({ ...prev, ...cfg.commissions }));
+          if (cfg.gateways) setGateways((prev) => ({ ...prev, ...cfg.gateways }));
         }
       } catch (err) {
         console.warn('PlatformSetting table sync note:', err);
@@ -286,49 +342,64 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     const updated = { ...branding, ...newBranding };
     setBranding(updated);
     localStorage.setItem(`${STORAGE_KEY}_branding`, JSON.stringify(updated));
-    await persistToDatabase({ branding: updated, theme, homepage, dashboard, navigation, features, commissions });
+    await persistToDatabase({ branding: updated, theme, homepage, dashboard, navigation, features, commissions, gateways });
   };
 
   const updateTheme = async (newTheme: Partial<PlatformThemeSettings>) => {
     const updated = { ...theme, ...newTheme };
     setTheme(updated);
     localStorage.setItem(`${STORAGE_KEY}_theme`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme: updated, homepage, dashboard, navigation, features, commissions });
+    await persistToDatabase({ branding, theme: updated, homepage, dashboard, navigation, features, commissions, gateways });
   };
 
   const updateHomepage = async (newHomepage: Partial<HomepageContentSettings>) => {
     const updated = { ...homepage, ...newHomepage };
     setHomepage(updated);
     localStorage.setItem(`${STORAGE_KEY}_homepage`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage: updated, dashboard, navigation, features, commissions });
+    await persistToDatabase({ branding, theme, homepage: updated, dashboard, navigation, features, commissions, gateways });
   };
 
   const updateDashboard = async (newDashboard: Partial<DashboardConfigSettings>) => {
     const updated = { ...dashboard, ...newDashboard };
     setDashboard(updated);
     localStorage.setItem(`${STORAGE_KEY}_dashboard`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard: updated, navigation, features, commissions });
+    await persistToDatabase({ branding, theme, homepage, dashboard: updated, navigation, features, commissions, gateways });
   };
 
   const updateNavigation = async (newNavigation: Partial<NavigationMenuConfig>) => {
     const updated = { ...navigation, ...newNavigation };
     setNavigation(updated);
     localStorage.setItem(`${STORAGE_KEY}_navigation`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard, navigation: updated, features, commissions });
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation: updated, features, commissions, gateways });
   };
 
   const updateFeatures = async (newFeatures: Partial<SystemFeatureSettings>) => {
     const updated = { ...features, ...newFeatures };
     setFeatures(updated);
     localStorage.setItem(`${STORAGE_KEY}_features`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features: updated, commissions });
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features: updated, commissions, gateways });
   };
 
   const updateCommissions = async (newCommissions: Partial<CommissionSettings>) => {
     const updated = { ...commissions, ...newCommissions };
     setCommissions(updated);
     localStorage.setItem(`${STORAGE_KEY}_commissions`, JSON.stringify(updated));
-    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features, commissions: updated });
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features, commissions: updated, gateways });
+  };
+
+  const updateGateways = async (newGateways: Partial<PaymentGatewaySettings>) => {
+    const updated: PaymentGatewaySettings = {
+      ...gateways,
+      ...newGateways,
+      paystack: { ...gateways.paystack, ...(newGateways.paystack || {}) },
+      cryptomus: { ...gateways.cryptomus, ...(newGateways.cryptomus || {}) },
+      jvzoo: { ...gateways.jvzoo, ...(newGateways.jvzoo || {}) },
+      bankTransfer: { ...gateways.bankTransfer, ...(newGateways.bankTransfer || {}) },
+      stripe: { ...gateways.stripe, ...(newGateways.stripe || {}) },
+    };
+    setGateways(updated);
+    localStorage.setItem(`${STORAGE_KEY}_gateways`, JSON.stringify(updated));
+    await persistToDatabase({ branding, theme, homepage, dashboard, navigation, features, commissions, gateways: updated });
   };
 
   const resetToDefaults = () => {
@@ -339,6 +410,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     setNavigation(DEFAULT_NAVIGATION);
     setFeatures(DEFAULT_FEATURES);
     setCommissions(DEFAULT_COMMISSIONS);
+    setGateways(DEFAULT_GATEWAYS);
     localStorage.removeItem(`${STORAGE_KEY}_branding`);
     localStorage.removeItem(`${STORAGE_KEY}_theme`);
     localStorage.removeItem(`${STORAGE_KEY}_homepage`);
@@ -346,6 +418,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
     localStorage.removeItem(`${STORAGE_KEY}_navigation`);
     localStorage.removeItem(`${STORAGE_KEY}_features`);
     localStorage.removeItem(`${STORAGE_KEY}_commissions`);
+    localStorage.removeItem(`${STORAGE_KEY}_gateways`);
   };
 
   return (
@@ -358,6 +431,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
         navigation,
         features,
         commissions,
+        gateways,
         updateBranding,
         updateTheme,
         updateHomepage,
@@ -365,6 +439,7 @@ export const PlatformSettingsProvider: React.FC<{ children: React.ReactNode }> =
         updateNavigation,
         updateFeatures,
         updateCommissions,
+        updateGateways,
         resetToDefaults,
       }}
     >

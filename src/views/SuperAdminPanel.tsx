@@ -52,7 +52,10 @@ import {
   Edit3,
   Phone,
   Share2,
-  User
+  User,
+  CreditCard,
+  EyeOff,
+  Copy
 } from 'lucide-react';
 import {
   initialKYCList,
@@ -86,6 +89,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     navigation,
     features,
     commissions,
+    gateways,
     updateBranding,
     updateTheme,
     updateHomepage,
@@ -93,6 +97,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     updateNavigation,
     updateFeatures,
     updateCommissions,
+    updateGateways,
   } = usePlatformSettings();
 
   const [activeTab, setActiveTab] = useState<
@@ -107,6 +112,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     | 'marketplace'
     | 'corporate_leads'
     | 'treasury'
+    | 'payment_gateways'
     | 'binary_rules'
     | 'system'
     | 'audit_log'
@@ -115,6 +121,9 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialAuditLogs);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [isSavingGateways, setIsSavingGateways] = useState(false);
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Forms State
   const [brandingForm, setBrandingForm] = useState(branding);
@@ -124,6 +133,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
   const [navigationForm, setNavigationForm] = useState(navigation);
   const [featuresForm, setFeaturesForm] = useState(features);
   const [commissionsForm, setCommissionsForm] = useState(commissions);
+  const [gatewaysForm, setGatewaysForm] = useState(gateways);
 
   // Commission Simulator State
   const [simSalePrice, setSimSalePrice] = useState(100);
@@ -133,7 +143,34 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     setCommissionsForm(commissions);
   }, [commissions]);
 
-    // Admin Approvals & Governance State
+  useEffect(() => {
+    setGatewaysForm(gateways);
+  }, [gateways]);
+
+  const handleSaveGateways = async () => {
+    setIsSavingGateways(true);
+    try {
+      await updateGateways(gatewaysForm);
+      setSaveSuccessMsg('Payment Gateway API credentials & webhooks saved successfully!');
+      setTimeout(() => setSaveSuccessMsg(null), 3500);
+    } catch (e) {
+      console.error('Failed saving gateways:', e);
+    } finally {
+      setIsSavingGateways(false);
+    }
+  };
+
+  const handleCopyText = (text: string, keyName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(keyName);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const toggleSecretVisibility = (fieldKey: string) => {
+    setShowSecrets(prev => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
+  };
+
+  // Admin Approvals & Governance State
   const [depositRequests, setDepositRequests] = useState<DepositApprovalRequest[]>(() => adminApprovalEngine.getDepositRequests());
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalApprovalRequest[]>(() => adminApprovalEngine.getWithdrawalRequests());
   const [productsList, setProductsList] = useState<Product[]>(() => marketplaceEngine.getProducts(true));
@@ -754,6 +791,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
             { id: 'marketplace', label: 'Marketplace Moderation', icon: Store },
             { id: 'corporate_leads', label: 'Corporate Leads (Book 7)', icon: Building2 },
             { id: 'treasury', label: 'Treasury & Payouts', icon: Wallet },
+            { id: 'payment_gateways', label: 'Payment Gateways & APIs', icon: CreditCard, badge: 'Live Multi-Rail' },
             { id: 'binary_rules', label: 'Commissions & Binary MLM', icon: Network },
             { id: 'system', label: 'System Flags & Coin', icon: Settings },
           ].map((tab) => (
@@ -770,6 +808,11 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </div>
+              {tab.badge && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-slate-800 text-slate-300">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1817,6 +1860,712 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PAYMENT GATEWAYS & API CREDENTIALS CONFIGURATION ENGINE                  */}
+      {/* ========================================================================= */}
+      {activeTab === 'payment_gateways' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Header & Save Action */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20 mb-2">
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Production Multi-Rail Gateway & API Hub</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">Payment Gateways & API Credentials Management</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Configure live API credentials, cryptographic webhook secrets, fiat exchange rates, and deposit rails across Paystack, Cryptomus, JVZoo, Corporate Custody Bank, and Stripe.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {saveSuccessMsg && (
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>{saveSuccessMsg}</span>
+                </div>
+              )}
+              <button
+                onClick={handleSaveGateways}
+                disabled={isSavingGateways}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isSavingGateways ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving API Keys...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save All API Credentials</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Status KPI Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Paystack Quick KPI */}
+            <div className={`p-4 rounded-2xl border transition-all ${gatewaysForm.paystack.enabled ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-950/60 border-slate-800/80 opacity-60'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-300">Paystack Multi-Rail</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${gatewaysForm.paystack.enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                  {gatewaysForm.paystack.enabled ? (gatewaysForm.paystack.mode === 'live' ? '● LIVE' : '○ TEST') : 'OFF'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Rate: <b className="text-white font-mono">₦{gatewaysForm.paystack.ngnExchangeRate} / $1 USD</b>
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate font-mono">
+                {gatewaysForm.paystack.publicKey ? `Key: ${gatewaysForm.paystack.publicKey.slice(0, 12)}...` : '⚠️ No Public Key Set'}
+              </p>
+            </div>
+
+            {/* Cryptomus Quick KPI */}
+            <div className={`p-4 rounded-2xl border transition-all ${gatewaysForm.cryptomus.enabled ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-950/60 border-slate-800/80 opacity-60'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-300">Cryptomus Crypto</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${gatewaysForm.cryptomus.enabled ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                  {gatewaysForm.cryptomus.enabled ? (gatewaysForm.cryptomus.mode === 'live' ? '● LIVE' : '○ TEST') : 'OFF'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Network: <b className="text-white font-mono">TRON USDT (TRC-20)</b>
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate font-mono">
+                {gatewaysForm.cryptomus.merchantId ? `Merchant: ${gatewaysForm.cryptomus.merchantId.slice(0, 10)}...` : '⚠️ No Merchant UUID Set'}
+              </p>
+            </div>
+
+            {/* JVZoo Quick KPI */}
+            <div className={`p-4 rounded-2xl border transition-all ${gatewaysForm.jvzoo.enabled ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-950/60 border-slate-800/80 opacity-60'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-300">JVZoo Marketing IPN</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${gatewaysForm.jvzoo.enabled ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-500'}`}>
+                  {gatewaysForm.jvzoo.enabled ? '● ACTIVE' : 'OFF'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Attribution: <b className="text-white font-mono">SHA1 IPN Verifier</b>
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate font-mono">
+                {gatewaysForm.jvzoo.ipnSecretKey ? `Secret: ••••••••••••` : '⚠️ No IPN Secret Set'}
+              </p>
+            </div>
+
+            {/* Bank Transfer Quick KPI */}
+            <div className={`p-4 rounded-2xl border transition-all ${gatewaysForm.bankTransfer.enabled ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-950/60 border-slate-800/80 opacity-60'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-300">Corporate Custody Wire</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${gatewaysForm.bankTransfer.enabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                  {gatewaysForm.bankTransfer.enabled ? '● ACTIVE' : 'OFF'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Bank: <b className="text-white truncate">{gatewaysForm.bankTransfer.bankName.slice(0, 18)}</b>
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate font-mono">
+                Acc: {gatewaysForm.bankTransfer.accountNumber || '⚠️ Not Configured'}
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION 1: PAYSTACK MULTI-RAIL CONFIGURATION */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Paystack Payment Gateway (Cards, Virtual Accounts, Mobile Money)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Official API: <a href="https://paystack.com/docs/api/" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">api.paystack.co</a> • Automated NGN/USD conversions & Webhooks.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={gatewaysForm.paystack.enabled}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, enabled: e.target.checked } }))}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-800 border-slate-700"
+                  />
+                  <span>Enable Paystack</span>
+                </label>
+
+                <select
+                  value={gatewaysForm.paystack.mode}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, mode: e.target.value as any } }))}
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white outline-none"
+                >
+                  <option value="live">Live Mode</option>
+                  <option value="test">Test Mode</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Paystack Public Key */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Public Key (Client-Facing)</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.paystack.publicKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, publicKey: e.target.value.trim() } }))}
+                  placeholder="Enter Paystack Public Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Paystack Secret Key */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Secret Key (Server-Only)</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('paystack_secret')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['paystack_secret'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['paystack_secret'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['paystack_secret'] ? 'text' : 'password'}
+                  value={gatewaysForm.paystack.secretKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, secretKey: e.target.value.trim() } }))}
+                  placeholder="Enter Paystack Secret Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Paystack Webhook Signing Secret */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Webhook Secret / IPN Secret (Optional custom secret)</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('paystack_webhook')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['paystack_webhook'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['paystack_webhook'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['paystack_webhook'] ? 'text' : 'password'}
+                  value={gatewaysForm.paystack.webhookSecret}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, webhookSecret: e.target.value.trim() } }))}
+                  placeholder="Leave empty to use standard Secret Key for signature validation"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* NGN Exchange Rate */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">NGN Market Exchange Rate (1.00 USD = X NGN)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={gatewaysForm.paystack.ngnExchangeRate}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, paystack: { ...prev.paystack, ngnExchangeRate: Number(e.target.value) || 1550 } }))}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono font-bold outline-none focus:border-emerald-500"
+                  />
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">₦</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Paystack Webhook Configuration Helper */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Paystack Webhook Endpoint (Configure in Paystack Dashboard):</span>
+              </p>
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <code className="text-xs text-emerald-400 font-mono select-all">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/paystack` : 'https://your-domain.com/api/webhooks/paystack'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/paystack` : 'https://your-domain.com/api/webhooks/paystack', 'paystack_webhook_url')}
+                  className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedKey === 'paystack_webhook_url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey === 'paystack_webhook_url' ? 'Copied' : 'Copy URL'}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Incoming events are verified via HMAC SHA-512 header <code className="text-slate-300 font-mono">x-paystack-signature</code>. Credits are automatically settled into user wallets.
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION 2: CRYPTOMUS CRYPTOCURRENCY GATEWAY CONFIGURATION */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Cryptomus Crypto Merchant Gateway (USDT TRC20, ERC20, BEP20)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Official API: <a href="https://doc.cryptomus.com" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">api.cryptomus.com/v1</a> • Automated blockchain confirmations & static address payouts.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={gatewaysForm.cryptomus.enabled}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, enabled: e.target.checked } }))}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
+                  />
+                  <span>Enable Cryptomus</span>
+                </label>
+
+                <select
+                  value={gatewaysForm.cryptomus.mode}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, mode: e.target.value as any } }))}
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white outline-none"
+                >
+                  <option value="live">Live Mode</option>
+                  <option value="test">Test Mode</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Merchant UUID */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Merchant UUID</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.cryptomus.merchantId}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, merchantId: e.target.value.trim() } }))}
+                  placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Payment API Key */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Payment API Key (Secret)</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('cryptomus_payment_key')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['cryptomus_payment_key'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['cryptomus_payment_key'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['cryptomus_payment_key'] ? 'text' : 'password'}
+                  value={gatewaysForm.cryptomus.paymentApiKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, paymentApiKey: e.target.value.trim() } }))}
+                  placeholder="Enter Cryptomus Payment API Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Payout API Key (Optional) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Payout API Key (Optional)</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('cryptomus_payout_key')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['cryptomus_payout_key'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['cryptomus_payout_key'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['cryptomus_payout_key'] ? 'text' : 'password'}
+                  value={gatewaysForm.cryptomus.payoutApiKey || ''}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, payoutApiKey: e.target.value.trim() } }))}
+                  placeholder="Enter Cryptomus Payout API Key for auto-withdrawals"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Master TRC20 Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Master TRC20 Custody Deposit Address</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.cryptomus.masterTrc20Address}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, cryptomus: { ...prev.cryptomus, masterTrc20Address: e.target.value.trim() } }))}
+                  placeholder="TX9xZgHkM92pqWrtY8dKl9mTRC20Address..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Cryptomus Webhook Configuration Helper */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span>Cryptomus Webhook Endpoint (Configure in Cryptomus Dashboard):</span>
+              </p>
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <code className="text-xs text-indigo-400 font-mono select-all">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/cryptomus` : 'https://your-domain.com/api/webhooks/cryptomus'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/cryptomus` : 'https://your-domain.com/api/webhooks/cryptomus', 'cryptomus_webhook_url')}
+                  className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedKey === 'cryptomus_webhook_url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey === 'cryptomus_webhook_url' ? 'Copied' : 'Copy URL'}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Incoming payloads are verified using MD5 signature generation: <code className="text-slate-300 font-mono">md5(base64_encode(body) + apiKey)</code>.
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION 3: JVZOO MARKETING ATTRIBUTION & IPN CONFIGURATION */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>JVZoo Marketing, Affiliate Attribution & IPN Integration</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Official API: <a href="https://api.jvzoo.com/v3.0" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">api.jvzoo.com</a> • External funnel sales attribution & Instant Payment Notifications.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={gatewaysForm.jvzoo.enabled}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, jvzoo: { ...prev.jvzoo, enabled: e.target.checked } }))}
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 bg-slate-800 border-slate-700"
+                  />
+                  <span>Enable JVZoo IPN</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* JVZIPN Secret Key */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">JVZIPN Secret Key</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('jvzoo_secret')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['jvzoo_secret'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['jvzoo_secret'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['jvzoo_secret'] ? 'text' : 'password'}
+                  value={gatewaysForm.jvzoo.ipnSecretKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, jvzoo: { ...prev.jvzoo, ipnSecretKey: e.target.value.trim() } }))}
+                  placeholder="Enter JVZIPN Secret Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* JVZoo API Key */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">JVZoo API Key</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.jvzoo.apiKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, jvzoo: { ...prev.jvzoo, apiKey: e.target.value.trim() } }))}
+                  placeholder="Enter JVZoo API Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Default Vendor ID */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Default JVZoo Vendor ID</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.jvzoo.defaultVendorId}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, jvzoo: { ...prev.jvzoo, defaultVendorId: e.target.value.trim() } }))}
+                  placeholder="e.g. 123456"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            {/* JVZoo IPN Webhook URL Helper */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>JVZoo Instant Payment Notification (IPN) URL:</span>
+              </p>
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <code className="text-xs text-amber-400 font-mono select-all">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/jvzoo` : 'https://your-domain.com/api/webhooks/jvzoo'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/jvzoo` : 'https://your-domain.com/api/webhooks/jvzoo', 'jvzoo_webhook_url')}
+                  className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedKey === 'jvzoo_webhook_url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey === 'jvzoo_webhook_url' ? 'Copied' : 'Copy URL'}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                In JVZoo product integration, configure this URL. Incoming sales will automatically track affiliate promoter commissions and 3% upline overrides.
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION 4: CORPORATE BANK CUSTODY WIRE TRANSFER */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Direct Corporate Custody Bank Wire (Manual Treasury Desk)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    High-ticket deposits and institutional wire settlements.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={gatewaysForm.bankTransfer.enabled}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, enabled: e.target.checked } }))}
+                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-800 border-slate-700"
+                  />
+                  <span>Enable Bank Wire Rail</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Bank Name</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.bankName}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, bankName: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Beneficiary Account Name</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.accountName}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, accountName: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Account Number / IBAN</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.accountNumber}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, accountNumber: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">SWIFT / BIC Code</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.swiftCode}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, swiftCode: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Routing / Sort Code</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.routingNumber || ''}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, routingNumber: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Settlement Currency</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.bankTransfer.currency}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, currency: e.target.value } }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Wire Instructions / Payment Memo Guidance</label>
+              <textarea
+                rows={2}
+                value={gatewaysForm.bankTransfer.instructions}
+                onChange={(e) => setGatewaysForm(prev => ({ ...prev, bankTransfer: { ...prev.bankTransfer, instructions: e.target.value } }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white outline-none focus:border-purple-500"
+              />
+            </div>
+          </div>
+
+          {/* SECTION 5: STRIPE GLOBAL GATEWAY (OPTIONAL) */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Stripe Global Payments (Credit Cards, Apple Pay, Google Pay)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Official API: <a href="https://stripe.com/docs/api" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">api.stripe.com/v1</a>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={gatewaysForm.stripe.enabled}
+                    onChange={(e) => setGatewaysForm(prev => ({ ...prev, stripe: { ...prev.stripe, enabled: e.target.checked } }))}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-800 border-slate-700"
+                  />
+                  <span>Enable Stripe</span>
+                </label>
+
+                <select
+                  value={gatewaysForm.stripe.mode}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, stripe: { ...prev.stripe, mode: e.target.value as any } }))}
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white outline-none"
+                >
+                  <option value="live">Live Mode</option>
+                  <option value="test">Test Mode</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">Publishable Key</label>
+                <input
+                  type="text"
+                  value={gatewaysForm.stripe.publishableKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, stripe: { ...prev.stripe, publishableKey: e.target.value.trim() } }))}
+                  placeholder="Enter Stripe Publishable Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Secret Key</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('stripe_secret')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['stripe_secret'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['stripe_secret'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['stripe_secret'] ? 'text' : 'password'}
+                  value={gatewaysForm.stripe.secretKey}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, stripe: { ...prev.stripe, secretKey: e.target.value.trim() } }))}
+                  placeholder="Enter Stripe Secret Key"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Webhook Secret</label>
+                  <button
+                    type="button"
+                    onClick={() => toggleSecretVisibility('stripe_webhook')}
+                    className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showSecrets['stripe_webhook'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecrets['stripe_webhook'] ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecrets['stripe_webhook'] ? 'text' : 'password'}
+                  value={gatewaysForm.stripe.webhookSecret}
+                  onChange={(e) => setGatewaysForm(prev => ({ ...prev, stripe: { ...prev.stripe, webhookSecret: e.target.value.trim() } }))}
+                  placeholder="Enter Stripe Webhook Signing Secret"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Stripe Webhook URL Helper */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-400" />
+                <span>Stripe Webhook URL (Configure in Stripe Dashboard):</span>
+              </p>
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                <code className="text-xs text-blue-400 font-mono select-all">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/stripe` : 'https://your-domain.com/api/webhooks/stripe'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/stripe` : 'https://your-domain.com/api/webhooks/stripe', 'stripe_webhook_url')}
+                  className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedKey === 'stripe_webhook_url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey === 'stripe_webhook_url' ? 'Copied' : 'Copy URL'}</span>
+                </button>
               </div>
             </div>
           </div>
