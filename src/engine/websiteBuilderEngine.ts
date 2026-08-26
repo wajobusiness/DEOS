@@ -224,5 +224,54 @@ export const websiteBuilderEngine = {
       ssl: isValid ? 'active' : 'pending',
       cnameTarget: 'cname.evionaecosystem.com',
     };
+  },
+
+  // 6. Hostname-to-Tenant Dynamic Domain Resolver (Book 6 §2 & §7)
+  resolveDomain(rawHostname: string): { isTenantDomain: boolean; userId: string; isCustomDomain: boolean } | null {
+    if (!rawHostname) return null;
+    const hostname = rawHostname.toLowerCase().trim();
+
+    const platformHosts = [
+      'localhost',
+      '127.0.0.1',
+      'evionaecosystem.com',
+      'www.evionaecosystem.com',
+      'deos.com',
+      'www.deos.com',
+      'app.evionaecosystem.com',
+      'app.deos.com',
+      'api.evionaecosystem.com',
+      'api.deos.com',
+      'admin.evionaecosystem.com',
+    ];
+    if (platformHosts.includes(hostname)) return null;
+
+    if (hostname.endsWith('.evionaecosystem.com') || hostname.endsWith('.deos.com')) {
+      const parts = hostname.split('.');
+      const sub = parts[0];
+      if (sub && !['app', 'api', 'admin', 'www', 'cname'].includes(sub)) {
+        return { isTenantDomain: true, userId: sub, isCustomDomain: false };
+      }
+      return null;
+    }
+
+    try {
+      const saved = localStorage.getItem(STORAGE_WEBSITES_KEY);
+      if (saved) {
+        const map: Record<string, WebsiteConfig> = JSON.parse(saved);
+        for (const [uid, config] of Object.entries(map)) {
+          if (
+            config.customDomain &&
+            (config.customDomain.toLowerCase() === hostname ||
+              `www.${config.customDomain.toLowerCase()}` === hostname ||
+              config.customDomain.toLowerCase() === `www.${hostname}`)
+          ) {
+            return { isTenantDomain: true, userId: uid, isCustomDomain: true };
+          }
+        }
+      }
+    } catch {}
+
+    return { isTenantDomain: true, userId: hostname, isCustomDomain: true };
   }
 };

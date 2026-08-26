@@ -32,6 +32,7 @@ import { UserSettings } from './views/UserSettings';
 import { SupportCommunity } from './views/SupportCommunity';
 import { AnalyticsOverview } from './views/AnalyticsOverview';
 import { BackofficePortal } from './views/BackofficePortal';
+import { websiteBuilderEngine } from './engine/websiteBuilderEngine';
 
 export function App() {
   const { member, isAuthenticated, isLoading, signOut, updatePlan } = useAuth();
@@ -82,33 +83,14 @@ export function App() {
         return;
       }
 
-      // Hostname-based Custom Domain & Subdomain Tenant Resolution (Book 0 Multi-Tenant Engine)
-      const hostname = window.location.hostname.toLowerCase();
-      if (
-        hostname !== 'localhost' &&
-        hostname !== '127.0.0.1' &&
-        hostname !== 'evionaecosystem.com' &&
-        hostname !== 'www.evionaecosystem.com' &&
-        hostname !== 'deos.com' &&
-        hostname !== 'www.deos.com'
-      ) {
-        if (hostname.endsWith('.evionaecosystem.com') || hostname.endsWith('.deos.com')) {
-          const sub = hostname.split('.')[0];
-          if (sub && !['app', 'api', 'admin', 'www'].includes(sub)) {
-            setTargetStoreUser(sub);
-            sessionStorage.setItem('eviona_active_ref', sub);
-            if (!isAuthenticated && pathname === '/') {
-              setCurrentView('store');
-              return;
-            }
-          }
-        } else {
-          setTargetStoreUser(hostname);
-          sessionStorage.setItem('eviona_active_ref', hostname);
-          if (!isAuthenticated && pathname === '/') {
-            setCurrentView('store');
-            return;
-          }
+      // Hostname-based Custom Domain & Subdomain Tenant Resolution (Book 6 §2 & §7)
+      const domainResolution = websiteBuilderEngine.resolveDomain(window.location.hostname);
+      if (domainResolution && domainResolution.isTenantDomain) {
+        setTargetStoreUser(domainResolution.userId);
+        sessionStorage.setItem('eviona_active_ref', domainResolution.userId);
+        if (!isAuthenticated && pathname === '/') {
+          setCurrentView('store');
+          return;
         }
       }
 
