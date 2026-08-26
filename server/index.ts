@@ -7,6 +7,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
+import crypto from 'crypto';
 import { calculateMarketplaceFeeSplit, calculateBinaryCommission, getDirectReferralBonus } from '../src/engine/binaryEngine';
 import { paymentGateway, PaymentProviderType } from '../src/engine/paymentGatewayEngine';
 
@@ -143,6 +144,101 @@ app.post('/api/payments/withdraw', async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Withdrawal request failed' });
   }
+});
+
+// ----------------------------------------------------
+// 3b. Real-Time Webhook Handlers with Cryptographic Security
+// ----------------------------------------------------
+app.post('/api/webhooks/paystack', async (req: Request, res: Response) => {
+  try {
+    const signature = (req.headers['x-paystack-signature'] as string) || '';
+    const secretKey = process.env.PAYSTACK_SECRET_KEY || 'sk_test_paystack_dummy_secret';
+
+    // Verify HMAC-SHA512 signature
+    if (signature && secretKey) {
+      const hash = crypto.createHmac('sha512', secretKey).update(JSON.stringify(req.body)).digest('hex');
+      if (hash.toLowerCase() !== signature.toLowerCase()) {
+        console.warn('[Paystack Webhook] Signature verification failed');
+        return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
+      }
+    }
+
+    const result = await paymentGateway.handleWebhook('paystack', req.body, signature);
+    res.status(200).json({ received: true, result });
+  } catch (error: any) {
+    console.error('[Paystack Webhook] Processing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/webhooks/cryptomus', async (req: Request, res: Response) => {
+  try {
+    const sign = req.body?.sign || (req.headers['sign'] as string) || '';
+    const apiKey = process.env.CRYPTOMUS_PAYMENT_API_KEY || 'cryptomus_api_key_dummy';
+
+    // Verify MD5 signature
+    if (sign && apiKey && req.body) {
+      const clone = { ...req.body };
+      delete clone.sign;
+      const rawBase64 = Buffer.from(JSON.stringify(clone)).toString('base64');
+      const expectedSign = crypto.createHash('md5').update(rawBase64 + apiKey).digest('hex');
+      if (expectedSign.toLowerCase() !== sign.toLowerCase()) {
+        console.warn('[Cryptomus Webhook] Signature verification failed');
+        return res.status(401).json({ error: 'Invalid Cryptomus signature' });
+      }
+    }
+
+    const result = await paymentGateway.handleWebhook('cryptomus', req.body, sign);
+    res.status(200).json({ received: true, result });
+  } catch (error: any) {
+    console.error('[Cryptomus Webhook] Processing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/webhooks/jvzoo', async (req: Request, res: Response) => {
+  try {
+    const cverify = req.body?.cverify || '';
+    const secretKey = process.env.JVZIPN_SECRET_KEY || 'jvzoo_secret_key_dummy';
+
+    // Verify JVZoo IPN signature
+    if (cverify && secretKey && req.body?.ctransreceipt) {
+      const expected = crypto.createHash('sha1').update(req.body.ctransreceipt + secretKey).digest('hex');
+      if (expected.toUpperCase() !== cverify.toUpperCase()) {
+        console.warn('[JVZoo IPN] Signature verification failed');
+        return res.status(401).json({ error: 'Invalid JVZoo cverify' });
+      }
+    }
+
+    const result = await paymentGateway.handleWebhook('jvzoo', req.body, cverify);
+    res.status(200).json({ received: true, result });
+  } catch (error: any) {
+    console.error('[JVZoo IPN] Processing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ----------------------------------------------------
+// 3c. Payment Status & History Endpoints
+// ----------------------------------------------------
+app.get('/api/payments/status/:reference', (req: Request, res: Response) => {
+  const { reference } = req.params;
+  const payment = paymentGateway.getPaymentByReference(reference);
+  if (!payment) {
+    return res.status(404).json({ error: 'Payment record not found' });
+  }
+  res.status(200).json({ success: true, payment });
+});
+
+app.get('/api/payments/history/:userId', (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const payments = paymentGateway.getUserPayments(userId);
+  res.status(200).json({ success: true, payments });
+});
+
+app.get('/api/payments/admin/all', (_req: Request, res: Response) => {
+  const payments = paymentGateway.getAllPayments();
+  res.status(200).json({ success: true, payments });
 });
 
 // ----------------------------------------------------

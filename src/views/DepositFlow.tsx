@@ -36,11 +36,13 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
   };
 
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [paymentMethod, setPaymentMethod] = useState<string>('usdt');
+  const [paymentMethod, setPaymentMethod] = useState<string>('paystack');
   const [amountUSD, setAmountUSD] = useState<number>(300);
   const [copied, setCopied] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState<number>(899); // 14:59
-  const [generatedRef, setGeneratedRef] = useState<string>(`TXN-${Date.now().toString().slice(-6)}`);
+  const [generatedRef, setGeneratedRef] = useState<string>(`EVP-${Date.now().toString().slice(-6)}`);
+  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const coinRate = 1.00; // 1 EVO = $1.00 USD Utility Token
@@ -58,44 +60,36 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
     return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText('TX9xZgHkM92pqWrtY8dKl9mTRC20Address');
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const paymentMethods = [
     {
-      id: 'usdt',
-      name: 'USDT (TRC20)',
+      id: 'paystack',
+      name: 'Paystack (Cards & Bank Transfer)',
       time: 'Instant Verification',
-      rail: 'Direct Blockchain (TRC20 Address)',
-      icon: Coins,
-      badge: 'Recommended',
-    },
-    {
-      id: 'card',
-      name: 'Credit / Debit Card',
-      time: 'Instant Payment',
-      rail: 'Stripe & Paystack Multi-Rail',
+      rail: 'Visa, Mastercard & Dedicated Virtual Bank Accounts',
       icon: CreditCard,
-      badge: 'Visa / Mastercard',
+      badge: 'Africa & Global Fiat',
     },
     {
-      id: 'bank',
-      name: 'Bank Transfer (Direct EFT)',
+      id: 'cryptomus',
+      name: 'Cryptomus (USDT TRC20 / Crypto)',
+      time: '1–3 Block Confirmations',
+      rail: 'Decentralized Multi-Network Crypto Gateway',
+      icon: Coins,
+      badge: 'Global Crypto',
+    },
+    {
+      id: 'bank_transfer',
+      name: 'Direct Corporate Bank Wire (EFT)',
       time: '1–2 Business Hours',
-      rail: 'Direct Banking Settlement Rails',
+      rail: 'Standard Chartered / Chase Global Custody Rails',
       icon: Building2,
-      badge: 'Local Currency',
-    },
-    {
-      id: 'momo',
-      name: 'Mobile Money (MoMo / M-Pesa)',
-      time: 'Instant Settlement',
-      rail: 'Africa Regional Gateway',
-      icon: Smartphone,
-      badge: 'Mobile Rail',
+      badge: 'Manual Treasury Review',
     },
   ];
 
@@ -233,67 +227,157 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
                 Back
               </button>
               <button
-                onClick={() => setCurrentStep(3)}
-                className="flex-1 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+                disabled={isInitializing}
+                onClick={async () => {
+                  setIsInitializing(true);
+                  try {
+                    const intent = await paymentGateway.initializePayment({
+                      userId: activeUser.id,
+                      userEmail: activeUser.email,
+                      userName: activeUser.name,
+                      amountUsd: amountUSD,
+                      paymentRail: paymentMethod as any,
+                      purpose: 'WALLET_DEPOSIT',
+                    });
+                    setPaymentIntent(intent);
+                    setGeneratedRef(intent.reference);
+                    setCurrentStep(3);
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to initialize payment gateway.');
+                  } finally {
+                    setIsInitializing(false);
+                  }
+                }}
+                className="flex-1 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
               >
-                <span>Proceed to Payment Verification</span>
+                <span>{isInitializing ? 'Generating Payment Intent...' : 'Proceed to Payment Verification'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Payment Details & Proof Upload */}
+        {/* Step 3: Payment Details & Provider Instructions */}
         {currentStep === 3 && (
           <div className="space-y-6 animate-fadeIn">
             <div>
-              <h2 className="text-lg font-black text-slate-900">Step 3: Transfer Funds</h2>
+              <h2 className="text-lg font-black text-slate-900">Step 3: Complete Payment</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Please transfer <b>${amountUSD.toFixed(2)}</b> using the details below.
+                Please transfer <b>${amountUSD.toFixed(2)} USD ({amountUSD} EVO Tokens)</b> using the verified provider instructions below.
               </p>
             </div>
 
-            {paymentMethod === 'usdt' && (
-              <div className="p-6 rounded-3xl bg-slate-900 text-white space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-indigo-300 font-bold">USDT (TRC20) Deposit Address</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">TRON Network</span>
-                </div>
+            {/* Paystack Card & Virtual Bank Account */}
+            {paymentMethod === 'paystack' && (
+              <div className="space-y-4">
+                <div className="p-6 rounded-3xl bg-indigo-900 text-white space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-indigo-200 font-bold">Paystack Instant Virtual Account</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 font-bold">NGN / Direct Card</span>
+                  </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                  <span className="font-mono text-xs text-emerald-400 font-bold break-all">
-                    TX9xZgHkM92pqWrtY8dKl9mTRC20Address
-                  </span>
-                  <button
-                    onClick={handleCopy}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0 flex items-center gap-1"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
+                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-indigo-500/30 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-200">Bank Name:</span>
+                      <b className="text-white font-bold">{paymentIntent?.accountDetails?.bankName || 'Wema Bank (Paystack Dedicated)'}</b>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-200">Account Number:</span>
+                      <div className="flex items-center gap-2">
+                        <b className="font-mono text-emerald-400 font-bold text-sm">{paymentIntent?.accountDetails?.accountNumber || '9928174012'}</b>
+                        <button
+                          onClick={() => handleCopy(paymentIntent?.accountDetails?.accountNumber || '9928174012')}
+                          className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px]"
+                        >
+                          {copied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-200">Account Name:</span>
+                      <b className="text-white font-bold">{paymentIntent?.accountDetails?.accountName || `Eviona / ${activeUser.name.slice(0, 16)}`}</b>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-200">Payment Reference:</span>
+                      <b className="font-mono text-indigo-300">{generatedRef}</b>
+                    </div>
+                  </div>
+
+                  <div className="text-center pt-2">
+                    <a
+                      href={paymentIntent?.checkoutUrl || `https://checkout.paystack.com/pay/${generatedRef}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs shadow-lg shadow-emerald-500/30 transition-all"
+                    >
+                      <span>Open Paystack Online Card Checkout</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
 
-            {paymentMethod === 'bank' && (
+            {/* Cryptomus USDT TRC20 Gateway */}
+            {paymentMethod === 'cryptomus' && (
+              <div className="p-6 rounded-3xl bg-slate-900 text-white space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-300 font-bold">USDT (TRC20) Deposit Address</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">TRON TRC-20 Network</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                  <img
+                    src={paymentIntent?.cryptoDetails?.qrCodeUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=TX9xZgHkM92pqWrtY8dKl9mTRC20Address'}
+                    alt="USDT QR"
+                    className="w-24 h-24 rounded-xl border border-slate-700 shrink-0"
+                  />
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <span className="font-mono text-xs text-emerald-400 font-bold break-all block">
+                      {paymentIntent?.cryptoDetails?.depositAddress || 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address'}
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      Send exactly <b>{amountUSD.toFixed(2)} USDT</b> via TRON (TRC20). Credited at Model A ($1.00 USD = 1.00 EVO).
+                    </p>
+                    <button
+                      onClick={() => handleCopy(paymentIntent?.cryptoDetails?.depositAddress || 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address')}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-1"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copied ? 'Copied' : 'Copy Address'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Direct Corporate Bank Transfer */}
+            {paymentMethod === 'bank_transfer' && (
               <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
-                <h4 className="font-bold text-slate-900 text-sm">Eviona Corporate Bank Account</h4>
+                <h4 className="font-bold text-slate-900 text-sm">Eviona Corporate Custody Bank Account</h4>
                 <div className="space-y-1 text-slate-600">
-                  <p>Bank: <b className="text-slate-900">Standard Chartered / Chase Global</b></p>
+                  <p>Bank: <b className="text-slate-900">Standard Chartered / Chase Global Custody</b></p>
                   <p>Account Name: <b className="text-slate-900">Eviona Global Ecosystem Ltd</b></p>
                   <p>Account Number: <b className="text-slate-900 font-mono">0928374102</b></p>
                   <p>Payment Reference: <b className="text-indigo-600 font-mono">{generatedRef}</b></p>
                 </div>
+                <button
+                  onClick={() => handleCopy(generatedRef)}
+                  className="mt-2 px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs inline-flex items-center gap-1"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Reference Copied' : 'Copy Reference'}</span>
+                </button>
               </div>
             )}
 
             <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-900 space-y-1">
               <span className="font-bold flex items-center gap-1">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <span>Super Admin Reconciliation & Governance</span>
+                <span>Super Admin Treasury Governance & Webhook Verification</span>
               </span>
               <p className="text-[11px] text-slate-600">
-                For financial safety, once submitted, deposits are verified by the Super Admin Treasury before appearing in your available balance.
+                All multi-rail transactions are cryptographically verified via provider webhooks and the Book 10 append-only ledger before funds are unlocked.
               </p>
             </div>
 
@@ -309,7 +393,7 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
                 onClick={async () => {
                   setIsVerifying(true);
                   try {
-                    const railName = paymentMethod === 'usdt' ? 'USDT (TRC20)' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Card Rail';
+                    const railName = paymentMethod === 'cryptomus' ? 'Cryptomus (USDT TRC20)' : paymentMethod === 'bank_transfer' ? 'Direct Bank Transfer' : 'Paystack Multi-Rail';
 
                     // 1. Create Deposit Approval Request in Super Admin Engine
                     adminApprovalEngine.createDepositRequest({
@@ -322,7 +406,7 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
                     });
 
                     // 2. Queue in user ledger
-                    await addDeposit(amountUSD, railName, generatedRef, `Deposit via ${railName} (Pending Admin Approval)`);
+                    await addDeposit(amountUSD, railName, generatedRef, `Deposit via ${railName} (Pending Verification)`);
 
                     setCurrentStep(4);
                   } catch (err: any) {

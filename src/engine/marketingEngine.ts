@@ -215,5 +215,23 @@ export const marketingEngine = {
       targetAudience: `Entrepreneurs, Agency Founders, Affiliate Marketers (Ages 24-55)`,
       suggestedBudget: '$15 - $35 / day',
     };
+  },
+
+  // 7. Record Campaign Conversion (JVZoo / External Ad Attribution)
+  recordCampaignConversion(campaignIdOrTag: string, amount: number, userId?: string) {
+    const key = getUserMarketingKey(userId, 'campaigns');
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const campaigns: MarketingCampaign[] = JSON.parse(saved);
+        const match = campaigns.find(c => c.id === campaignIdOrTag || c.utmCampaign === campaignIdOrTag || c.name.toLowerCase().includes(campaignIdOrTag.toLowerCase()));
+        if (match) {
+          match.revenue = (match.revenue || 0) + amount;
+          match.leadsGenerated = (match.leadsGenerated || 0) + 1;
+          match.salesGenerated = (match.salesGenerated || 0) + 1;
+          localStorage.setItem(key, JSON.stringify(campaigns));
+        }
+      }
+    } catch {}
   }
 };
