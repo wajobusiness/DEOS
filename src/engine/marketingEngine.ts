@@ -1,6 +1,7 @@
 import { Lead, SellerOrder } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { marketplaceEngine } from './marketplaceEngine';
+import { crmEngine } from './crmEngine';
 
 export interface TrackingPixelsConfig {
   metaPixelId: string;
@@ -16,6 +17,7 @@ export interface TrackingPixelsConfig {
 
 export interface MarketingCampaign {
   id: string;
+  userId?: string;
   name: string;
   channel: 'meta' | 'google' | 'tiktok' | 'whatsapp' | 'email' | 'twitter' | 'youtube';
   targetUrl: string;
@@ -38,8 +40,10 @@ export interface PromoSwipeFile {
   content: string; // contains {{REF_LINK}} and {{USER_NAME}}
 }
 
-const STORAGE_PIXELS_KEY = 'eviona_marketing_pixels_v3';
-const STORAGE_CAMPAIGNS_KEY = 'eviona_marketing_campaigns_v3';
+function getUserMarketingKey(userId: string | undefined, suffix: 'pixels' | 'campaigns'): string {
+  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  return `eviona_user_${cleanId}_marketing_${suffix}`;
+}
 
 export const INITIAL_SWIPE_FILES: PromoSwipeFile[] = [
   {
@@ -73,37 +77,39 @@ export const INITIAL_SWIPE_FILES: PromoSwipeFile[] = [
 ];
 
 export const marketingEngine = {
-  // 1. Get Tracking Pixels Configuration
+  // 1. Get Tracking Pixels Configuration (Tenant Scoped)
   getTrackingPixels(userId?: string): TrackingPixelsConfig {
+    const key = getUserMarketingKey(userId, 'pixels');
     try {
-      const saved = localStorage.getItem(STORAGE_PIXELS_KEY);
+      const saved = localStorage.getItem(key);
       if (saved) {
         return JSON.parse(saved);
       }
     } catch {}
 
     const defaults: TrackingPixelsConfig = {
-      metaPixelId: '128938472910',
-      metaCapiToken: 'EAAG9283401kdlasmdklq9281...',
-      ga4MeasurementId: 'G-EVIONA9821',
-      gtmContainerId: 'GTM-KV9281X',
-      googleAdsId: 'AW-982145678',
-      tiktokPixelId: 'C892810KMS921',
-      tiktokApiToken: 'tt_api_99214...',
-      linkedinTagId: '982341',
-      snapchatPixelId: 'snap_8829104',
+      metaPixelId: '',
+      metaCapiToken: '',
+      ga4MeasurementId: '',
+      gtmContainerId: '',
+      googleAdsId: '',
+      tiktokPixelId: '',
+      tiktokApiToken: '',
+      linkedinTagId: '',
+      snapchatPixelId: '',
     };
-    localStorage.setItem(STORAGE_PIXELS_KEY, JSON.stringify(defaults));
     return defaults;
   },
 
   // 2. Save Tracking Pixels Configuration
-  saveTrackingPixels(pixels: TrackingPixelsConfig): TrackingPixelsConfig {
+  saveTrackingPixels(userId: string | undefined, pixels: TrackingPixelsConfig): TrackingPixelsConfig {
+    const key = getUserMarketingKey(userId, 'pixels');
     try {
-      localStorage.setItem(STORAGE_PIXELS_KEY, JSON.stringify(pixels));
+      localStorage.setItem(key, JSON.stringify(pixels));
       (async () => {
         try {
           await supabase.from('MarketingSettings').upsert({
+            userId: userId || 'EVO-ID-100245',
             configJson: JSON.stringify(pixels),
             updatedAt: new Date().toISOString(),
           });
@@ -113,56 +119,23 @@ export const marketingEngine = {
     return pixels;
   },
 
-  // 3. Get Tracking Campaigns
+  // 3. Get Tracking Campaigns (Tenant Scoped)
   getCampaigns(userId?: string): MarketingCampaign[] {
+    const key = getUserMarketingKey(userId, 'campaigns');
     try {
-      const saved = localStorage.getItem(STORAGE_CAMPAIGNS_KEY);
+      const saved = localStorage.getItem(key);
       if (saved) {
         const list: MarketingCampaign[] = JSON.parse(saved);
-        if (Array.isArray(list) && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
     } catch {}
 
-    const cleanUser = userId || 'EVO-ID-100245';
-    const defaultCampaigns: MarketingCampaign[] = [
-      {
-        id: 'CMP-101',
-        name: 'Meta Ads Launch Campaign',
-        channel: 'meta',
-        targetUrl: `https://evionaecosystem.com/store?user=${cleanUser}`,
-        utmSource: 'facebook',
-        utmMedium: 'cpc',
-        utmCampaign: 'launch-growth-2025',
-        fullCampaignUrl: `https://evionaecosystem.com/store?user=${cleanUser}&utm_source=facebook&utm_medium=cpc&utm_campaign=launch-growth-2025`,
-        clicks: 412,
-        leadsGenerated: 38,
-        salesGenerated: 8,
-        revenue: 640,
-        createdAt: 'May 10, 2025',
-      },
-      {
-        id: 'CMP-102',
-        name: 'WhatsApp Mastermind Broadcast',
-        channel: 'whatsapp',
-        targetUrl: `https://evionaecosystem.com/store?user=${cleanUser}`,
-        utmSource: 'whatsapp',
-        utmMedium: 'direct_msg',
-        utmCampaign: 'vip-invite',
-        fullCampaignUrl: `https://evionaecosystem.com/store?user=${cleanUser}&utm_source=whatsapp&utm_medium=direct_msg&utm_campaign=vip-invite`,
-        clicks: 185,
-        leadsGenerated: 24,
-        salesGenerated: 6,
-        revenue: 480,
-        createdAt: 'May 18, 2025',
-      }
-    ];
-
-    localStorage.setItem(STORAGE_CAMPAIGNS_KEY, JSON.stringify(defaultCampaigns));
-    return defaultCampaigns;
+    return [];
   },
 
   // 4. Create New Tracking Campaign Link
   createCampaign(data: {
+    userId?: string;
     name: string;
     channel: MarketingCampaign['channel'];
     baseUrl: string;
@@ -175,6 +148,7 @@ export const marketingEngine = {
 
     const newCampaign: MarketingCampaign = {
       id: `CMP-${Date.now().toString().slice(-4)}`,
+      userId: data.userId,
       name: data.name.trim(),
       channel: data.channel,
       targetUrl: data.baseUrl,
@@ -189,37 +163,43 @@ export const marketingEngine = {
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
 
-    const current = this.getCampaigns();
+    const current = this.getCampaigns(data.userId);
     const updated = [newCampaign, ...current];
-    localStorage.setItem(STORAGE_CAMPAIGNS_KEY, JSON.stringify(updated));
+    const key = getUserMarketingKey(data.userId, 'campaigns');
+    localStorage.setItem(key, JSON.stringify(updated));
     return newCampaign;
   },
 
   // 5. Get Real Marketing Intelligence KPI metrics
   getMarketingMetrics(userId?: string) {
+    if (!userId) {
+      return {
+        totalVisitors: 0,
+        leadsCaptured: 0,
+        totalSales: 0,
+        revenueGenerated: 0,
+        conversionRate: '0.0%',
+        bestTrafficSource: 'None yet',
+      };
+    }
+
     const orders: SellerOrder[] = marketplaceEngine.getSellerOrders(userId);
-    let totalLeadsCount = 0;
-    try {
-      const crmRaw = localStorage.getItem('eviona_crm_leads_v2');
-      if (crmRaw) {
-        const leads: Lead[] = JSON.parse(crmRaw);
-        totalLeadsCount = leads.length;
-      }
-    } catch {}
+    const leads = crmEngine.getMemberLeads(userId);
+    const totalLeadsCount = leads.length;
 
     const campaigns = this.getCampaigns(userId);
-    const totalClicks = campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0) + 1240;
-    const totalSalesCount = orders.length > 0 ? orders.length : 14;
-    const totalRevenue = orders.reduce((sum, o) => sum + o.netSellerEarned, 0) || 840;
-    const conversionRate = totalClicks > 0 ? ((totalLeadsCount / totalClicks) * 100).toFixed(1) : '8.2';
+    const totalClicks = campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
+    const totalSalesCount = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + o.netSellerEarned, 0);
+    const conversionRate = totalClicks > 0 ? ((totalLeadsCount / totalClicks) * 100).toFixed(1) : totalLeadsCount > 0 ? '100.0' : '0.0';
 
     return {
       totalVisitors: totalClicks,
-      leadsCaptured: totalLeadsCount || 42,
+      leadsCaptured: totalLeadsCount,
       totalSales: totalSalesCount,
       revenueGenerated: totalRevenue,
       conversionRate: `${conversionRate}%`,
-      bestTrafficSource: 'Meta Ads & WhatsApp (58%)',
+      bestTrafficSource: campaigns.length > 0 ? `${campaigns[0].name} (${campaigns[0].channel.toUpperCase()})` : 'Direct Link',
     };
   },
 

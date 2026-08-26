@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { WalletTransaction, LedgerEventType } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { userRegistryEngine } from '../engine/userRegistryEngine';
 
 export interface RecipientProfile {
   id: string;
@@ -51,15 +52,6 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 const LOCAL_STORAGE_ACTIVE_MEMBER_KEY = 'eviona_active_member_profile';
 const LOCAL_STORAGE_P2P_REGISTRY_KEY = 'eviona_p2p_transfer_registry_v2';
 
-// Known fallback directory for instant resolution
-const KNOWN_MEMBERS_DIRECTORY: RecipientProfile[] = [
-  { id: 'EVO-ID-100245', name: 'John Doe', email: 'john@evionaecosystem.com', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
-  { id: 'EVO-ID-100246', name: 'Sarah Johnson', email: 'sarah@agency.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
-  { id: 'EVO-ID-100247', name: 'Michael Brown', email: 'michael@bright.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-  { id: 'EVO-ID-100248', name: 'Emily Davis', email: 'emily@consulting.com', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' },
-  { id: 'EVO-ID-000001', name: 'Super Admin', email: 'admin@evionaecosystem.com', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
-];
-
 function getActiveUserIdentifier(): { id: string; email: string; name: string } {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_ACTIVE_MEMBER_KEY);
@@ -85,7 +77,7 @@ function getUserStorageKey(identifier: string, suffix: 'balance' | 'ledger'): st
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const activeUser = getActiveUserIdentifier();
 
-  // Load persistent user wallet balance
+  // Load persistent user wallet balance strictly isolated by user
   const [walletBalance, setWalletBalance] = useState<number>(() => {
     try {
       const userKey = getUserStorageKey(activeUser.email, 'balance');
@@ -96,14 +88,17 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const savedId = localStorage.getItem(savedIdKey);
       if (savedId) return parseFloat(savedId);
 
-      const globalSaved = localStorage.getItem('eviona_wallet_balance');
-      return globalSaved ? parseFloat(globalSaved) : 0.00;
+      const regUser = userRegistryEngine.getUserById(activeUser.id) || userRegistryEngine.getUserByEmail(activeUser.email);
+      if (regUser && typeof regUser.walletBalance === 'number') {
+        return regUser.walletBalance;
+      }
+      return 0.00;
     } catch {
       return 0.00;
     }
   });
 
-  // Load persistent user ledger transactions
+  // Load persistent user ledger transactions strictly isolated by user
   const [transactions, setTransactions] = useState<WalletTransaction[]>(() => {
     try {
       const userKey = getUserStorageKey(activeUser.email, 'ledger');
@@ -114,8 +109,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const savedId = localStorage.getItem(savedIdKey);
       if (savedId) return JSON.parse(savedId);
 
-      const globalSaved = localStorage.getItem('eviona_wallet_ledger_txs');
-      return globalSaved ? JSON.parse(globalSaved) : [];
+      return [];
     } catch {
       return [];
     }
@@ -129,83 +123,81 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const idKey = getUserStorageKey(activeUser.id, 'balance');
       localStorage.setItem(emailKey, formattedBalance);
       localStorage.setItem(idKey, formattedBalance);
-      localStorage.setItem('eviona_wallet_balance', formattedBalance);
+      localStorage.setItem(`eviona_user_${activeUser.id}_balance`, formattedBalance);
+      localStorage.setItem(`eviona_user_${activeUser.email}_balance`, formattedBalance);
+    } catch (err) {
+      console.warn('[WalletContext] Storage write error:', err);
+    }
+  }, [walletBalance, activeUser.email, activeUser.id]);
 
-      const serializedLedger = JSON.stringify(transactions);
+  useEffect(() => {
+    try {
       const emailLedgerKey = getUserStorageKey(activeUser.email, 'ledger');
       const idLedgerKey = getUserStorageKey(activeUser.id, 'ledger');
-      localStorage.setItem(emailLedgerKey, serializedLedger);
-      localStorage.setItem(idLedgerKey, serializedLedger);
-      localStorage.setItem('eviona_wallet_ledger_txs', serializedLedger);
-    } catch (e) {
-      console.warn('[WalletContext] Failed to persist wallet state:', e);
+      const serialized = JSON.stringify(transactions);
+      localStorage.setItem(emailLedgerKey, serialized);
+      localStorage.setItem(idLedgerKey, serialized);
+    } catch (err) {
+      console.warn('[WalletContext] Ledger write error:', err);
     }
-  }, [walletBalance, transactions, activeUser.email, activeUser.id]);
+  }, [transactions, activeUser.email, activeUser.id]);
 
-  // Ingest incoming P2P transfers meant for the current active user
+  // Synchronize incoming P2P transfers claimed by this member
   const syncIncomingTransfers = useCallback(() => {
     try {
       const registryRaw = localStorage.getItem(LOCAL_STORAGE_P2P_REGISTRY_KEY);
       if (!registryRaw) return;
 
       const registry: P2PRegistryEntry[] = JSON.parse(registryRaw);
-      let newBalance = walletBalance;
-      let newTransactions = [...transactions];
+      let balanceDelta = 0;
+      const newTransactions: WalletTransaction[] = [...transactions];
       let registryModified = false;
 
-      const currentIdentities = [
+      const userAliases = [
         activeUser.id.toUpperCase(),
         activeUser.email.toLowerCase(),
         activeUser.id.replace('EVO-ID-', '').toUpperCase(),
       ];
 
-      for (const item of registry) {
-        const targetClean = item.recipientTarget.trim().toUpperCase();
-        const targetEmail = (item.recipientEmail || '').trim().toLowerCase();
-        const targetId = (item.recipientId || '').trim().toUpperCase();
+      for (const entry of registry) {
+        const isTarget =
+          userAliases.includes(entry.recipientTarget.toUpperCase()) ||
+          userAliases.includes((entry.recipientId || '').toUpperCase()) ||
+          userAliases.includes((entry.recipientEmail || '').toLowerCase());
 
-        const isAddressedToMe =
-          currentIdentities.includes(targetClean) ||
-          (targetEmail && currentIdentities.includes(targetEmail)) ||
-          (targetId && currentIdentities.includes(targetId));
+        const alreadyClaimed = entry.claimedBy.some(id => userAliases.includes(id.toUpperCase()));
 
-        const isClaimedByMe = item.claimedBy.some(claim => currentIdentities.includes(claim.toUpperCase()) || currentIdentities.includes(claim.toLowerCase()));
-
-        if (isAddressedToMe && !isClaimedByMe) {
-          // Credit transfer to active user
-          newBalance += item.amount;
-          const inTx: WalletTransaction = {
-            id: item.id,
-            type: 'wallet_transfer_in',
-            description: `P2P Transfer from ${item.senderName} (${item.senderId})`,
-            amount: item.amount,
-            currency: 'EVO',
-            status: 'Completed',
-            date: item.date,
-            time: item.time,
-          };
-
-          // Avoid duplicating in ledger
-          if (!newTransactions.some(t => t.id === item.id)) {
-            newTransactions = [inTx, ...newTransactions];
-          }
-
-          item.claimedBy.push(activeUser.id, activeUser.email);
+        if (isTarget && !alreadyClaimed) {
+          balanceDelta += entry.amount;
+          entry.claimedBy.push(activeUser.id);
           registryModified = true;
+
+          const exists = newTransactions.some(tx => tx.id === `${entry.id}-IN` || tx.id === entry.id);
+          if (!exists) {
+            newTransactions.unshift({
+              id: `${entry.id}-IN`,
+              type: 'wallet_transfer_in',
+              description: `P2P Transfer from ${entry.senderName} (${entry.senderId})`,
+              amount: entry.amount,
+              currency: 'EVO',
+              status: 'Completed',
+              date: entry.date,
+              time: entry.time,
+            });
+          }
         }
       }
 
       if (registryModified) {
-        setWalletBalance(newBalance);
+        setWalletBalance(prev => prev + balanceDelta);
         setTransactions(newTransactions);
         localStorage.setItem(LOCAL_STORAGE_P2P_REGISTRY_KEY, JSON.stringify(registry));
       }
     } catch (err) {
       console.warn('[WalletContext] Error syncing incoming transfers:', err);
     }
-  }, [walletBalance, transactions, activeUser.id, activeUser.email]);
+  }, [transactions, activeUser.id, activeUser.email]);
 
-  // Run synchronization on mount and when storage events trigger
   useEffect(() => {
     syncIncomingTransfers();
 
@@ -219,16 +211,21 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [syncIncomingTransfers]);
 
-  // Recipient Lookup helper
+  // Dynamic Recipient Lookup helper querying real master registry + Supabase
   const lookupRecipient = async (query: string): Promise<RecipientProfile | null> => {
     if (!query || !query.trim()) return null;
     const clean = query.trim();
 
-    // 1. Check known directory
-    const known = KNOWN_MEMBERS_DIRECTORY.find(
-      m => m.id.toUpperCase() === clean.toUpperCase() || m.email.toLowerCase() === clean.toLowerCase()
-    );
-    if (known) return known;
+    // 1. Check live master user registry
+    const registered = userRegistryEngine.getUserById(clean) || userRegistryEngine.getUserByEmail(clean);
+    if (registered) {
+      return {
+        id: registered.id,
+        name: registered.name,
+        email: registered.email,
+        avatar: registered.avatar,
+      };
+    }
 
     // 2. Query Supabase Member table
     try {
@@ -353,7 +350,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { success: true, transaction: newTx };
   };
 
-  // 4. Process P2P Member Transfer (Updates BOTH Sender and Receiver Ledger)
+  // 4. Process P2P Member Transfer
   const processP2PTransfer = async (amount: number, recipientInput: string): Promise<P2PTransferResult> => {
     if (amount <= 0) {
       return { success: false, error: 'Invalid transfer amount. Please enter an amount greater than 0.' };
@@ -404,7 +401,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `${transferId}-IN`,
       type: 'wallet_transfer_in',
       description: `P2P Transfer from ${sender.name} (${sender.id})`,
-      amount: amount, // Positive credit
+      amount: amount,
       currency: 'EVO',
       status: 'Completed',
       date: txDate,
@@ -415,7 +412,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setWalletBalance(prev => Math.max(0, prev - amount));
     setTransactions(prev => [senderTx, ...prev]);
 
-    // 2. Credit Receiver in Persistent Storage (for both email and ID aliases)
+    // 2. Credit Receiver in Persistent Storage
     try {
       const recipientKeys = [
         recipient.email.toLowerCase(),
@@ -437,7 +434,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         localStorage.setItem(ledgerKey, JSON.stringify([receiverTx, ...currentLedger]));
       }
 
-      // 3. Register in Global P2P Registry for Real-time Ingestion
+      // 3. Register in Global P2P Registry
       const registryRaw = localStorage.getItem(LOCAL_STORAGE_P2P_REGISTRY_KEY);
       const registry: P2PRegistryEntry[] = registryRaw ? JSON.parse(registryRaw) : [];
       registry.push({
@@ -458,7 +455,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // 4. Background Sync to Supabase Database
       try {
-        // Sync sender balance in DB
         await supabase
           .from('Member')
           .update({
@@ -467,7 +463,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           })
           .or(`id.eq.${sender.id},email.ilike.${sender.email}`);
 
-        // Sync recipient balance in DB
         const { data: recipDb } = await supabase
           .from('Member')
           .select('id, walletBalance, wallet_balance')
@@ -522,8 +517,14 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const resetLedger = () => {
     setWalletBalance(0.00);
     setTransactions([]);
-    localStorage.removeItem('eviona_wallet_balance');
-    localStorage.removeItem('eviona_wallet_ledger_txs');
+    const emailKey = getUserStorageKey(activeUser.email, 'balance');
+    const idKey = getUserStorageKey(activeUser.id, 'balance');
+    const emailLedgerKey = getUserStorageKey(activeUser.email, 'ledger');
+    const idLedgerKey = getUserStorageKey(activeUser.id, 'ledger');
+    localStorage.removeItem(emailKey);
+    localStorage.removeItem(idKey);
+    localStorage.removeItem(emailLedgerKey);
+    localStorage.removeItem(idLedgerKey);
     localStorage.removeItem(LOCAL_STORAGE_P2P_REGISTRY_KEY);
   };
 

@@ -82,6 +82,36 @@ export function App() {
         return;
       }
 
+      // Hostname-based Custom Domain & Subdomain Tenant Resolution (Book 0 Multi-Tenant Engine)
+      const hostname = window.location.hostname.toLowerCase();
+      if (
+        hostname !== 'localhost' &&
+        hostname !== '127.0.0.1' &&
+        hostname !== 'evionaecosystem.com' &&
+        hostname !== 'www.evionaecosystem.com' &&
+        hostname !== 'deos.com' &&
+        hostname !== 'www.deos.com'
+      ) {
+        if (hostname.endsWith('.evionaecosystem.com') || hostname.endsWith('.deos.com')) {
+          const sub = hostname.split('.')[0];
+          if (sub && !['app', 'api', 'admin', 'www'].includes(sub)) {
+            setTargetStoreUser(sub);
+            sessionStorage.setItem('eviona_active_ref', sub);
+            if (!isAuthenticated && pathname === '/') {
+              setCurrentView('store');
+              return;
+            }
+          }
+        } else {
+          setTargetStoreUser(hostname);
+          sessionStorage.setItem('eviona_active_ref', hostname);
+          if (!isAuthenticated && pathname === '/') {
+            setCurrentView('store');
+            return;
+          }
+        }
+      }
+
       // Handle Isolated Store Route (/store, /store?user=..., /s/...)
       if (pathname.startsWith('/store') || hash.startsWith('#/store') || search.includes('store') || pathname.startsWith('/s/')) {
         const storeUser = userParam || refParam || (pathname.split('/store/')[1]) || (pathname.split('/s/')[1]) || '';

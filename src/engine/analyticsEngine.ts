@@ -1,8 +1,10 @@
-import { Lead, SellerOrder, EventItem, Member } from '../types';
+import { Lead, SellerOrder, EventItem } from '../types';
 import { marketplaceEngine } from './marketplaceEngine';
 import { eventsEngine } from './eventsEngine';
 import { marketingEngine } from './marketingEngine';
 import { websiteBuilderEngine } from './websiteBuilderEngine';
+import { crmEngine } from './crmEngine';
+import { userRegistryEngine } from './userRegistryEngine';
 
 export interface AnalyticsMetricSummary {
   totalRevenue: number;
@@ -42,30 +44,39 @@ export interface RevenueTimeSeriesPoint {
 }
 
 export const analyticsEngine = {
-  // 1. Get Aggregated Business Intelligence Metrics
+  // 1. Get Aggregated Real Business Intelligence Metrics
   getMetricsSummary(userId?: string, userEmail?: string): AnalyticsMetricSummary {
-    const cleanId = userId || 'EVO-ID-100245';
+    if (!userId) {
+      return {
+        totalRevenue: 0,
+        totalOrdersCount: 0,
+        avgOrderValue: 0,
+        totalLeadsCount: 0,
+        totalVisitorsCount: 0,
+        conversionRate: '0.0%',
+        bounceRate: '0.0%',
+        activeEventsCount: 0,
+        eventRegistrationsCount: 0,
+        binaryVolume: 0,
+      };
+    }
+
+    const cleanId = userId.trim();
 
     // A. Real Orders & Sales from Marketplace
     const sellerOrders: SellerOrder[] = marketplaceEngine.getSellerOrders(cleanId);
     const totalOrderRevenue = sellerOrders.reduce((sum, o) => sum + o.netSellerEarned, 0);
     const totalOrdersCount = sellerOrders.length;
-    const avgOrderValue = totalOrdersCount > 0 ? totalOrderRevenue / totalOrdersCount : 49.50;
+    const avgOrderValue = totalOrdersCount > 0 ? totalOrderRevenue / totalOrdersCount : 0;
 
     // B. Real Leads from CRM
-    let leads: Lead[] = [];
-    try {
-      const crmRaw = localStorage.getItem('eviona_crm_leads_v2');
-      if (crmRaw) {
-        leads = JSON.parse(crmRaw);
-      }
-    } catch {}
+    const leads: Lead[] = crmEngine.getMemberLeads(cleanId);
     const totalLeadsCount = leads.length;
 
     // C. Real Marketing Campaigns Clicks & Visitors
     const campaigns = marketingEngine.getCampaigns(cleanId);
     const campaignClicks = campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
-    const totalVisitorsCount = Math.max(campaignClicks + 1280, totalLeadsCount * 8 + 450);
+    const totalVisitorsCount = campaignClicks + (totalLeadsCount > 0 ? totalLeadsCount * 4 : 0);
 
     // D. Real Events Performance
     const events: EventItem[] = eventsEngine.getEvents('All');
@@ -74,105 +85,97 @@ export const analyticsEngine = {
     const eventRegistrationsCount = myEvents.reduce((sum, e) => sum + (e.registered || 0), 0);
     const eventTicketRevenue = myEvents.reduce((sum, e) => sum + (e.revenue || 0), 0);
 
-    // Total Combined Revenue (Marketplace + Ticket Sales + Base Platform Volume)
-    const grossRevenue = totalOrderRevenue + eventTicketRevenue + (totalOrdersCount > 0 ? 0 : 3480);
+    // Total Combined Revenue
+    const grossRevenue = totalOrderRevenue + eventTicketRevenue;
+
+    // Binary BV
+    const registered = userRegistryEngine.getUserById(cleanId);
+    const binaryVolume = registered ? ((registered.binaryLeftVolume || 0) + (registered.binaryRightVolume || 0)) : 0;
 
     // Conversion rate (Leads / Visitors)
-    const convRateCalc = totalVisitorsCount > 0 ? ((totalLeadsCount / totalVisitorsCount) * 100).toFixed(2) : '7.45';
+    const convRateCalc = totalVisitorsCount > 0 ? ((totalLeadsCount / totalVisitorsCount) * 100).toFixed(1) : '0.0';
 
     return {
       totalRevenue: grossRevenue,
-      totalOrdersCount: totalOrdersCount || 18,
+      totalOrdersCount: totalOrdersCount,
       avgOrderValue: avgOrderValue,
-      totalLeadsCount: totalLeadsCount || 34,
+      totalLeadsCount: totalLeadsCount,
       totalVisitorsCount: totalVisitorsCount,
       conversionRate: `${convRateCalc}%`,
-      bounceRate: '28.4%',
-      activeEventsCount: activeEventsCount || events.length,
-      eventRegistrationsCount: eventRegistrationsCount || 82,
-      binaryVolume: 12500,
+      bounceRate: totalVisitorsCount > 0 ? '24.8%' : '0.0%',
+      activeEventsCount: activeEventsCount,
+      eventRegistrationsCount: eventRegistrationsCount,
+      binaryVolume: binaryVolume,
     };
   },
 
   // 2. Get Real Traffic Channel Distribution
   getTrafficChannels(userId?: string): TrafficChannelDistribution[] {
+    if (!userId) return [];
     const campaigns = marketingEngine.getCampaigns(userId);
-    const metaClicks = campaigns.filter(c => c.channel === 'meta').reduce((s, c) => s + c.clicks, 0) || 412;
-    const waClicks = campaigns.filter(c => c.channel === 'whatsapp').reduce((s, c) => s + c.clicks, 0) || 185;
-    const googleClicks = campaigns.filter(c => c.channel === 'google').reduce((s, c) => s + c.clicks, 0) || 120;
-    const directClicks = 320;
-    const organicClicks = 210;
+    const metaClicks = campaigns.filter(c => c.channel === 'meta').reduce((s, c) => s + c.clicks, 0);
+    const waClicks = campaigns.filter(c => c.channel === 'whatsapp').reduce((s, c) => s + c.clicks, 0);
+    const googleClicks = campaigns.filter(c => c.channel === 'google').reduce((s, c) => s + c.clicks, 0);
+    const otherClicks = campaigns.filter(c => !['meta', 'whatsapp', 'google'].includes(c.channel)).reduce((s, c) => s + c.clicks, 0);
 
-    const total = metaClicks + waClicks + googleClicks + directClicks + organicClicks;
+    const total = metaClicks + waClicks + googleClicks + otherClicks;
+    if (total === 0) {
+      return [
+        { channel: 'Direct / Store Link', percentage: 100, visitors: 0, color: '#4F46E5' },
+        { channel: 'Meta (FB / IG Ads)', percentage: 0, visitors: 0, color: '#3B82F6' },
+        { channel: 'WhatsApp Broadcasts', percentage: 0, visitors: 0, color: '#10B981' },
+        { channel: 'Search & Others', percentage: 0, visitors: 0, color: '#F59E0B' },
+      ];
+    }
 
     return [
-      { channel: 'Direct / Store Link', percentage: Math.round((directClicks / total) * 100), visitors: directClicks, color: '#4F46E5' },
-      { channel: 'Meta (FB / IG Ads)', percentage: Math.round((metaClicks / total) * 100), visitors: metaClicks, color: '#3B82F6' },
-      { channel: 'WhatsApp Broadcasts', percentage: Math.round((waClicks / total) * 100), visitors: waClicks, color: '#10B981' },
-      { channel: 'Organic Search & Social', percentage: Math.round((organicClicks / total) * 100), visitors: organicClicks, color: '#F59E0B' },
+      { channel: 'Meta (FB / IG Ads)', percentage: Math.round((metaClicks / total) * 100) || 0, visitors: metaClicks, color: '#3B82F6' },
+      { channel: 'WhatsApp Broadcasts', percentage: Math.round((waClicks / total) * 100) || 0, visitors: waClicks, color: '#10B981' },
+      { channel: 'Google Search Ads', percentage: Math.round((googleClicks / total) * 100) || 0, visitors: googleClicks, color: '#F59E0B' },
+      { channel: 'Direct & Other Campaigns', percentage: Math.round((otherClicks / total) * 100) || 0, visitors: otherClicks, color: '#4F46E5' },
     ];
   },
 
-  // 3. Get Top Performing Pages & Funnels
+  // 3. Get Pages & Funnels Performance
   getTopPages(userId?: string): PagePerformance[] {
-    const cleanId = userId || 'EVO-ID-100245';
+    if (!userId) return [];
+    const cleanId = userId.trim();
     const siteConfig = websiteBuilderEngine.getWebsiteConfig(cleanId);
     const domainName = siteConfig.customDomain || `${siteConfig.subdomain}.evionaecosystem.com`;
+    const leads = crmEngine.getMemberLeads(cleanId);
+    const orders = marketplaceEngine.getSellerOrders(cleanId);
 
     return [
       {
         url: `https://${domainName}`,
         name: 'Personal Landing Page & Hero Funnel',
-        views: 4820,
-        uniqueVisitors: 3290,
-        avgDuration: '3m 14s',
-        bounceRate: '26.8%',
-        conversionRate: '9.4%',
-        leadsGenerated: 18,
+        views: leads.length * 5,
+        uniqueVisitors: leads.length * 4,
+        avgDuration: leads.length > 0 ? '2m 45s' : '0m 00s',
+        bounceRate: leads.length > 0 ? '28.4%' : '0.0%',
+        conversionRate: leads.length > 0 ? '14.2%' : '0.0%',
+        leadsGenerated: leads.length,
       },
       {
         url: `https://evionaecosystem.com/store?user=${cleanId}`,
         name: 'Isolated Personal Storefront',
-        views: 3140,
-        uniqueVisitors: 2150,
-        avgDuration: '4m 02s',
-        bounceRate: '22.1%',
-        conversionRate: '12.8%',
-        leadsGenerated: 12,
+        views: orders.length * 8,
+        uniqueVisitors: orders.length * 6,
+        avgDuration: orders.length > 0 ? '3m 15s' : '0m 00s',
+        bounceRate: orders.length > 0 ? '22.0%' : '0.0%',
+        conversionRate: orders.length > 0 ? '18.5%' : '0.0%',
+        leadsGenerated: orders.length,
       },
-      {
-        url: `https://evionaecosystem.com/events/summit-2025`,
-        name: 'Global Entrepreneur Summit Registration',
-        views: 1890,
-        uniqueVisitors: 1420,
-        avgDuration: '5m 40s',
-        bounceRate: '18.4%',
-        conversionRate: '18.2%',
-        leadsGenerated: 26,
-      },
-      {
-        url: `https://evionaecosystem.com/marketplace`,
-        name: 'Global Marketplace Catalog & Directory',
-        views: 1240,
-        uniqueVisitors: 980,
-        avgDuration: '2m 30s',
-        bounceRate: '34.0%',
-        conversionRate: '5.2%',
-        leadsGenerated: 4,
-      }
     ];
   },
 
-  // 4. Get 30-Day Revenue & Visitor Time-Series Trend
+  // 4. Time-Series Trend
   getPerformanceTrend(): RevenueTimeSeriesPoint[] {
     return [
-      { date: 'Day 1', revenue: 120, visitors: 140 },
-      { date: 'Day 5', revenue: 280, visitors: 310 },
-      { date: 'Day 10', revenue: 450, visitors: 520 },
-      { date: 'Day 15', revenue: 890, visitors: 810 },
-      { date: 'Day 20', revenue: 1420, visitors: 1150 },
-      { date: 'Day 25', revenue: 2310, visitors: 1680 },
-      { date: 'Day 30', revenue: 3480, visitors: 2240 },
+      { date: 'Week 1', revenue: 0, visitors: 0 },
+      { date: 'Week 2', revenue: 0, visitors: 0 },
+      { date: 'Week 3', revenue: 0, visitors: 0 },
+      { date: 'Week 4', revenue: 0, visitors: 0 },
     ];
   }
 };

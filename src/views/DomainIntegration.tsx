@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Globe,
   ShieldCheck,
@@ -13,17 +13,29 @@ import {
   AlertCircle,
   Clock,
   Key,
-  Check
+  Check,
+  X
 } from 'lucide-react';
-import { defaultDomainConfig } from '../store/useAppStore';
 import { Badge } from '../components/common/Badge';
+import { useAuth } from '../context/AuthContext';
+import { websiteBuilderEngine, WebsiteConfig } from '../engine/websiteBuilderEngine';
 
 export const DomainIntegration: React.FC = () => {
-  const [domainConfig, setDomainConfig] = useState(defaultDomainConfig);
+  const { member } = useAuth();
+  const activeUserId = member?.id || 'EVO-ID-100245';
+  const activeUserName = member?.name || 'Entrepreneur';
+
+  const [siteConfig, setSiteConfig] = useState<WebsiteConfig>(() =>
+    websiteBuilderEngine.getWebsiteConfig(activeUserId, activeUserName)
+  );
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [customDomainInput, setCustomDomainInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSiteConfig(websiteBuilderEngine.getWebsiteConfig(activeUserId, activeUserName));
+  }, [activeUserId, activeUserName]);
 
   const handleCopy = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
@@ -35,27 +47,43 @@ export const DomainIntegration: React.FC = () => {
     e.preventDefault();
     if (!customDomainInput.trim()) return;
 
-    const formatted = customDomainInput.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '');
-    setDomainConfig(prev => ({
-      ...prev,
+    const formatted = customDomainInput.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').trim();
+    const updated: WebsiteConfig = {
+      ...siteConfig,
       customDomain: formatted,
-      dnsRecords: [
-        { type: 'CNAME', name: 'www', value: 'cname.evionaecosystem.com', status: 'configured' },
-        { type: 'A', name: '@', value: '76.76.21.21', status: 'configured' },
-        { type: 'TXT', name: '_eviona-verify', value: `eviona-site-verification-${Date.now().toString().slice(-6)}`, status: 'configured' },
-      ]
-    }));
+      isDomainVerified: false,
+      sslStatus: 'pending',
+    };
+    websiteBuilderEngine.saveWebsiteConfig(updated);
+    setSiteConfig(updated);
     setShowConnectModal(false);
     setCustomDomainInput('');
   };
 
   const handleVerifyDNS = () => {
+    if (!siteConfig.customDomain) return;
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      alert(`DNS Records for ${domainConfig.customDomain} verified successfully! TLS 1.3 certificate is active.`);
+      const updated: WebsiteConfig = {
+        ...siteConfig,
+        isDomainVerified: true,
+        sslStatus: 'active',
+      };
+      websiteBuilderEngine.saveWebsiteConfig(updated);
+      setSiteConfig(updated);
+      alert(`DNS Records for ${siteConfig.customDomain} verified successfully! TLS 1.3 certificate is active.`);
     }, 1200);
   };
+
+  const fullSubdomain = `${siteConfig.subdomain}.evionaecosystem.com`;
+  const activeDomain = siteConfig.customDomain || fullSubdomain;
+
+  const dnsRecords = [
+    { type: 'CNAME', name: 'www', value: 'cname.evionaecosystem.com', status: siteConfig.isDomainVerified ? 'verified' : 'configured' },
+    { type: 'A', name: '@', value: '76.76.21.21', status: siteConfig.isDomainVerified ? 'verified' : 'configured' },
+    { type: 'TXT', name: '_eviona-verify', value: `eviona-site-verification-${activeUserId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`, status: siteConfig.isDomainVerified ? 'verified' : 'configured' },
+  ];
 
   const backups = [
     { id: 'BAK-104', date: 'Today, 03:00 AM (Auto)', size: '24.5 MB', description: 'Daily scheduled site backup' },
@@ -73,11 +101,17 @@ export const DomainIntegration: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900">{domainConfig.customDomain}</h2>
-              <Badge variant="emerald" size="sm">● Custom Domain Active</Badge>
+              <h2 className="text-lg font-black text-slate-900">{activeDomain}</h2>
+              {siteConfig.customDomain ? (
+                <Badge variant={siteConfig.isDomainVerified ? 'emerald' : 'warning'} size="sm">
+                  ● {siteConfig.isDomainVerified ? 'Custom Domain Active' : 'DNS Pending Verification'}
+                </Badge>
+              ) : (
+                <Badge variant="blue" size="sm">● Standard Subdomain Active</Badge>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Default Subdomain: <code className="text-indigo-600 font-mono font-semibold">{domainConfig.subdomain}</code> (Always active fallback)
+              Default Subdomain: <code className="text-indigo-600 font-mono font-semibold">{fullSubdomain}</code> (Always active fallback)
             </p>
           </div>
         </div>
@@ -88,245 +122,119 @@ export const DomainIntegration: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Connect Another Domain</span>
+            <span>{siteConfig.customDomain ? 'Change Custom Domain' : 'Connect Custom Domain'}</span>
           </button>
 
-          <button
-            onClick={handleVerifyDNS}
-            disabled={isVerifying}
-            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center gap-2"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin text-indigo-600' : ''}`} />
-            <span>{isVerifying ? 'Checking DNS...' : 'Verify DNS Status'}</span>
-          </button>
-
-          <button
-            onClick={() => window.open(`https://${domainConfig.customDomain}`, '_blank')}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
-          >
-            <span>Visit Live Site</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </button>
+          {siteConfig.customDomain && (
+            <button
+              onClick={handleVerifyDNS}
+              disabled={isVerifying}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors flex items-center gap-2 shadow-md"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin text-white' : ''}`} />
+              <span>{isVerifying ? 'Checking DNS...' : 'Verify DNS Status'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Domain Credit Voucher Redemption Card */}
-      {domainConfig.domainCreditVoucher && (
-        <div className="rounded-3xl p-6 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-indigo-950/80 border border-emerald-500/30 text-white shadow-card flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Key className="w-5 h-5" />
-            </div>
+      {/* DNS Configuration Instructions (Show when custom domain is set) */}
+      {siteConfig.customDomain && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <h4 className="text-sm font-bold text-white">Free Custom Domain Voucher Available</h4>
-              <p className="text-xs text-emerald-200">
-                Included with your Growth/Legacy plan. Claim your free 1-year .COM registration.
+              <h3 className="text-base font-black text-slate-900">DNS Records Configuration</h3>
+              <p className="text-xs text-slate-500">
+                Add the following DNS records to your domain provider (e.g. GoDaddy, Namecheap, Cloudflare).
               </p>
             </div>
+            <Badge variant="purple" size="sm">TLS 1.3 Automatic</Badge>
           </div>
 
-          <button
-            onClick={() => setShowConnectModal(true)}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition-all shrink-0"
-          >
-            Claim Free Domain
-          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Host / Name</th>
+                  <th className="py-3 px-4">Value / Target</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Copy</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-mono text-xs">
+                {dnsRecords.map((r, i) => (
+                  <tr key={i} className="hover:bg-slate-50/60">
+                    <td className="py-3 px-4 font-bold text-indigo-600">{r.type}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-800">{r.name}</td>
+                    <td className="py-3 px-4 text-slate-600 truncate max-w-xs">{r.value}</td>
+                    <td className="py-3 px-4 font-sans">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        r.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        ● {r.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => handleCopy(r.value, i)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      >
+                        {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* DNS Configuration Table & Security Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* DNS Records Table (8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200 shadow-card overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-black text-slate-900">DNS Configuration Records</h4>
-                <p className="text-xs text-slate-500">Configure these DNS records at your domain registrar (GoDaddy, Namecheap, Cloudflare)</p>
-              </div>
-              <Badge variant="blue" size="sm">Anycast Global CDN</Badge>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3.5 px-6">Type</th>
-                    <th className="py-3.5 px-6">Host / Name</th>
-                    <th className="py-3.5 px-6">Value / Target</th>
-                    <th className="py-3.5 px-6">Status</th>
-                    <th className="py-3.5 px-6 text-right">Copy</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
-                  {domainConfig.dnsRecords.map((rec, i) => (
-                    <tr key={i} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-4 px-6 font-bold text-indigo-600">{rec.type}</td>
-                      <td className="py-4 px-6 font-semibold">{rec.name}</td>
-                      <td className="py-4 px-6 text-slate-900 truncate max-w-xs">{rec.value}</td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1 text-emerald-700 text-[10px] font-sans font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Configured
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right font-sans">
-                        <button
-                          onClick={() => handleCopy(rec.value, i)}
-                          className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
-                        >
-                          {copiedIndex === i ? 'Copied!' : 'Copy'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="p-4 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-600">
-            <b>Automatic Routing:</b> Your personal landing page is accessible on both <code className="text-indigo-600 font-bold">{domainConfig.customDomain}</code> and <code className="text-indigo-600 font-bold">{domainConfig.subdomain}</code>.
-          </div>
-        </div>
-
-        {/* SSL & Business Email Card (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* SSL Certificate Card */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">SSL Security Status</h4>
-              <Badge variant="emerald" size="sm">● Let&apos;s Encrypt Active</Badge>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Encryption Level</span>
-                <span className="font-bold text-slate-900">TLS 1.3 (256-bit)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Auto-Renewal</span>
-                <span className="font-bold text-emerald-600">Automatic (90 Days)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">HTTP to HTTPS</span>
-                <span className="font-bold text-indigo-600">Forced Redirect</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Business Email Addon */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
-            <div className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-indigo-600" />
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Professional Business Email</h4>
-            </div>
-            <p className="text-xs text-slate-500">
-              Create branded email inboxes (e.g. <code className="text-indigo-600 font-bold">contact@{domainConfig.customDomain}</code>) connected to your CRM.
-            </p>
-            <button
-              onClick={() => alert(`Business email wizard for ${domainConfig.customDomain} opened.`)}
-              className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors"
-            >
-              Configure Email Mailboxes
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Automated Backups Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-card overflow-hidden">
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-black text-slate-900">Automated Website Backups & Restore</h4>
-            <p className="text-xs text-slate-500">Snapshot history allowing 1-click restore without data loss</p>
-          </div>
-
-          <button
-            onClick={() => alert('Manual backup snapshot created successfully.')}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm"
-          >
-            + Create Backup Snapshot
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="py-3.5 px-6">Backup ID</th>
-                <th className="py-3.5 px-6">Snapshot Date</th>
-                <th className="py-3.5 px-6">Description</th>
-                <th className="py-3.5 px-6">Size</th>
-                <th className="py-3.5 px-6 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {backups.map((b) => (
-                <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-4 px-6 font-mono font-bold text-slate-900">{b.id}</td>
-                  <td className="py-4 px-6">{b.date}</td>
-                  <td className="py-4 px-6 text-slate-600">{b.description}</td>
-                  <td className="py-4 px-6 font-mono">{b.size}</td>
-                  <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => alert(`Restoring website to snapshot ${b.id}...`)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
-                    >
-                      Restore to Version
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Connect Domain Modal */}
       {showConnectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Connect Custom Domain</h3>
-                <p className="text-xs text-slate-500">Map your branded domain name to your published website.</p>
-              </div>
-              <button onClick={() => setShowConnectModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900">Connect Custom Domain</h3>
+              <button onClick={() => setShowConnectModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
+            <p className="text-xs text-slate-500">
+              Enter your custom apex or subdomain (e.g. <code className="text-indigo-600 font-bold">yourbrand.com</code>).
+            </p>
 
-            <form onSubmit={handleConnectDomain} className="space-y-4 text-xs">
+            <form onSubmit={handleConnectDomain} className="space-y-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Domain Name</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Domain Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. john.com or www.john.com"
+                  placeholder="e.g. mybusiness.com"
                   value={customDomainInput}
                   onChange={(e) => setCustomDomainInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-1.5 text-slate-600">
-                <span className="font-bold text-indigo-950 block">DNS Setup Requirement:</span>
-                <p>1. Add a <b>CNAME</b> record pointing <b>www</b> to <b>cname.evionaecosystem.com</b></p>
-                <p>2. Add an <b>A</b> record pointing <b>@</b> to <b>76.76.21.21</b></p>
+              <div className="p-3 rounded-xl bg-indigo-50 text-[11px] text-indigo-900">
+                💡 <b>Instant Mapping:</b> Free SSL certificates are automatically provisioned via Let's Encrypt once DNS points to our servers.
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowConnectModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-md"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Connect Domain</span>
+                  Connect Domain
                 </button>
               </div>
             </form>

@@ -98,7 +98,7 @@ export const MarketingCenter: React.FC<MarketingCenterProps> = ({ currentUser })
 
   const handleSavePixels = (e: React.FormEvent) => {
     e.preventDefault();
-    marketingEngine.saveTrackingPixels(pixels);
+    marketingEngine.saveTrackingPixels(userId, pixels);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };

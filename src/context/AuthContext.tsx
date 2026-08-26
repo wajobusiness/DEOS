@@ -392,6 +392,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMember(null);
       localStorage.removeItem(LOCAL_STORAGE_MEMBER_KEY);
       localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+      localStorage.removeItem('eviona_active_member_profile');
+      sessionStorage.removeItem('eviona_active_ref');
+      sessionStorage.removeItem('eviona_active_leg');
     } catch (err) {
       console.error('SignOut error:', err);
     } finally {

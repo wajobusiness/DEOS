@@ -1,9 +1,9 @@
 import { EventItem, EventTicket, EventSpeaker, EventAgendaItem, Lead } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { crmEngine } from './crmEngine';
 
 const STORAGE_EVENTS_KEY = 'eviona_events_master_v4';
 const STORAGE_TICKETS_KEY = 'eviona_event_tickets_v4';
-const STORAGE_CRM_LEADS_KEY = 'eviona_crm_leads_v2';
 
 export const INITIAL_PLATFORM_EVENTS: EventItem[] = [
   {
@@ -299,29 +299,20 @@ export const eventsEngine = {
     });
     localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(updatedEvents));
 
-    // 3. Ingest Lead into Organizer CRM
+    // 3. Ingest Lead into Organizer CRM (Tenant Scoped)
     try {
-      const savedLeads = localStorage.getItem(STORAGE_CRM_LEADS_KEY);
-      const leads: Lead[] = savedLeads ? JSON.parse(savedLeads) : [];
-      const newLead: Lead = {
-        id: `LED-${Date.now().toString().slice(-4)}`,
+      crmEngine.addLead({
+        ownerId: event.organizerId || 'EVO-ID-100245',
+        ownerName: event.organizerName || 'Organizer',
         name: attendeeName.trim(),
         email: attendeeEmail.trim().toLowerCase(),
         phone: attendeePhone?.trim() || '',
         company: 'Event Attendee',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-        leadSource: 'member_landing_page',
-        ownerType: 'member',
-        ownerId: event.organizerId || 'EVO-ID-100245',
-        ownerName: event.organizerName || 'Organizer',
         source: `Registered for Event: ${event.title}`,
         status: 'New',
         stage: 'Qualified',
-        dealValue: price > 0 ? price : 500,
-        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      };
-      leads.unshift(newLead);
-      localStorage.setItem(STORAGE_CRM_LEADS_KEY, JSON.stringify(leads));
+        dealValue: price > 0 ? price : 50,
+      });
     } catch {}
 
     return { ticket: newTicket, event: { ...event, registered: event.registered + 1 } };

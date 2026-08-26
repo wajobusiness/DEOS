@@ -1,5 +1,6 @@
 import { Lead } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { crmEngine } from './crmEngine';
 
 export interface WebsiteConfig {
   userId: string;
@@ -189,54 +190,18 @@ export const websiteBuilderEngine = {
       throw new Error('Name and email are required to claim this blueprint.');
     }
 
-    const newLead: Lead = {
-      id: `LED-${Date.now().toString().slice(-5)}`,
+    const newLead = crmEngine.addLead({
+      ownerId: websiteOwnerId,
+      ownerName: websiteOwnerName || 'Member',
       name: name.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
-      company: 'Website Lead',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      leadSource: 'member_landing_page',
-      ownerType: 'member',
-      ownerId: websiteOwnerId,
-      ownerName: websiteOwnerName || 'You',
+      company: 'Landing Page Lead',
       source: campaignSource ? `Landing Page Form (${campaignSource})` : 'Personal Landing Page Lead Form',
       status: 'New',
       stage: 'New',
       dealValue: 2500,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    };
-
-    // Save to CRM Leads store
-    try {
-      const saved = localStorage.getItem(STORAGE_CRM_LEADS_KEY);
-      const leads: Lead[] = saved ? JSON.parse(saved) : [];
-      // Prepend lead
-      const updated = [newLead, ...leads];
-      localStorage.setItem(STORAGE_CRM_LEADS_KEY, JSON.stringify(updated));
-
-      // Also save to per-site leads log
-      const siteKey = `eviona_site_leads_${websiteOwnerId}`;
-      const siteRaw = localStorage.getItem(siteKey);
-      const siteLeads: Lead[] = siteRaw ? JSON.parse(siteRaw) : [];
-      localStorage.setItem(siteKey, JSON.stringify([newLead, ...siteLeads]));
-
-      // Background sync to Supabase
-      try {
-        await supabase.from('Lead').insert({
-          id: newLead.id,
-          name: newLead.name,
-          email: newLead.email,
-          phone: newLead.phone,
-          ownerId: newLead.ownerId,
-          source: newLead.source,
-          status: newLead.status,
-          createdAt: new Date().toISOString(),
-        });
-      } catch {}
-    } catch (e) {
-      console.warn('[WebsiteBuilderEngine] Error saving lead to CRM:', e);
-    }
+    });
 
     return {
       success: true,
@@ -247,14 +212,7 @@ export const websiteBuilderEngine = {
 
   // 4. Get Captured Leads for a specific website owner
   getWebsiteLeads(websiteOwnerId: string): Lead[] {
-    try {
-      const saved = localStorage.getItem(STORAGE_CRM_LEADS_KEY);
-      if (saved) {
-        const leads: Lead[] = JSON.parse(saved);
-        return leads.filter(l => l.ownerId === websiteOwnerId);
-      }
-    } catch {}
-    return [];
+    return crmEngine.getMemberLeads(websiteOwnerId);
   },
 
   // 5. Custom Domain Verification Simulator
