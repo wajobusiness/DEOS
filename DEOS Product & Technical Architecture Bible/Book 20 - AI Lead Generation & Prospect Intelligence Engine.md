@@ -2,9 +2,10 @@
 ## Book 20: AI Lead Generation & Prospect Intelligence Engine
 ### High-Performance Business Discovery, B2B Prospecting & CRM Integration Layer
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Approved & Formally Integrated into Core Architecture  
 **Author / Architect:** Lead Laravel Architect & Lead Product Engineer  
+**Source Baseline:** `Mahanaicoach/google-maps-scraper-kit` (Go-Engine Wrapper by Georgios Komninos `gosom/google-maps-scraper`)  
 **Governed by:** Book 0 (Constitution), Book 1 (Business Blueprint), Book 7 (CRM Platform), Book 9 (AI Business Center), Book 11 (API Architecture), Book 12 (Database Architecture), Book 13 (Security & Compliance), Book 18 (Marketing Intelligence)
 
 ---
@@ -13,7 +14,7 @@
 
 The **AI Lead Generation & Prospect Intelligence Engine** is an enterprise-grade B2B lead harvesting, data enrichment, and prospecting automation system natively embedded inside the **DEOS AI Business Center** (Book 9).
 
-Rather than exposing a raw, unmonitored scraping tool to end-users (which introduces significant IP rate-limiting, infrastructure bans, and legal exposure), DEOS encapsulates the underlying high-performance scraper kit (built upon Dockerized Go-based distributed workers via `gosom/google-maps-scraper`) into an **orchestrated, intelligent business acquisition pipeline**.
+Rather than exposing a raw, unmonitored scraping tool to end-users (which introduces significant IP rate-limiting, infrastructure bans, and legal exposure), DEOS encapsulates the underlying high-performance scraper kit into an **orchestrated, intelligent business acquisition pipeline**.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
@@ -36,13 +37,14 @@ Rather than exposing a raw, unmonitored scraping tool to end-users (which introd
                   ┌───────────────────────────────────────────┐
                   │ 3. Go Scraper Daemon (Docker Sidecar)     │
                   │    - Headless concurrency, Deep parsing   │
+                  │    - Port 8080 internal microservice      │
                   └───────────────────────────────────────────┘
                                         │
                                         ▼
                   ┌───────────────────────────────────────────┐
-                  │ 4. Data Normalization & AI Enrichment     │
-                  │    - Website deep scan for emails/phones  │
-                  │    - AI business sentiment & categorization│
+                  │ 4. 0-Token Socials & AI Data Enrichment   │
+                  │    - Website deep scan for emails/socials │
+                  │    - Zero-token regex parsing + AI intros │
                   └───────────────────────────────────────────┘
                                         │
                                         ▼
@@ -68,9 +70,9 @@ Members access the Lead Generation Center directly within the AI Business Center
    - Progress bar tracking verified business profiles collected.
    - Live grid preview displaying Business Name, Verified Phone, Direct Website, Physical Address, Review Score, Total Reviews, and Social/Email presence.
 3. **Action Triggers:**
-   - `[⚡ Import All to CRM Leads]` (Automatic deduplication and contact creation).
-   - `[✉️ Generate AI Outreach Campaign]` (Dispatches leads to AI Email Writer with personalized intros).
-   - `[📥 Export Clean CSV / Excel]` (Includes all enriched metadata).
+   - `[⚡ Import All to CRM Leads]` (Automatic deduplication and contact creation in Book 7).
+   - `[✉️ Generate AI Outreach Campaign]` (Dispatches leads to AI Email Writer with personalized, location-aware intros).
+   - `[📥 Export Clean CSV / Excel]` (Includes all enriched metadata with raw 34-field noise stripped).
 
 ---
 
@@ -92,12 +94,21 @@ In strict accordance with Book 1 (§6 Membership Model) and Book 0 (§6 Plan Gat
 ## 3. Deep Technical & Laravel Backend Architecture
 
 ### 3.1 Dockerized Go-Worker Sidecar Infrastructure
-The scraping daemon is deployed as an internal, non-public Docker service running on the private infrastructure network:
-- **Base Engine:** Custom hardened build of `gosom/google-maps-scraper`.
-- **Communication Protocol:** Internal gRPC or authenticated HTTP microservice bridge (`http://deos-lead-daemon:8080/v1/extract`).
+The scraping daemon is deployed as an internal, non-public Docker service running on the private infrastructure network (`http://deos-lead-daemon:8080`):
+- **Base Engine:** Hardened Dockerized build of `gosom/google-maps-scraper`.
+- **Daemon Endpoints:**
+  - `POST /api/v1/jobs` (Dispatches headless extraction job with `depth`, `fast_mode`, and proxy configuration).
+  - `GET /api/v1/jobs/{id}` (Polls execution progress and status).
+  - `GET /api/v1/jobs/{id}/results` (Retrieves structured JSON payload).
+  - `DELETE /api/v1/jobs/{id}` (Cleans temporary job cache).
 - **Proxy Management:** Integrated residential proxy pool mesh (e.g., BrightData / Oxylabs / Smartproxy) with dynamic IP rotation per session to guarantee zero IP throttling and bypass bot challenges.
 
-### 3.2 Laravel Job & Queue Pipeline (Horizon Architecture)
+### 3.2 0-Token Socials Extraction & Field Normalization
+- **Raw Field Stripping:** The raw scraper returns ~34 fields (including raw pixel bounding boxes, photo hashes, internal map IDs, and unstructured review blobs). The DEOS pipeline filters out this noise to extract only clean, actionable B2B attributes:
+  `name, phone, email, website, category, address, rating, review_count, instagram, facebook, linkedin, lat, lon, place_id`.
+- **0-Token Socials Crawler:** Rather than consuming expensive AI tokens to identify social accounts, DEOS executes an asynchronous HTTP + Regex scraper across the target business website to capture verified Instagram, Facebook, and LinkedIn links at **zero AI token cost**.
+
+### 3.3 Laravel Job & Queue Pipeline (Horizon Architecture)
 
 ```php
 namespace App\Jobs\LeadGeneration;
@@ -110,52 +121,72 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Http;
 
 class ExecuteLeadExtractionJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 300;
+    public $timeout = 600;
     public $tries = 3;
 
     public function __construct(
         protected LeadSearch $search
     ) {}
 
-    public function handle(ProxyMeshService $proxyMesh, AiEnrichmentService $aiEnricher): void
+    public function handle(ProxyMeshService $proxyMesh): void
     {
         $this->search->update(['status' => 'processing']);
 
-        // 1. Dispatch query to internal Scraper Daemon with residential proxy
-        $results = $proxyMesh->dispatchSearch([
-            'query'    => "{$this->search->category} in {$this->search->city}, {$this->search->state}, {$this->search->country}",
-            'limit'    => $this->search->target_limit,
-            'language' => 'en',
+        // 1. Create extraction job in internal Go-Daemon with residential proxy
+        $response = Http::post('http://deos-lead-daemon:8080/api/v1/jobs', [
+            'name'      => "search_{$this->search->id}",
+            'query'     => ["{$this->search->category} in {$this->search->city}, {$this->search->state}, {$this->search->country}"],
+            'depth'     => $this->search->depth ?? 5,
+            'fast_mode' => true,
+            'email'     => in_array($this->search->member->plan, ['growth', 'legacy']),
+            'socials'   => in_array($this->search->member->plan, ['growth', 'legacy']),
+            'proxies'   => $proxyMesh->getRotatingResidentialProxyList(),
         ]);
 
-        // 2. Normalize and enrich extracted leads
-        foreach ($results as $rawBusiness) {
-            $lead = $this->search->leads()->create([
+        $jobId = $response->json('id');
+
+        // 2. Poll until completed
+        $completed = false;
+        while (!$completed) {
+            sleep(5);
+            $statusCheck = Http::get("http://deos-lead-daemon:8080/api/v1/jobs/{$jobId}");
+            if ($statusCheck->json('status') === 'completed') {
+                $completed = true;
+            } elseif ($statusCheck->json('status') === 'failed') {
+                throw new \Exception("Lead extraction daemon failed for search {$this->search->id}");
+            }
+        }
+
+        // 3. Fetch results and persist normalized leads
+        $results = Http::get("http://deos-lead-daemon:8080/api/v1/jobs/{$jobId}/results")->json();
+
+        foreach ($results as $raw) {
+            $this->search->leads()->create([
                 'member_id'     => $this->search->member_id,
-                'business_name' => $rawBusiness['name'],
-                'category'      => $rawBusiness['category'] ?? $this->search->category,
-                'address'       => $rawBusiness['address'] ?? '',
+                'business_name' => $raw['title'] ?? $raw['name'],
+                'category'      => $raw['category'] ?? $this->search->category,
+                'address'       => $raw['address'] ?? '',
                 'city'          => $this->search->city,
                 'state'         => $this->search->state,
                 'country'       => $this->search->country,
-                'phone'         => $rawBusiness['phone'] ?? null,
-                'website'       => $rawBusiness['website'] ?? null,
-                'rating'        => $rawBusiness['rating'] ?? null,
-                'review_count'  => $rawBusiness['review_count'] ?? 0,
-                'latitude'      => $rawBusiness['latitude'] ?? null,
-                'longitude'     => $rawBusiness['longitude'] ?? null,
-                'place_id'      => $rawBusiness['place_id'] ?? null,
+                'phone'         => $raw['phone'] ?? null,
+                'email'         => $raw['email'] ?? null,
+                'website'       => $raw['website'] ?? null,
+                'rating'        => $raw['rating'] ?? null,
+                'review_count'  => $raw['review_count'] ?? 0,
+                'instagram'     => $raw['instagram'] ?? null,
+                'facebook'      => $raw['facebook'] ?? null,
+                'linkedin'      => $raw['linkedin'] ?? null,
+                'latitude'      => $raw['latitude'] ?? null,
+                'longitude'     => $raw['longitude'] ?? null,
+                'place_id'      => $raw['place_id'] ?? null,
             ]);
-
-            // 3. Growth & Legacy Tier: Deep Crawl website for direct email addresses
-            if (in_array($this->search->member->plan, ['growth', 'legacy']) && $lead->website) {
-                dispatch(new DeepCrawlContactJob($lead));
-            }
         }
 
         $this->search->update([
@@ -179,6 +210,7 @@ CREATE TABLE lead_searches (
     country VARCHAR(64) NOT NULL,
     state VARCHAR(64) NULL,
     city VARCHAR(128) NOT NULL,
+    depth INT UNSIGNED DEFAULT 5,
     target_limit INT UNSIGNED DEFAULT 100,
     total_found INT UNSIGNED DEFAULT 0,
     status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
@@ -206,6 +238,9 @@ CREATE TABLE prospect_leads (
     website VARCHAR(255) NULL,
     rating DECIMAL(3,2) NULL,
     review_count INT UNSIGNED DEFAULT 0,
+    instagram VARCHAR(255) NULL,
+    facebook VARCHAR(255) NULL,
+    linkedin VARCHAR(255) NULL,
     place_id VARCHAR(191) NULL,
     latitude DECIMAL(10,8) NULL,
     longitude DECIMAL(11,8) NULL,
@@ -236,9 +271,9 @@ CREATE TABLE lead_search_quotas (
 
 1. **Direct Ingestion into CRM (Book 7):**
    - Clicking `Import to CRM` transforms `prospect_leads` records directly into `crm_leads` with status `New Prospect` and tag `Source: AI Lead Finder`.
-   - Populates business phone numbers, physical locations, and decision-maker contact details.
+   - Populates business phone numbers, physical locations, social profiles, and decision-maker contact details.
 2. **AI Email Writer & Cold Outreach (Book 9 & Book 18):**
-   - Integrates with the **AI Email Writer** to generate custom cold pitch emails tailored to the specific business category and local city (e.g. *"We noticed your dental clinic in Dallas has 4.2 stars on Google — here is how we can automate your patient booking"*).
+   - Integrates with the **AI Email Writer** to generate custom cold pitch emails tailored to the specific business category, city, and star rating (e.g. *"We noticed your dental clinic in Dallas has 4.2 stars on Google — here is how we can automate your patient booking"*).
 3. **Affiliate & Local Business Marketing Campaigns (Book 2 Chapter 15):**
    - Allows entrepreneurs running local agency businesses to generate tailored audit reports and sell digital marketing packages directly to extracted prospects.
 
@@ -258,7 +293,8 @@ CREATE TABLE lead_search_quotas (
 ## 7. Acceptance Criteria
 
 - [x] **Architecture Verified:** Fully integrated as an internal intelligence engine inside the AI Business Center rather than a raw scraping utility.
+- [x] **API & Daemon Endpoints Documented:** `/api/v1/jobs` pipeline with `depth`, `fast_mode`, `email`, `socials`, and proxy mesh parameters.
 - [x] **Plan Quota Gating Enforced:** Strict monthly limits enforced ($100 Plan: 100/mo, $300 Plan: 1,000/mo, $500 Plan: 10,000/mo).
 - [x] **CRM Compatibility:** 1-Click seamless import into DEOS CRM pipeline.
-- [x] **AI Enrichment Pipeline:** Automated website crawling for business emails and AI cold outreach generation.
+- [x] **0-Token Socials Crawler:** Integrated sub-page social regex parser at zero LLM token overhead.
 - [x] **Multi-Tenant Privacy:** Strict database partitioning ensuring complete tenant isolation.
