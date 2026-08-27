@@ -39,11 +39,13 @@ interface WalletContextType {
   availableBalance: number;
   transactions: WalletTransaction[];
   addDeposit: (amount: number, rail: string, reference?: string, description?: string) => Promise<WalletTransaction>;
+  recordPendingDeposit: (amount: number, rail: string, reference?: string, description?: string) => Promise<WalletTransaction>;
   processWithdrawal: (amount: number, method: string, destination?: any) => Promise<{ success: boolean; transaction: WalletTransaction; message: string }>;
   processPurchase: (amount: number, description: string, reference?: string) => { success: boolean; transaction?: WalletTransaction; error?: string };
   processP2PTransfer: (amount: number, recipientInput: string) => Promise<P2PTransferResult>;
   creditCommission: (amount: number, type: LedgerEventType, description: string, reference?: string) => WalletTransaction;
   lookupRecipient: (query: string) => Promise<RecipientProfile | null>;
+  refreshWalletState: () => void;
   resetLedger: () => void;
 }
 
@@ -142,6 +144,31 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [transactions, activeUser.email, activeUser.id]);
 
+  // Sync/Refresh Wallet State from storage (e.g. after Admin approval)
+  const refreshWalletState = useCallback(() => {
+    try {
+      const userKey = getUserStorageKey(activeUser.email, 'balance');
+      const savedUser = localStorage.getItem(userKey);
+      if (savedUser) {
+        setWalletBalance(parseFloat(savedUser));
+      } else {
+        const savedIdKey = getUserStorageKey(activeUser.id, 'balance');
+        const savedId = localStorage.getItem(savedIdKey);
+        if (savedId) setWalletBalance(parseFloat(savedId));
+      }
+
+      const emailLedgerKey = getUserStorageKey(activeUser.email, 'ledger');
+      const savedLedger = localStorage.getItem(emailLedgerKey);
+      if (savedLedger) {
+        setTransactions(JSON.parse(savedLedger));
+      } else {
+        const idLedgerKey = getUserStorageKey(activeUser.id, 'ledger');
+        const savedIdLedger = localStorage.getItem(idLedgerKey);
+        if (savedIdLedger) setTransactions(JSON.parse(savedIdLedger));
+      }
+    } catch {}
+  }, [activeUser.email, activeUser.id]);
+
   // Synchronize incoming P2P transfers claimed by this member
   const syncIncomingTransfers = useCallback(() => {
     try {
@@ -205,11 +232,20 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (e.key === LOCAL_STORAGE_P2P_REGISTRY_KEY || e.key === LOCAL_STORAGE_ACTIVE_MEMBER_KEY) {
         syncIncomingTransfers();
       }
+      refreshWalletState();
+    };
+
+    const handleWalletUpdated = () => {
+      refreshWalletState();
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [syncIncomingTransfers]);
+    window.addEventListener('eviona_wallet_updated', handleWalletUpdated);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('eviona_wallet_updated', handleWalletUpdated);
+    };
+  }, [syncIncomingTransfers, refreshWalletState]);
 
   // Dynamic Recipient Lookup helper querying real master registry + Supabase
   const lookupRecipient = async (query: string): Promise<RecipientProfile | null> => {
@@ -270,7 +306,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return null;
   };
 
-  // 1. Add Deposit
+  // 1. Add Instant Verified Deposit (e.g. Card Success via Online Webhook/Popup)
   const addDeposit = async (amount: number, rail: string, reference?: string, description?: string): Promise<WalletTransaction> => {
     const ref = reference || `DEP-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     const newTx: WalletTransaction = {
@@ -285,6 +321,25 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setWalletBalance(prev => prev + amount);
+    setTransactions(prev => [newTx, ...prev]);
+    return newTx;
+  };
+
+  // 1b. Record Pending Deposit (Manual Wire / Crypto / Virtual Account awaiting Admin Review)
+  const recordPendingDeposit = async (amount: number, rail: string, reference?: string, description?: string): Promise<WalletTransaction> => {
+    const ref = reference || `DEP-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const newTx: WalletTransaction = {
+      id: ref,
+      type: 'coin_deposit',
+      description: description || `Deposit via ${rail.toUpperCase()} (Pending Admin Approval)`,
+      amount: amount,
+      currency: 'EVO',
+      status: 'Pending',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    // NOTE: Does NOT increment walletBalance. Balance is only unlocked upon Super Admin verification.
     setTransactions(prev => [newTx, ...prev]);
     return newTx;
   };
@@ -536,11 +591,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         availableBalance: walletBalance,
         transactions,
         addDeposit,
+        recordPendingDeposit,
         processWithdrawal,
         processPurchase,
         processP2PTransfer,
         creditCommission,
         lookupRecipient,
+        refreshWalletState,
         resetLedger,
       }}
     >

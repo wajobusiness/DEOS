@@ -120,12 +120,28 @@ export const adminApprovalEngine = {
     localStorage.setItem(STORAGE_DEPOSITS_KEY, JSON.stringify(list));
 
     // 1. Credit the user's storage balance directly
+    const cleanId = (req.userId || '').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    const cleanEmail = (req.userEmail || '').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+
     const userBalanceKey = `eviona_user_${req.userId}_balance`;
     const userEmailBalanceKey = `eviona_user_${req.userEmail.toLowerCase()}_balance`;
-    const currentBal = parseFloat(localStorage.getItem(userBalanceKey) || localStorage.getItem(userEmailBalanceKey) || '0.00');
+    const walletBalIdKey = `eviona_wallet_balance_${cleanId}`;
+    const walletBalEmailKey = `eviona_wallet_balance_${cleanEmail}`;
+
+    const currentBal = parseFloat(
+      localStorage.getItem(walletBalEmailKey) ||
+      localStorage.getItem(walletBalIdKey) ||
+      localStorage.getItem(userBalanceKey) ||
+      localStorage.getItem(userEmailBalanceKey) ||
+      '0.00'
+    );
     const newBal = currentBal + req.amount;
-    localStorage.setItem(userBalanceKey, newBal.toFixed(2));
-    localStorage.setItem(userEmailBalanceKey, newBal.toFixed(2));
+    const formattedBal = newBal.toFixed(2);
+
+    localStorage.setItem(userBalanceKey, formattedBal);
+    localStorage.setItem(userEmailBalanceKey, formattedBal);
+    if (cleanId) localStorage.setItem(walletBalIdKey, formattedBal);
+    if (cleanEmail) localStorage.setItem(walletBalEmailKey, formattedBal);
 
     // Update user registry master record
     userRegistryEngine.updateUser(req.userId, {
@@ -133,27 +149,41 @@ export const adminApprovalEngine = {
       tokenBalance: newBal,
     });
 
-    // 2. Append/Update transaction in user's ledger
+    // 2. Append/Update transaction in user's ledger across all keys
     const userLedgerKey = `eviona_user_${req.userId}_ledger`;
+    const ledgerKeys = [
+      userLedgerKey,
+      cleanId ? `eviona_wallet_ledger_${cleanId}` : null,
+      cleanEmail ? `eviona_wallet_ledger_${cleanEmail}` : null,
+    ].filter(Boolean) as string[];
+
+    ledgerKeys.forEach(key => {
+      try {
+        const existingLedger: WalletTransaction[] = JSON.parse(localStorage.getItem(key) || '[]');
+        const matchTx = existingLedger.find(t => t.id === req.reference);
+        if (matchTx) {
+          matchTx.status = 'Completed';
+          matchTx.description = `Deposit via ${req.rail.toUpperCase()} (Approved by Super Admin)`;
+        } else {
+          existingLedger.unshift({
+            id: req.reference,
+            type: 'coin_deposit',
+            description: `Deposit via ${req.rail.toUpperCase()} (Approved by Super Admin)`,
+            amount: req.amount,
+            currency: 'EVO',
+            status: 'Completed',
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          });
+        }
+        localStorage.setItem(key, JSON.stringify(existingLedger));
+      } catch {}
+    });
+
+    // Dispatch update notification so active UI reactive components sync immediately
     try {
-      const existingLedger: WalletTransaction[] = JSON.parse(localStorage.getItem(userLedgerKey) || '[]');
-      const matchTx = existingLedger.find(t => t.id === req.reference);
-      if (matchTx) {
-        matchTx.status = 'Completed';
-        matchTx.description = `Deposit via ${req.rail.toUpperCase()} (Approved by Super Admin)`;
-      } else {
-        existingLedger.unshift({
-          id: req.reference,
-          type: 'coin_deposit',
-          description: `Deposit via ${req.rail.toUpperCase()} (Approved by Super Admin)`,
-          amount: req.amount,
-          currency: 'EVO',
-          status: 'Completed',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        });
-      }
-      localStorage.setItem(userLedgerKey, JSON.stringify(existingLedger));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('eviona_wallet_updated', { detail: { userId: req.userId, newBalance: newBal } }));
     } catch {}
 
     // 3. Optional Supabase Sync
