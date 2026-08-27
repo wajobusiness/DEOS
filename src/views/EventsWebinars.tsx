@@ -42,9 +42,29 @@ import {
   CameraOff,
   Monitor,
   Trash2,
-  Settings
+  Settings,
+  BarChart2,
+  TrendingUp,
+  ThumbsUp,
+  HelpCircle,
+  Heart,
+  Flame,
+  Rocket,
+  Lightbulb,
+  ShoppingBag
 } from 'lucide-react';
-import { EventItem, EventTicket, EventSpeaker, EventAgendaItem, Member } from '../types';
+import {
+  EventItem,
+  EventTicket,
+  EventSpeaker,
+  EventAgendaItem,
+  WebinarType,
+  DynamicCTA,
+  WebinarChatMessage,
+  WebinarPoll,
+  WebinarQuestion,
+  Member
+} from '../types';
 import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 import { eventsEngine } from '../engine/eventsEngine';
@@ -60,7 +80,6 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
   const { member } = useAuth();
   const { walletBalance, processPurchase } = useWallet();
   const { gateways } = usePlatformSettings();
-  const [eventPaymentMethod, setEventPaymentMethod] = useState<'wallet' | 'card' | 'usdt'>('wallet');
 
   const activeUser = currentUser || member || {
     id: '',
@@ -70,25 +89,16 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
   };
 
   const [events, setEvents] = useState<EventItem[]>(() => eventsEngine.getEvents('All'));
-  const [activeTab, setActiveTab] = useState<'feed' | 'calendar' | 'evergreen' | 'my_tickets'>('feed');
-  const [filterScope, setFilterScope] = useState<'all' | 'my_hosted' | 'live' | 'upcoming'>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('All');
+  const [activeTab, setActiveTab] = useState<'explore' | 'live_room' | 'ai_creator' | 'affiliate_funnels' | 'analytics' | 'my_tickets'>('explore');
+  const [filterType, setFilterType] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Modals
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // Modals & Selected States
   const [selectedEventForRegister, setSelectedEventForRegister] = useState<EventItem | null>(null);
-  const [selectedEventForWatch, setSelectedEventForWatch] = useState<EventItem | null>(null);
-  const [selectedEventForHostStudio, setSelectedEventForHostStudio] = useState<EventItem | null>(null);
+  const [activeRoomEvent, setActiveRoomEvent] = useState<EventItem | null>(() => events.find(e => e.status === 'Live') || events[0] || null);
   const [generatedTicket, setGeneratedTicket] = useState<EventTicket | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  // Host Studio Live Controls State
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isBroadcastActive, setIsBroadcastActive] = useState(true);
-  const [eventAttendeesList, setEventAttendeesList] = useState<EventTicket[]>([]);
+  const [eventPaymentMethod, setEventPaymentMethod] = useState<'wallet' | 'card' | 'usdt'>('wallet');
 
   // Registration Form State
   const [regName, setRegName] = useState(activeUser.name || '');
@@ -101,177 +111,135 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
     eventsEngine.getUserTickets(activeUser.email)
   );
 
-  // Create Event Form State
-  const [newTitle, setNewTitle] = useState('');
-  const [newSubtitle, setNewSubtitle] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newCategory, setNewCategory] = useState('Webinar');
-  const [newFormat, setNewFormat] = useState<'online_webinar' | 'zoom' | 'google_meet' | 'youtube_live' | 'physical' | 'prerecorded_evergreen'>('online_webinar');
-  const [newDate, setNewDate] = useState('Jun 25, 2025');
-  const [newTime, setNewTime] = useState('02:00 PM EST');
-  const [newMeetingLink, setNewMeetingLink] = useState('https://zoom.us/j/12345678');
-  const [newVenue, setNewVenue] = useState('');
-  const [newIsPaid, setNewIsPaid] = useState(false);
-  const [newPrice, setNewPrice] = useState('29.00');
-  const [newCapacity, setNewCapacity] = useState('500');
-  const [newSpeakerName, setNewSpeakerName] = useState(activeUser.name || 'Speaker');
-  const [newSpeakerTopic, setNewSpeakerTopic] = useState('Scaling Digital Business');
+  // Live Room State
+  const [chatMessages, setChatMessages] = useState<WebinarChatMessage[]>([]);
+  const [currentChatInput, setCurrentChatInput] = useState('');
+  const [polls, setPolls] = useState<WebinarPoll[]>([]);
+  const [questions, setQuestions] = useState<WebinarQuestion[]>([]);
+  const [newQuestionInput, setNewQuestionInput] = useState('');
+  const [activeCTA, setActiveCTA] = useState<DynamicCTA | null>(null);
+  const [roomViewMode, setRoomViewMode] = useState<'chat' | 'qa' | 'polls'>('chat');
+  const [emojiReactions, setEmojiReactions] = useState<Array<{ id: number; emoji: string; left: number }>>([]);
+  const [isHostControlActive, setIsHostControlActive] = useState(false);
 
-  // AI Assistant State
-  const [aiTopic, setAiTopic] = useState('');
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  // AI Funnel Creator Form State
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+  const [creatorTopic, setCreatorTopic] = useState('AI Client Acquisition & Lead Funnels');
+  const [creatorNiche, setCreatorNiche] = useState('Digital Agency & SaaS');
+  const [creatorType, setCreatorType] = useState<WebinarType>('masterclass');
+  const [creatorPrice, setCreatorPrice] = useState('0');
+  const [creatorDate, setCreatorDate] = useState('2025-07-15');
+  const [creatorTime, setCreatorTime] = useState('02:00 PM EST');
+  const [creatorVideoUrl, setCreatorVideoUrl] = useState('https://www.youtube.com/embed/dQw4w9WgXcQ');
+  const [isGeneratingSuite, setIsGeneratingSuite] = useState(false);
+  const [generatedSuite, setGeneratedSuite] = useState<any>(null);
+
+  // Affiliate Funnel Link State
+  const [selectedAffiliateProduct, setSelectedAffiliateProduct] = useState({
+    id: 'PRD-MKT-01',
+    name: 'AI Prompts Mastery Kit & SaaS Funnel Pack',
+    price: 49.00,
+    commissionRate: 50,
+  });
+  const [affiliateFunnelGenerated, setAffiliateFunnelGenerated] = useState(false);
 
   const refreshEvents = () => {
-    setEvents(eventsEngine.getEvents('All'));
+    const list = eventsEngine.getEvents('All');
+    setEvents(list);
     setUserTickets(eventsEngine.getUserTickets(activeUser.email));
+    if (!activeRoomEvent && list.length > 0) {
+      setActiveRoomEvent(list[0]);
+    }
   };
 
   useEffect(() => {
     refreshEvents();
   }, [activeUser.email, activeUser.id]);
 
-  const checkIsHost = (event: EventItem): boolean => {
-    const orgId = (event.organizerId || '').toUpperCase();
-    const myId = (activeUser.id || '').toUpperCase();
-    const orgEmail = (event.organizerEmail || '').toLowerCase();
-    const myEmail = (activeUser.email || '').toLowerCase();
-    const instructor = (event.instructor || '').toLowerCase();
-    const myName = (activeUser.name || '').toLowerCase();
-
-    return (
-      (orgId !== '' && orgId === myId) ||
-      (orgEmail !== '' && orgEmail === myEmail) ||
-      (instructor !== '' && instructor === myName)
-    );
-  };
-
-  const handleCopyLink = (eventId: string) => {
-    const url = `https://evionaecosystem.com/events/${eventId}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(eventId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleAIGenerateEvent = () => {
-    if (!aiTopic.trim()) {
-      alert('Please enter an event topic for AI generation.');
-      return;
-    }
-    setIsGeneratingAI(true);
-    setTimeout(() => {
-      const generated = eventsEngine.generateAIEventContent({
-        topic: aiTopic,
-        category: newCategory,
-        format: newFormat,
-      });
-      setNewTitle(generated.title);
-      setNewSubtitle(generated.subtitle);
-      setNewDescription(generated.description);
-      if (generated.suggestedPrice > 0) {
-        setNewIsPaid(true);
-        setNewPrice(generated.suggestedPrice.toString());
+  // Load Live Room Data when Active Room Event Changes
+  useEffect(() => {
+    if (activeRoomEvent) {
+      setChatMessages(eventsEngine.getWebinarChat(activeRoomEvent.id));
+      setPolls(eventsEngine.getWebinarPolls(activeRoomEvent.id));
+      setQuestions(eventsEngine.getWebinarQA(activeRoomEvent.id));
+      if (activeRoomEvent.dynamicCTAs && activeRoomEvent.dynamicCTAs.length > 0) {
+        setActiveCTA(activeRoomEvent.dynamicCTAs[0]);
       } else {
-        setNewIsPaid(false);
+        setActiveCTA(null);
       }
-      setIsGeneratingAI(false);
-    }, 600);
-  };
+      eventsEngine.recordInteraction(activeRoomEvent.id, 'view');
+    }
+  }, [activeRoomEvent]);
 
-  const handleCreateEventSubmit = (e: React.FormEvent) => {
+  // Send Chat Message
+  const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    eventsEngine.createEvent({
-      title: newTitle,
-      subtitle: newSubtitle,
-      description: newDescription,
-      category: newCategory,
-      format: newFormat,
-      date: newDate,
-      time: newTime,
-      meetingLink: newMeetingLink,
-      venue: newVenue || (newFormat === 'physical' ? 'Grand Hyatt Convention Center' : 'Eviona Virtual Studio'),
-      meetingPlatform: newFormat.toUpperCase().replace('_', ' '),
-      organizerId: activeUser.id || activeUser.memberCode || '',
-      organizerName: activeUser.name || 'Member',
-      organizerEmail: activeUser.email || '',
-      instructor: newSpeakerName || activeUser.name,
-      instructorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      capacity: parseInt(newCapacity) || 500,
-      isPaid: newIsPaid,
-      ticketPrice: newIsPaid ? parseFloat(newPrice) || 0 : 0,
-      speakers: [
-        {
-          id: `spk-${Date.now()}`,
-          name: newSpeakerName || activeUser.name,
-          role: 'Featured Keynote Host',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-          topic: newSpeakerTopic,
-        }
-      ],
-      agenda: [
-        { id: 'a1', time: '02:00 PM', title: 'Opening & Keynote Session', speakerName: newSpeakerName || activeUser.name },
-        { id: 'a2', time: '03:00 PM', title: 'Interactive Workshop & Strategy Q&A', speakerName: newSpeakerName || activeUser.name }
-      ],
-      faqs: [
-        { question: 'Will this session be recorded?', answer: 'Yes, all registered attendees receive replay access automatically.' }
-      ],
-      status: 'Upcoming',
-      visibility: 'public',
-    });
-
-    refreshEvents();
-    setShowCreateModal(false);
-    // Reset Form
-    setNewTitle('');
-    setNewSubtitle('');
-    setNewDescription('');
-    setAiTopic('');
-    alert('Event created successfully! You are the verified Host.');
+    if (!currentChatInput.trim() || !activeRoomEvent) return;
+    const updated = eventsEngine.sendChatMessage(
+      activeRoomEvent.id,
+      activeUser.name || 'Member',
+      currentChatInput,
+      'attendee'
+    );
+    setChatMessages(updated);
+    setCurrentChatInput('');
   };
 
-  const completeTicketRegistration = async (paidMethod: 'wallet' | 'card' | 'free') => {
-    if (!selectedEventForRegister) return;
-    const res = await eventsEngine.registerAttendee({
-      eventId: selectedEventForRegister.id,
-      attendeeName: regName,
-      attendeeEmail: regEmail,
-      attendeePhone: regPhone,
-      paymentMethod: paidMethod,
-    });
-
-    setGeneratedTicket(res.ticket);
-    setSelectedEventForRegister(null);
-    setIsRegistering(false);
-    refreshEvents();
+  // Submit Poll Vote
+  const handleVotePoll = (pollId: string, optionId: string) => {
+    if (!activeRoomEvent) return;
+    const updated = eventsEngine.votePoll(activeRoomEvent.id, pollId, optionId);
+    setPolls(updated);
   };
 
-  const handleRegisterForEvent = async (e: React.FormEvent) => {
+  // Ask Question
+  const handleAskQuestion = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newQuestionInput.trim() || !activeRoomEvent) return;
+    const updated = eventsEngine.askQuestion(activeRoomEvent.id, activeUser.name || 'Member', newQuestionInput);
+    setQuestions(updated);
+    setNewQuestionInput('');
+  };
+
+  // Upvote Question
+  const handleUpvoteQuestion = (qId: string) => {
+    if (!activeRoomEvent) return;
+    const updated = eventsEngine.upvoteQuestion(activeRoomEvent.id, qId);
+    setQuestions(updated);
+  };
+
+  // Trigger Emoji Reaction
+  const handleTriggerReaction = (emoji: string) => {
+    const newReaction = {
+      id: Date.now() + Math.random(),
+      emoji,
+      left: 10 + Math.random() * 80,
+    };
+    setEmojiReactions(prev => [...prev, newReaction]);
+    setTimeout(() => {
+      setEmojiReactions(prev => prev.filter(r => r.id !== newReaction.id));
+    }, 2500);
+  };
+
+  // 1-Click Registration / Ticket Purchase Execution
+  const handleCompleteRegistration = async (paymentMethod: 'wallet' | 'card' | 'usdt' | 'free') => {
     if (!selectedEventForRegister || !regName || !regEmail) return;
-
     setIsRegistering(true);
+
     try {
       const isPaid = Boolean(selectedEventForRegister.isPaid && (selectedEventForRegister.ticketPrice || 0) > 0);
       const cost = selectedEventForRegister.ticketPrice || 0;
 
-      if (!isPaid) {
-        await completeTicketRegistration('free');
-        return;
-      }
-
-      if (eventPaymentMethod === 'wallet') {
-        const res = processPurchase(cost, `Event Ticket: ${selectedEventForRegister.title}`);
+      if (isPaid && paymentMethod === 'wallet') {
+        const res = processPurchase(cost, `Ticket: ${selectedEventForRegister.title}`);
         if (!res.success) {
-          alert(res.error || 'Insufficient wallet balance. Please select card payment or deposit funds.');
+          alert(res.error || 'Insufficient wallet balance. Please select online card or deposit funds.');
           setIsRegistering(false);
           return;
         }
-        await completeTicketRegistration('wallet');
-        return;
       }
 
-      if (eventPaymentMethod === 'card') {
+      if (isPaid && paymentMethod === 'card') {
         const tktRef = `TKT-PSTK-${Date.now().toString().slice(-6)}`;
         const launched = await launchPaystackPopup({
           publicKey: gateways.paystack?.publicKey,
@@ -281,171 +249,179 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
           customerName: regName || 'Attendee',
           reference: tktRef,
           metadata: {
-            custom_fields: [
-              { display_name: 'Event Title', variable_name: 'event_title', value: selectedEventForRegister.title },
-            ],
+            eventId: selectedEventForRegister.id,
+            eventTitle: selectedEventForRegister.title,
+            type: 'webinar_ticket_pass',
           },
           onSuccess: async () => {
-            await completeTicketRegistration('card');
+            const regResult = await eventsEngine.registerAttendee({
+              eventId: selectedEventForRegister.id,
+              attendeeName: regName,
+              attendeeEmail: regEmail,
+              attendeePhone: regPhone,
+              paymentMethod: 'card',
+            });
+            setGeneratedTicket(regResult.ticket);
+            refreshEvents();
+            alert(`🎉 Payment & Registration confirmed! Your ticket pass is ready.`);
+            setIsRegistering(false);
           },
           onClose: () => {
             setIsRegistering(false);
-          },
+          }
         });
 
-        if (!launched) {
-          // Instant card simulation fallback
-          await new Promise((r) => setTimeout(r, 1000));
-          await completeTicketRegistration('card');
-        }
-        return;
+        if (launched) return;
       }
 
-      if (eventPaymentMethod === 'usdt') {
-        await new Promise((r) => setTimeout(r, 1000));
-        await completeTicketRegistration('card');
-        return;
-      }
+      const regResult = await eventsEngine.registerAttendee({
+        eventId: selectedEventForRegister.id,
+        attendeeName: regName,
+        attendeeEmail: regEmail,
+        attendeePhone: regPhone,
+        paymentMethod: paymentMethod === 'usdt' ? 'card' : paymentMethod,
+      });
+
+      setGeneratedTicket(regResult.ticket);
+      refreshEvents();
+      alert(`🎉 Registration confirmed! Your ticket pass is ready.`);
     } catch (err: any) {
-      alert(err.message || 'Failed to register for event.');
+      alert(err.message || 'Registration failed.');
+    } finally {
       setIsRegistering(false);
     }
   };
 
-  const handleOpenHostStudio = (event: EventItem) => {
-    setSelectedEventForHostStudio(event);
-    setEventAttendeesList(eventsEngine.getEventAttendees(event.id));
+  // AI Suite Generator
+  const handleGenerateAISuite = () => {
+    setIsGeneratingSuite(true);
+    setTimeout(() => {
+      const suite = eventsEngine.generateAIWebinarSuite({
+        topic: creatorTopic,
+        category: 'Masterclass',
+        webinarType: creatorType,
+        niche: creatorNiche,
+        price: parseFloat(creatorPrice) || 0,
+      });
+      setGeneratedSuite(suite);
+      setIsGeneratingSuite(false);
+    }, 900);
   };
 
-  const handleDeleteHostedEvent = (eventId: string) => {
-    if (confirm('Are you sure you want to cancel and delete this event?')) {
-      eventsEngine.deleteEvent(eventId);
-      setSelectedEventForHostStudio(null);
-      refreshEvents();
-    }
+  // Create Webinar from AI Suite
+  const handlePublishWebinarFromSuite = () => {
+    if (!generatedSuite) return;
+
+    const newWebinar = eventsEngine.createEvent({
+      title: generatedSuite.title,
+      subtitle: generatedSuite.subtitle,
+      description: generatedSuite.description,
+      category: 'Masterclass & Workshop',
+      webinarType: creatorType,
+      format: creatorType.includes('evergreen') ? 'prerecorded_evergreen' : 'youtube_live',
+      date: creatorDate,
+      time: creatorTime,
+      videoSource: 'youtube',
+      videoEmbedUrl: creatorVideoUrl,
+      organizerId: activeUser.id || activeUser.memberCode || 'EVO-ID-000001',
+      organizerName: activeUser.name || 'Member',
+      organizerEmail: activeUser.email || '',
+      capacity: 1000,
+      isPaid: parseFloat(creatorPrice) > 0,
+      ticketPrice: parseFloat(creatorPrice) || 0,
+      isEvergreen: creatorType.includes('evergreen'),
+      speakers: [
+        {
+          id: `spk-${Date.now()}`,
+          name: activeUser.name || 'Featured Host',
+          role: 'Keynote Presenter',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+          topic: creatorTopic,
+        }
+      ],
+      agenda: generatedSuite.agenda,
+      aiAssistantConfig: generatedSuite.aiAssistant,
+      dynamicCTAs: [generatedSuite.dynamicCTA],
+      status: 'Upcoming',
+      visibility: 'public',
+    });
+
+    refreshEvents();
+    setActiveRoomEvent(newWebinar);
+    setActiveTab('live_room');
+    alert('🚀 AI Webinar Funnel Published & Live Room Initialized!');
   };
 
-  const handleCheckInAttendee = (ticketNumber: string) => {
-    const res = eventsEngine.checkInAttendee(ticketNumber);
-    if (res.success) {
-      if (selectedEventForHostStudio) {
-        setEventAttendeesList(eventsEngine.getEventAttendees(selectedEventForHostStudio.id));
-      }
-      refreshEvents();
-    }
-    alert(res.message);
-  };
-
+  // Filtered Events List
   const filteredEvents = events.filter(e => {
-    const isHost = checkIsHost(e);
-    const isLive = e.status === 'Live';
-
-    // Scope filter
-    if (filterScope === 'my_hosted' && !isHost) return false;
-    if (filterScope === 'live' && !isLive) return false;
-    if (filterScope === 'upcoming' && (isLive || e.status === 'Past')) return false;
-
-    // Category filter
-    const matchesCategory = filterCategory === 'All' || e.category.toLowerCase().includes(filterCategory.toLowerCase());
-
-    // Search query
-    const matchesSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (e.subtitle && e.subtitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (e.instructor && e.instructor.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return matchesCategory && matchesSearch;
+    const matchesType = filterType === 'All' || (e.webinarType || '').toLowerCase() === filterType.toLowerCase() || (e.category || '').toLowerCase() === filterType.toLowerCase();
+    const matchesSearch = !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()) || (e.subtitle || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesType && matchesSearch;
   });
 
-  const myHostedEventsCount = events.filter(e => checkIsHost(e)).length;
-  const totalEventsCount = events.length;
-  const liveWebinarsCount = events.filter(e => e.status === 'Live' || e.format === 'youtube_live' || e.format === 'online_webinar').length;
-  const totalRegistrations = events.reduce((sum, e) => sum + (e.registered || 0), 0);
-  const totalRevenue = events.reduce((sum, e) => sum + (e.revenue || 0), 0);
+  // Calculate High-Level Platform Metrics
+  const totalRegistrations = events.reduce((acc, curr) => acc + (curr.registered || 0), 0);
+  const totalPlatformRevenue = events.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
+  const totalAffiliateCommissions = events.reduce((acc, curr) => acc + (curr.analytics?.affiliateCommissions || 0), 0);
 
   return (
-    <div className="space-y-6 pb-20 animate-fadeIn max-w-7xl mx-auto">
-      {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 rounded-3xl p-6 sm:p-8 text-white shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-indigo-500/20">
-        <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
-            <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-            <span>Eviona Live Event & Webinar Infrastructure</span>
+    <div className="space-y-6 pb-20 animate-fadeIn">
+      {/* Top Banner: AI Webinar & Conversion Center Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 rounded-3xl p-6 text-white shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-indigo-500/20">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] uppercase tracking-wider font-black px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-indigo-400" />
+              <span>AI Webinar & Conversion Center</span>
+            </span>
+            <span className="text-[10px] text-emerald-400 font-bold">● High-Conversion Funnels</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight">
-            Events & Webinar Center
-          </h1>
-          <p className="text-xs sm:text-sm text-indigo-200 leading-relaxed">
-            Host live Zoom/Meet sessions, automated recruitment webinars, summits, and physical conferences. Auto-connected to your CRM and email marketing pipelines.
+          <h2 className="text-xl sm:text-2xl font-black">Interactive Sales, Education & Recruitment Stage</h2>
+          <p className="text-xs text-indigo-200 mt-0.5 max-w-2xl">
+            Live and evergreen webinar funnels powered by autonomous AI hosts, timed dynamic CTAs, and automated CRM lead capture.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-transform active:scale-95 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Host New Event / Webinar</span>
-          </button>
+        {/* Global Performance Highlights */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/10 p-3.5 rounded-2xl border border-white/10 backdrop-blur-md">
+          <div className="text-center px-2">
+            <span className="text-[10px] text-indigo-200 block font-semibold">Webinars</span>
+            <span className="text-sm font-black text-white">{events.length}</span>
+          </div>
+          <div className="text-center px-2 border-l border-white/10">
+            <span className="text-[10px] text-indigo-200 block font-semibold">Attendees</span>
+            <span className="text-sm font-black text-white">{totalRegistrations.toLocaleString()}</span>
+          </div>
+          <div className="text-center px-2 border-l border-white/10">
+            <span className="text-[10px] text-indigo-200 block font-semibold">Revenue</span>
+            <span className="text-sm font-black text-emerald-400">${totalPlatformRevenue.toLocaleString()}</span>
+          </div>
+          <div className="text-center px-2 border-l border-white/10">
+            <span className="text-[10px] text-indigo-200 block font-semibold">Affiliate Splits</span>
+            <span className="text-sm font-black text-amber-400">${totalAffiliateCommissions.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
-      {/* 4 Real Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Total Events</span>
-            <CalendarIcon className="w-5 h-5 text-indigo-600" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">{totalEventsCount}</h3>
-          <p className="text-xs text-indigo-600 font-bold mt-1">{myHostedEventsCount} Hosted by You</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Live Webinars</span>
-            <Video className="w-5 h-5 text-purple-600" />
-          </div>
-          <h3 className="text-2xl font-black text-purple-600">{liveWebinarsCount}</h3>
-          <p className="text-xs text-purple-600 font-semibold mt-1">Active broadcast channels</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Total Registrations</span>
-            <Users className="w-5 h-5 text-blue-600" />
-          </div>
-          <h3 className="text-2xl font-black text-blue-600">{totalRegistrations}</h3>
-          <p className="text-xs text-emerald-600 font-semibold mt-1">Real attendee leads</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Ticket Revenue</span>
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
-          <p className="text-xs text-slate-400 mt-1">Settled Box Office earnings</p>
-        </div>
-      </div>
-
-      {/* Navigation Sub-Tabs */}
-      <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs text-xs font-bold overflow-x-auto w-full">
+      {/* Navigation Tabs */}
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full sm:w-max overflow-x-auto gap-1">
         {[
-          { id: 'feed', label: 'All Events & Webinars', icon: CalendarIcon },
-          { id: 'calendar', label: 'Calendar Grid View', icon: Clock },
-          { id: 'evergreen', label: 'Evergreen Recruitment Funnels', icon: Tv },
-          { id: 'my_tickets', label: `My Tickets (${userTickets.length})`, icon: Ticket },
+          { id: 'explore', label: 'Explore & Join', icon: Globe },
+          { id: 'live_room', label: 'Host Studio & Live Room', icon: Radio },
+          { id: 'ai_creator', label: 'AI Funnel Creator', icon: Sparkles },
+          { id: 'affiliate_funnels', label: 'Affiliate Webinars', icon: ShoppingBag },
+          { id: 'analytics', label: 'Analytics & Conversions', icon: BarChart2 },
+          { id: 'my_tickets', label: `My Ticket Passes (${userTickets.length})`, icon: Ticket },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl flex items-center gap-1.5 whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-white text-indigo-950 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -455,342 +431,664 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
         })}
       </div>
 
-      {/* TAB 1: ALL EVENTS & WEBINARS FEED */}
-      {activeTab === 'feed' && (
+      {/* TAB 1: EXPLORE & JOIN WEBINARS */}
+      {activeTab === 'explore' && (
         <div className="space-y-6">
-          {/* Scope Filters & Search Controls */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Scope Switcher: All vs Hosted by Me vs Live vs Upcoming */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600 w-full md:w-auto overflow-x-auto">
+          {/* Search & Filter Bar */}
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-card flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search masterclasses, topics, speakers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+              {['All', 'Live', 'Masterclass', 'Affiliate', 'Evergreen'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterType(cat)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    filterType === cat
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Webinars Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredEvents.map((event) => {
+              const isPaid = Boolean(event.isPaid && (event.ticketPrice || 0) > 0);
+              return (
+                <div
+                  key={event.id}
+                  className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-card hover:shadow-lg transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Banner Thumbnail */}
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-900">
+                      <img
+                        src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80'}
+                        alt={event.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+
+                      {/* Status Badges */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        {event.status === 'Live' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-lg animate-pulse">
+                            <Radio className="w-3 h-3" />
+                            <span>LIVE NOW</span>
+                          </span>
+                        ) : event.isEvergreen ? (
+                          <span className="px-2.5 py-1 rounded-full bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>EVERGREEN REPLAY</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold">
+                            {event.date} • {event.time}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="absolute top-3 right-3">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                          isPaid ? 'bg-amber-400 text-slate-950' : 'bg-emerald-500 text-white'
+                        }`}>
+                          {isPaid ? `$${event.ticketPrice?.toFixed(2)} PASS` : '100% FREE'}
+                        </span>
+                      </div>
+
+                      {/* Bottom Info on Thumbnail */}
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs">
+                        <div className="flex items-center gap-2 truncate">
+                          <img
+                            src={event.instructorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                            alt={event.instructor}
+                            className="w-6 h-6 rounded-full border border-white/40 object-cover"
+                          />
+                          <span className="font-bold text-[11px] truncate">{event.instructor || 'Host'}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-300 font-semibold">{event.registered} Registered</span>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-5 space-y-3">
+                      <h4 className="text-sm font-black text-slate-900 leading-snug line-clamp-2">
+                        {event.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                        {event.subtitle || event.description}
+                      </p>
+
+                      {/* AI Assistant & Dynamic CTA Features */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {event.aiAssistantConfig?.enabled && (
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold flex items-center gap-1 border border-indigo-100">
+                            <Bot className="w-3 h-3 text-indigo-600" />
+                            <span>AI Host Active</span>
+                          </span>
+                        )}
+                        {event.dynamicCTAs && event.dynamicCTAs.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold flex items-center gap-1 border border-emerald-100">
+                            <Zap className="w-3 h-3 text-emerald-600" />
+                            <span>Fast-Action Offers</span>
+                          </span>
+                        )}
+                        {event.affiliateConfig?.isAffiliateWebinar && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold flex items-center gap-1 border border-amber-200">
+                            <DollarSign className="w-3 h-3 text-amber-600" />
+                            <span>{event.affiliateConfig.affiliateCommissionRate}% Affiliate Split</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="p-5 pt-0 border-t border-slate-100 flex items-center justify-between gap-2 mt-4">
+                    <button
+                      onClick={() => {
+                        setActiveRoomEvent(event);
+                        setActiveTab('live_room');
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Play className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Enter Room</span>
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedEventForRegister(event)}
+                      className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all"
+                    >
+                      <Ticket className="w-3.5 h-3.5" />
+                      <span>{isPaid ? `Buy Pass ($${event.ticketPrice})` : 'Get Free Pass'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: HOST STUDIO & INTERACTIVE LIVE ROOM */}
+      {activeTab === 'live_room' && activeRoomEvent && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+          {/* Main Stage Video Player & CTA Container */}
+          <div className="lg:col-span-8 space-y-4">
+            {/* Video Player Box */}
+            <div className="relative rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl aspect-video flex flex-col justify-between">
+              {/* Embedded Video Player */}
+              <iframe
+                src={`${activeRoomEvent.videoEmbedUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ'}?autoplay=1&mute=0&controls=1`}
+                title={activeRoomEvent.title}
+                className="w-full h-full absolute inset-0 object-cover"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+
+              {/* Floating Emoji Reactions Layer */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {emojiReactions.map((r) => (
+                  <div
+                    key={r.id}
+                    className="absolute bottom-10 text-3xl animate-float-reaction"
+                    style={{ left: `${r.left}%` }}
+                  >
+                    {r.emoji}
+                  </div>
+                ))}
+              </div>
+
+              {/* Room Top Header Overlay */}
+              <div className="relative z-10 p-4 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent flex items-center justify-between text-white">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase flex items-center gap-1 animate-pulse">
+                    <Radio className="w-3 h-3" />
+                    <span>BROADCASTING</span>
+                  </span>
+                  <span className="text-xs font-bold truncate max-w-sm">{activeRoomEvent.title}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] bg-white/10 px-2.5 py-1 rounded-full backdrop-blur-md font-semibold flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{activeRoomEvent.analytics?.peakAttendees || 312} Live</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Timed Call-to-Action (CTA) Overlay */}
+            {activeCTA && (
+              <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 rounded-3xl p-5 sm:p-6 text-white shadow-xl border border-indigo-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-slideDown">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20">
+                    ⚡ Fast-Action Webinar Offer
+                  </span>
+                  <h4 className="text-base sm:text-lg font-black text-white">{activeCTA.title}</h4>
+                  <p className="text-xs text-indigo-200">{activeCTA.description}</p>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      eventsEngine.recordInteraction(activeRoomEvent.id, 'cta_click');
+                      eventsEngine.recordInteraction(activeRoomEvent.id, 'conversion', activeCTA.price || 49);
+                      alert(`🎉 Offer Claimed! You have successfully converted on '${activeCTA.title}'!`);
+                    }}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all transform hover:scale-105"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>{activeCTA.buttonText}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Emoji Reaction Floating Bar */}
+            <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-card flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-600 pl-2">Live Reaction Stream:</span>
+              <div className="flex items-center gap-2">
+                {[
+                  { emoji: '🔥', label: 'Fire' },
+                  { emoji: '🚀', label: 'Rocket' },
+                  { emoji: '💡', label: 'Idea' },
+                  { emoji: '👏', label: 'Clap' },
+                  { emoji: '❤️', label: 'Love' },
+                ].map((item) => (
+                  <button
+                    key={item.emoji}
+                    onClick={() => handleTriggerReaction(item.emoji)}
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:scale-110 active:scale-95 text-lg flex items-center justify-center transition-all"
+                  >
+                    {item.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar: Live Chat, AI Host, Q&A, and Polls */}
+          <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200 shadow-card flex flex-col h-[580px] overflow-hidden">
+            {/* View Switcher Tabs */}
+            <div className="flex border-b border-slate-100 p-2 gap-1 bg-slate-50">
               <button
-                onClick={() => setFilterScope('all')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                  filterScope === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
+                onClick={() => setRoomViewMode('chat')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  roomViewMode === 'chat' ? 'bg-white text-indigo-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                All Events ({events.length})
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Live Chat</span>
               </button>
+
               <button
-                onClick={() => setFilterScope('my_hosted')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap flex items-center gap-1 transition-all ${
-                  filterScope === 'my_hosted' ? 'bg-white text-indigo-600 shadow-xs' : 'hover:text-slate-900'
+                onClick={() => setRoomViewMode('qa')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  roomViewMode === 'qa' ? 'bg-white text-indigo-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Crown className="w-3 h-3 text-amber-500" />
-                <span>Hosted by Me ({myHostedEventsCount})</span>
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Q&A ({questions.length})</span>
               </button>
+
               <button
-                onClick={() => setFilterScope('live')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                  filterScope === 'live' ? 'bg-white text-rose-600 shadow-xs' : 'hover:text-slate-900'
+                onClick={() => setRoomViewMode('polls')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  roomViewMode === 'polls' ? 'bg-white text-indigo-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Live Now ({events.filter(e => e.status === 'Live').length})
-              </button>
-              <button
-                onClick={() => setFilterScope('upcoming')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                  filterScope === 'upcoming' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
-                }`}
-              >
-                Upcoming
+                <BarChart2 className="w-3.5 h-3.5" />
+                <span>Live Polls</span>
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="relative w-full md:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            {/* TAB CONTENT 1: LIVE CHAT */}
+            {roomViewMode === 'chat' && (
+              <div className="flex-1 flex flex-col justify-between overflow-hidden p-4">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                  {chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                        msg.senderRole === 'ai_assistant'
+                          ? 'bg-indigo-50/80 border border-indigo-200 text-indigo-950'
+                          : msg.senderRole === 'host'
+                          ? 'bg-amber-50 border border-amber-200 text-amber-950'
+                          : 'bg-slate-50 border border-slate-200/70 text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          {msg.senderRole === 'ai_assistant' && <Bot className="w-3.5 h-3.5 text-indigo-600" />}
+                          <span className="font-bold text-[11px] text-slate-900">{msg.senderName}</span>
+                          {msg.senderRole === 'ai_assistant' && (
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-indigo-200 text-indigo-800">AI Host</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400">{msg.time}</span>
+                      </div>
+                      <p className="text-slate-700">{msg.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <form onSubmit={handleSendChat} className="pt-3 border-t border-slate-100 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type in chat or ask AI Sophia..."
+                    value={currentChatInput}
+                    onChange={(e) => setCurrentChatInput(e.target.value)}
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center shadow-md shadow-indigo-600/20"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* TAB CONTENT 2: Q&A QUEUE */}
+            {roomViewMode === 'qa' && (
+              <div className="flex-1 flex flex-col justify-between overflow-hidden p-4">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                  {questions.map((q) => (
+                    <div key={q.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{q.authorName}</span>
+                        <button
+                          onClick={() => handleUpvoteQuestion(q.id)}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] transition-all"
+                        >
+                          <ThumbsUp className="w-3 h-3 text-indigo-600" />
+                          <span>{q.upvotes}</span>
+                        </button>
+                      </div>
+                      <p className="text-slate-700 font-medium">{q.question}</p>
+                      {q.isAnswered && (
+                        <div className="pt-1.5 border-t border-slate-200 text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Answered Live by {q.answeredBy || 'Presenter'}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <form onSubmit={handleAskQuestion} className="pt-3 border-t border-slate-100 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Submit a question for speaker Q&A..."
+                    value={newQuestionInput}
+                    onChange={(e) => setNewQuestionInput(e.target.value)}
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+                  >
+                    Ask
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* TAB CONTENT 3: LIVE POLLS */}
+            {roomViewMode === 'polls' && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {polls.map((poll) => (
+                  <div key={poll.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                    <h5 className="font-bold text-slate-900 leading-snug">{poll.question}</h5>
+                    <div className="space-y-2">
+                      {poll.options.map((opt) => {
+                        const pct = poll.totalVotes > 0 ? Math.round((opt.votes / poll.totalVotes) * 100) : 0;
+                        return (
+                          <button
+                            key={opt.id}
+                            onClick={() => handleVotePoll(poll.id, opt.id)}
+                            className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 bg-white relative overflow-hidden transition-all group"
+                          >
+                            <div
+                              className="absolute top-0 bottom-0 left-0 bg-indigo-50 group-hover:bg-indigo-100 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                            <div className="relative z-10 flex items-center justify-between text-[11px] font-bold text-slate-800">
+                              <span>{opt.text}</span>
+                              <span className="text-indigo-600">{pct}% ({opt.votes})</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: AI WEBINAR FUNNEL CREATOR */}
+      {activeTab === 'ai_creator' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6 animate-fadeIn">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-black px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+              AI Conversion Suite Generator
+            </span>
+            <h3 className="text-lg font-black text-slate-900 mt-1">Autonomous AI Webinar Funnel Builder</h3>
+            <p className="text-xs text-slate-500">
+              Generate full webinar titles, landing page copy, timed agendas, AI Host knowledge base, and email sequences in seconds.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <div className="sm:col-span-6">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Webinar Topic / Masterclass Subject</label>
               <input
                 type="text"
-                placeholder="Search events, speakers, topics..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
+                value={creatorTopic}
+                onChange={(e) => setCreatorTopic(e.target.value)}
+                placeholder="e.g. AI Lead Generation, Real Estate Closers, High-Ticket E-Commerce"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="sm:col-span-6">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Target Niche / Audience</label>
+              <input
+                type="text"
+                value={creatorNiche}
+                onChange={(e) => setCreatorNiche(e.target.value)}
+                placeholder="e.g. Digital Marketing Agencies, SaaS Founders, Realtors"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Webinar Archetype</label>
+              <select
+                value={creatorType}
+                onChange={(e) => setCreatorType(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500 bg-white"
+              >
+                <option value="free_live">Free Live Webinar</option>
+                <option value="paid_live">Paid Live Masterclass</option>
+                <option value="free_evergreen">Free Evergreen Automated Funnel</option>
+                <option value="paid_evergreen">Paid Evergreen Masterclass</option>
+                <option value="product_demo">Product Demonstration & Pitch</option>
+                <option value="recruitment">Team Recruitment Session</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Ticket Price ($0 = 100% Free)</label>
+              <input
+                type="number"
+                value={creatorPrice}
+                onChange={(e) => setCreatorPrice(e.target.value)}
+                placeholder="0"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Video Stream Embed URL (YouTube/Vimeo)</label>
+              <input
+                type="text"
+                value={creatorVideoUrl}
+                onChange={(e) => setCreatorVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/embed/..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
               />
             </div>
           </div>
 
-          {/* Events Grid */}
-          {filteredEvents.length === 0 ? (
-            <div className="p-16 bg-white rounded-3xl border border-slate-200 text-center text-slate-400 text-xs space-y-3">
-              <CalendarIcon className="w-12 h-12 mx-auto text-slate-300" />
-              <p className="font-bold text-slate-700 text-sm">No Events Found</p>
-              <p className="text-slate-400">
-                {filterScope === 'my_hosted'
-                  ? 'You have not created any events yet. Click "Host New Event / Webinar" to create one.'
-                  : 'Try adjusting your search criteria or filter scope.'}
-              </p>
-              {filterScope === 'my_hosted' && (
+          <button
+            onClick={handleGenerateAISuite}
+            disabled={isGeneratingSuite}
+            className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all"
+          >
+            <Sparkles className={`w-4 h-4 ${isGeneratingSuite ? 'animate-spin' : ''}`} />
+            <span>{isGeneratingSuite ? 'Crafting High-Converting Suite...' : 'Generate Full AI Webinar Suite'}</span>
+          </button>
+
+          {/* Generated AI Suite Preview */}
+          {generatedSuite && (
+            <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-6 text-xs animate-fadeIn">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h4 className="text-sm font-black text-slate-900">Generated Conversion Suite</h4>
                 <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                  onClick={handlePublishWebinarFromSuite}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
                 >
-                  Create Your First Event
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Publish & Open Live Room</span>
                 </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((event) => {
-                const isHost = checkIsHost(event);
-                const isLive = event.status === 'Live';
-                const isPaid = event.isPaid && (event.ticketPrice || 0) > 0;
-                const isRegistered = userTickets.some(t => t.eventId === event.id || t.eventTitle === event.title);
-                const capacityPct = Math.min(100, Math.round(((event.registered || 0) / (event.capacity || 500)) * 100));
+              </div>
 
-                return (
-                  <div
-                    key={event.id}
-                    className={`bg-white rounded-3xl border overflow-hidden shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between group ${
-                      isHost ? 'border-indigo-300 ring-2 ring-indigo-500/20' : 'border-slate-200'
-                    }`}
-                  >
-                    {/* Event Banner */}
-                    <div className="relative aspect-video overflow-hidden bg-slate-900">
-                      <img
-                        src={event.image}
-                        alt={event.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
-                      />
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
-                        {isHost && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white flex items-center gap-1 shadow-md">
-                            <Crown className="w-3 h-3 text-amber-300" />
-                            YOU ARE HOST
-                          </span>
-                        )}
-                        {isLive && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white flex items-center gap-1 animate-pulse shadow-md">
-                            <Radio className="w-3 h-3" />
-                            LIVE NOW
-                          </span>
-                        )}
-                        {!isLive && !isHost && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900/80 text-white backdrop-blur-xs">
-                            {event.category}
-                          </span>
-                        )}
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <span className="text-[10px] font-black uppercase text-indigo-600">Headline & Description</span>
+                  <h5 className="font-bold text-slate-900">{generatedSuite.title}</h5>
+                  <p className="text-slate-600 leading-relaxed">{generatedSuite.description}</p>
+                </div>
 
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-xs px-2.5 py-1 rounded-xl text-xs font-black text-slate-900 shadow-sm">
-                        {isPaid ? `$${event.ticketPrice?.toFixed(2)} USD` : 'FREE PASS'}
-                      </div>
-                    </div>
-
-                    {/* Event Details */}
-                    <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs text-indigo-600 font-bold">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{event.date} • {event.time}</span>
-                        </div>
-
-                        <h3 className="font-extrabold text-slate-900 text-base leading-snug">
-                          {event.title}
-                        </h3>
-                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                          {event.subtitle || event.description}
-                        </p>
-
-                        {/* Instructor / Speaker Badge */}
-                        <div className="flex items-center gap-2 pt-2">
-                          <img
-                            src={event.instructorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                            alt={event.instructor}
-                            className="w-6 h-6 rounded-full object-cover border border-slate-200"
-                          />
-                          <span className="text-xs font-bold text-slate-700">
-                            {isHost ? `${activeUser.name} (You)` : (event.instructor || event.organizerName)}
-                          </span>
-                        </div>
-
-                        {/* Capacity Progress Bar */}
-                        <div className="pt-2">
-                          <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1">
-                            <span>Capacity</span>
-                            <span>{event.registered} / {event.capacity} Registered ({capacityPct}%)</span>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                            <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${capacityPct}%` }} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Strip: Dynamic Host vs Attendee logic */}
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => handleCopyLink(event.id)}
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-                          title="Share Event Link"
-                        >
-                          {copiedId === event.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-                        </button>
-
-                        {/* 1. YOU ARE THE HOST: Host Studio Access */}
-                        {isHost ? (
-                          <button
-                            onClick={() => handleOpenHostStudio(event)}
-                            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5"
-                          >
-                            <Crown className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Host Studio & Broadcast</span>
-                          </button>
-                        ) : isRegistered ? (
-                          /* 2. YOU ARE AN ATTENDEE & ALREADY REGISTERED: Enter Room */
-                          <button
-                            onClick={() => setSelectedEventForWatch(event)}
-                            className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Enter Stream Room</span>
-                          </button>
-                        ) : (
-                          /* 3. YOU ARE AN ATTENDEE NOT YET REGISTERED: Get Pass */
-                          <button
-                            onClick={() => setSelectedEventForRegister(event)}
-                            className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5"
-                          >
-                            <Ticket className="w-3.5 h-3.5" />
-                            <span>{isPaid ? `Register ($${event.ticketPrice?.toFixed(2)})` : 'Get Free Pass'}</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <span className="text-[10px] font-black uppercase text-amber-600">Dynamic Call-to-Action (CTA)</span>
+                  <h5 className="font-bold text-slate-900">{generatedSuite.dynamicCTA.title}</h5>
+                  <p className="text-slate-600">{generatedSuite.dynamicCTA.description}</p>
+                  <Badge variant="warning" size="sm">{generatedSuite.dynamicCTA.buttonText}</Badge>
+                </div>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 2: INTERACTIVE CALENDAR VIEW */}
-      {activeTab === 'calendar' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 bg-white rounded-3xl p-6 border border-slate-200 shadow-card">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-base font-black text-slate-900">Event Schedule Calendar</h3>
-              <div className="flex gap-1 text-slate-400">
-                <button className="p-2 rounded-xl hover:bg-slate-100 text-slate-700"><ChevronLeft className="w-4 h-4" /></button>
-                <button className="p-2 rounded-xl hover:bg-slate-100 text-slate-700"><ChevronRight className="w-4 h-4" /></button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 mb-3">
-              <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
-            </div>
-            <div className="grid grid-cols-7 gap-2 text-center text-xs">
-              {Array.from({ length: 31 }).map((_, i) => {
-                const day = i + 1;
-                const isEvent = day === 15 || day === 20 || day === 25 || day === 30;
-                const isToday = day === 24;
-
-                return (
-                  <div
-                    key={day}
-                    className={`py-4 rounded-2xl font-bold transition-all flex flex-col items-center justify-between gap-1 border ${
-                      isToday
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                        : isEvent
-                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        : 'border-slate-100 hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>{day}</span>
-                    {isEvent && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+      {/* TAB 4: AFFILIATE WEBINAR FUNNELS */}
+      {activeTab === 'affiliate_funnels' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6 animate-fadeIn">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+              Affiliate Revenue Funnels
+            </span>
+            <h3 className="text-lg font-black text-slate-900 mt-1">Affiliate Webinar Funnel Engine</h3>
+            <p className="text-xs text-slate-500">
+              Attach demo and masterclass recordings to marketplace products and earn instant double-entry wallet commissions on every in-webinar sale.
+            </p>
           </div>
 
-          <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
-            <h4 className="font-black text-slate-900 text-sm">Upcoming Timeline</h4>
-            <div className="space-y-3">
-              {events.slice(0, 4).map((e) => (
-                <div key={e.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-indigo-600">{e.date} • {e.time}</span>
-                    {checkIsHost(e) && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">You Host</span>}
+          <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200 space-y-4">
+            <h4 className="text-sm font-black text-slate-900">Select Marketplace Product to Promote:</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { id: 'PRD-MKT-01', name: 'AI Prompts Mastery Kit', price: 49.00, split: 50 },
+                { id: 'PRD-MKT-02', name: 'SaaS Agency Automation Blueprint', price: 199.00, split: 40 },
+                { id: 'PRD-MKT-03', name: 'High-Ticket Funnel Vault', price: 299.00, split: 50 },
+              ].map((prod) => (
+                <div
+                  key={prod.id}
+                  onClick={() => setSelectedAffiliateProduct({ id: prod.id, name: prod.name, price: prod.price, commissionRate: prod.split })}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                    selectedAffiliateProduct.id === prod.id
+                      ? 'bg-indigo-50/60 border-indigo-600 shadow-sm'
+                      : 'bg-white border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <h5 className="font-bold text-slate-900 text-xs">{prod.name}</h5>
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <span className="font-black text-slate-800">${prod.price}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">{prod.split}% Commission</span>
                   </div>
-                  <h5 className="font-bold text-slate-900 truncate">{e.title}</h5>
-                  <p className="text-[11px] text-slate-400">{e.venue || e.meetingPlatform}</p>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* TAB 3: EVERGREEN RECRUITMENT FUNNELS */}
-      {activeTab === 'evergreen' && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-6 sm:p-8 space-y-6">
-          <div>
-            <h3 className="text-lg font-black text-slate-900">Evergreen Automated Recruitment & Sales Webinars</h3>
-            <p className="text-xs text-slate-500">24/7 on-demand webinar funnels that capture leads, present value, and convert prospects into registered team members.</p>
-          </div>
+            <button
+              onClick={() => setAffiliateFunnelGenerated(true)}
+              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md"
+            >
+              Generate Branded Affiliate Funnel Link
+            </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {events.filter(e => e.format === 'prerecorded_evergreen' || e.category.includes('Recruitment')).map((e) => (
-              <div key={e.id} className="p-6 rounded-3xl bg-slate-900 text-white space-y-4 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <Badge variant="purple" size="sm">24/7 On Demand</Badge>
-                  <h4 className="text-lg font-black text-white">{e.title}</h4>
-                  <p className="text-xs text-slate-300 leading-relaxed">{e.subtitle || e.description}</p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+            {affiliateFunnelGenerated && (
+              <div className="p-4 rounded-2xl bg-white border border-indigo-200 space-y-2 animate-fadeIn">
+                <span className="text-[10px] font-bold text-indigo-600 uppercase">Your Unique Affiliate Webinar Link:</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`https://evionaecosystem.com/webinar/demo-${selectedAffiliateProduct.id.toLowerCase()}?ref=${activeUser.memberCode || activeUser.id || 'AFFILIATE'}`}
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800"
+                  />
                   <button
-                    onClick={() => setSelectedEventForWatch(e)}
-                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://evionaecosystem.com/webinar/demo-${selectedAffiliateProduct.id.toLowerCase()}?ref=${activeUser.memberCode || activeUser.id || 'AFFILIATE'}`);
+                      alert('Affiliate link copied to clipboard!');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1"
                   >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Watch Webinar Replay</span>
-                  </button>
-                  <button
-                    onClick={() => handleCopyLink(e.id)}
-                    className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold"
-                    title="Copy Funnel Link"
-                  >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
                   </button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 4: MY TICKETS */}
-      {activeTab === 'my_tickets' && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-6 space-y-6">
+      {/* TAB 5: ANALYTICS & CONVERSIONS */}
+      {activeTab === 'analytics' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6 animate-fadeIn">
           <div>
-            <h3 className="text-lg font-black text-slate-900">Your Registered Passes & Event Tickets</h3>
-            <p className="text-xs text-slate-500">Display your QR ticket codes for physical check-in or access virtual broadcast links.</p>
+            <h3 className="text-lg font-black text-slate-900">Webinar Performance & Conversion Funnel</h3>
+            <p className="text-xs text-slate-500">Track registration conversion, watch retention, dynamic CTA clicks, and sales.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Views</span>
+              <h4 className="text-xl font-black text-slate-900 mt-1">2,480</h4>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Registrations</span>
+              <h4 className="text-xl font-black text-slate-900 mt-1">{totalRegistrations}</h4>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">CTA Click Rate</span>
+              <h4 className="text-xl font-black text-indigo-600 mt-1">28.4%</h4>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Revenue</span>
+              <h4 className="text-xl font-black text-emerald-600 mt-1">${totalPlatformRevenue.toLocaleString()}</h4>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: MY TICKET PASSES */}
+      {activeTab === 'my_tickets' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6 animate-fadeIn">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">My Registered Ticket Passes</h3>
+            <p className="text-xs text-slate-500">Your verified passes and QR codes for upcoming and live webinars.</p>
           </div>
 
           {userTickets.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-xs space-y-2">
-              <Ticket className="w-10 h-10 mx-auto text-slate-300" />
-              <p className="font-bold text-slate-700 text-sm">No Tickets Found</p>
-              <p className="text-slate-400">Register for an upcoming summit or live webinar to access your digital tickets.</p>
+            <div className="text-center py-12 space-y-3">
+              <Ticket className="w-12 h-12 text-slate-300 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-700">No Tickets Yet</h4>
+              <p className="text-xs text-slate-500">Explore our catalog and register for your first session!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {userTickets.map((t) => (
-                <div key={t.id} className="p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row items-center gap-5 justify-between">
-                  <div className="space-y-2 text-xs">
-                    <Badge variant="emerald" size="sm">Confirmed Pass</Badge>
-                    <h4 className="text-base font-black text-white">{t.eventTitle}</h4>
-                    <p className="font-mono text-indigo-300 font-bold">Ticket #{t.ticketNumber}</p>
-                    <p className="text-slate-400 text-[11px]">Attendee: <b className="text-white">{t.attendeeName}</b></p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {userTickets.map((tkt) => (
+                <div key={tkt.id} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-indigo-600 font-bold">{tkt.ticketNumber}</span>
+                    <h5 className="font-bold text-slate-900 text-xs">{tkt.eventTitle}</h5>
+                    <span className="text-[10px] text-slate-400 block">{tkt.registeredAt ? new Date(tkt.registeredAt).toLocaleDateString() : 'Active Pass'}</span>
                   </div>
-
-                  <div className="p-3 bg-white rounded-2xl shrink-0">
-                    <img src={t.qrCodeUrl} alt="Ticket QR" className="w-24 h-24" />
-                  </div>
+                  <img src={tkt.qrCodeUrl} alt="QR Code" className="w-16 h-16 rounded-xl border border-slate-200" />
                 </div>
               ))}
             </div>
@@ -798,204 +1096,24 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
         </div>
       )}
 
-      {/* MODAL 1: HOST LIVE BROADCAST STUDIO (For Event Host) */}
-      {selectedEventForHostStudio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-5xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col max-h-[92vh]">
-            {/* Studio Header */}
-            <div className="p-4 bg-slate-950 flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-amber-300" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-black text-white">{selectedEventForHostStudio.title}</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 animate-pulse">
-                      <Radio className="w-3 h-3" />
-                      Host Studio Active
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">Host: <b className="text-white">{activeUser.name}</b> • {selectedEventForHostStudio.meetingPlatform}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDeleteHostedEvent(selectedEventForHostStudio.id)}
-                  className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold flex items-center gap-1 border border-rose-500/20"
-                  title="Cancel & Delete Event"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <button onClick={() => setSelectedEventForHostStudio(null)} className="text-slate-400 hover:text-white p-2">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Studio Body: Video Stage + Controls + Attendee Roster */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-y-auto">
-              {/* Left: Broadcast Stage (8 cols) */}
-              <div className="lg:col-span-8 p-6 space-y-4 border-r border-slate-800 flex flex-col justify-between">
-                <div className="aspect-video w-full bg-slate-950 rounded-2xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
-                  {isCameraOn ? (
-                    <div className="text-center space-y-2">
-                      <div className="w-20 h-20 rounded-full bg-indigo-600/30 border-2 border-indigo-500 text-indigo-300 flex items-center justify-center mx-auto animate-pulse">
-                        <Video className="w-10 h-10" />
-                      </div>
-                      <p className="text-xs font-bold text-slate-300">Live Stage: {activeUser.name} is Broadcasting</p>
-                      <p className="text-[11px] text-indigo-400 font-mono">1080p HD • 60 FPS • Encrypted Stream</p>
-                    </div>
-                  ) : (
-                    <div className="text-center text-slate-500 text-xs space-y-1">
-                      <CameraOff className="w-8 h-8 mx-auto" />
-                      <p>Camera is Muted</p>
-                    </div>
-                  )}
-
-                  {/* Stage Watermark */}
-                  <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs px-3 py-1 rounded-xl text-xs font-bold text-white flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Live Output</span>
-                  </div>
-                </div>
-
-                {/* Studio Control Toolbar */}
-                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsMicOn(!isMicOn)}
-                      className={`p-3 rounded-xl font-bold flex items-center gap-1.5 transition-colors ${
-                        isMicOn ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-rose-600 text-white'
-                      }`}
-                    >
-                      {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                      <span>{isMicOn ? 'Mute Mic' : 'Unmute'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setIsCameraOn(!isCameraOn)}
-                      className={`p-3 rounded-xl font-bold flex items-center gap-1.5 transition-colors ${
-                        isCameraOn ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-rose-600 text-white'
-                      }`}
-                    >
-                      {isCameraOn ? <Camera className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
-                      <span>{isCameraOn ? 'Stop Camera' : 'Start Camera'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setIsScreenSharing(!isScreenSharing)}
-                      className={`p-3 rounded-xl font-bold flex items-center gap-1.5 transition-colors ${
-                        isScreenSharing ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                    >
-                      <Monitor className="w-4 h-4" />
-                      <span>{isScreenSharing ? 'Sharing Screen' : 'Share Screen'}</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopyLink(selectedEventForHostStudio.id)}
-                      className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center gap-1.5"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Invite Link</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Attendee Roster & Check-In (4 cols) */}
-              <div className="lg:col-span-4 p-6 space-y-4 bg-slate-950/50 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <h4 className="font-black text-white text-sm flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-indigo-400" />
-                      <span>Registered Attendees ({eventAttendeesList.length})</span>
-                    </h4>
-                  </div>
-
-                  {eventAttendeesList.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 text-xs space-y-1">
-                      <Users className="w-8 h-8 mx-auto text-slate-600" />
-                      <p className="font-bold text-slate-400">No Registrations Yet</p>
-                      <p className="text-[11px]">Share your event link with your network or community.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                      {eventAttendeesList.map((att) => (
-                        <div key={att.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 text-xs">
-                          <div>
-                            <p className="font-bold text-white truncate">{att.attendeeName}</p>
-                            <p className="text-[10px] text-slate-400 font-mono truncate">{att.attendeeEmail}</p>
-                          </div>
-                          {att.status === 'checked_in' ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              Checked In
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleCheckInAttendee(att.ticketNumber)}
-                              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px]"
-                            >
-                              Check In
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 text-xs space-y-2 text-indigo-200">
-                  <p className="font-bold text-white flex items-center gap-1">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Automatic CRM Sync</span>
-                  </p>
-                  <p className="text-[11px] leading-relaxed">
-                    All attendees are automatically saved into your CRM pipeline with tags and timestamp.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: ATTENDEE REGISTRATION (For Non-Host) */}
+      {/* REGISTRATION & LANDING PAGE MODAL */}
       {selectedEventForRegister && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 text-slate-900 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-black text-slate-900">Event Registration</h3>
-                <p className="text-xs text-slate-500">Secure your pass for {selectedEventForRegister.title}</p>
+                <span className="text-[10px] uppercase font-bold text-indigo-600">Webinar Registration Pass</span>
+                <h4 className="text-base font-black text-slate-900 mt-0.5">{selectedEventForRegister.title}</h4>
               </div>
-              <button onClick={() => setSelectedEventForRegister(null)} className="text-slate-400 hover:text-slate-700">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => setSelectedEventForRegister(null)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
               </button>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Host:</span>
-                <span className="font-bold text-slate-800">{selectedEventForRegister.instructor || selectedEventForRegister.organizerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Date & Time:</span>
-                <span className="font-bold text-slate-800">{selectedEventForRegister.date} • {selectedEventForRegister.time}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Ticket Price:</span>
-                <span className="font-black text-indigo-600">
-                  {selectedEventForRegister.isPaid ? `$${selectedEventForRegister.ticketPrice?.toFixed(2)} USD` : 'FREE PASS'}
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleRegisterForEvent} className="space-y-3 text-xs">
+            <div className="space-y-3 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Full Name</label>
                 <input
@@ -1003,7 +1121,7 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
                   required
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -1014,334 +1132,70 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
                   required
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Phone Number</label>
+                <label className="block font-bold text-slate-700 mb-1">Phone Number (For SMS Reminder)</label>
                 <input
                   type="tel"
-                  placeholder="+1 (555) 019-2834"
+                  placeholder="+1 (555) 000-0000"
                   value={regPhone}
                   onChange={(e) => setRegPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
                 />
               </div>
 
-              {selectedEventForRegister.isPaid && (
-                <div className="space-y-2 pt-1">
-                  <label className="block font-bold text-slate-700">Select Payment Method</label>
+              {selectedEventForRegister.isPaid && (selectedEventForRegister.ticketPrice || 0) > 0 && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                  <div className="flex justify-between items-center font-bold">
+                    <span>Ticket Fee</span>
+                    <span className="text-sm text-slate-900">${selectedEventForRegister.ticketPrice?.toFixed(2)}</span>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEventPaymentMethod('wallet')}
-                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
-                        eventPaymentMethod === 'wallet'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-[11px]">Eviona Wallet</span>
-                      <span className="text-[10px] text-indigo-600 font-mono">(${walletBalance.toFixed(2)})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEventPaymentMethod('card')}
-                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
-                        eventPaymentMethod === 'card'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-[11px]">Paystack / Card</span>
-                      <span className="text-[10px] text-emerald-600 font-bold">Instant Online</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEventPaymentMethod('usdt')}
-                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
-                        eventPaymentMethod === 'usdt'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-[11px]">Crypto USDT</span>
-                      <span className="text-[10px] text-indigo-600 font-bold">TRC-20</span>
-                    </button>
+                    {[
+                      { id: 'wallet', label: 'Wallet ($' + walletBalance.toFixed(2) + ')' },
+                      { id: 'card', label: 'Online Card' },
+                      { id: 'usdt', label: 'USDT Crypto' },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setEventPaymentMethod(m.id as any)}
+                        className={`py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                          eventPaymentMethod === m.id
+                            ? 'bg-amber-400 text-slate-950 border-amber-500'
+                            : 'bg-white text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedEventForRegister(null)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isRegistering}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
-                >
-                  {isRegistering
-                    ? 'Processing...'
-                    : selectedEventForRegister.isPaid
-                    ? `Pay $${selectedEventForRegister.ticketPrice?.toFixed(2)} & Get Pass`
-                    : 'Confirm Free Pass'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: GENERATED TICKET PASS */}
-      {generatedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 text-center space-y-4">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-md">
-              <CheckCircle2 className="w-8 h-8" />
             </div>
 
-            <h3 className="text-xl font-black text-slate-900">Pass Confirmed!</h3>
-            <p className="text-xs text-slate-500">
-              Your digital ticket has been sent to <span className="font-bold text-slate-800">{generatedTicket.attendeeEmail}</span>.
-            </p>
-
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-              <img src={generatedTicket.qrCodeUrl} alt="QR Ticket" className="w-36 h-36 mx-auto bg-white p-2 rounded-xl shadow-xs" />
-              <p className="font-mono font-bold text-sm text-indigo-600">{generatedTicket.ticketNumber}</p>
-            </div>
-
-            <button
-              onClick={() => setGeneratedTicket(null)}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 4: WATCH VIRTUAL STREAM / WEBINAR ROOM (For Registered Attendee) */}
-      {selectedEventForWatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-4xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 space-y-4">
-            <div className="p-4 bg-slate-950 flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
-                <h3 className="text-sm font-bold text-white truncate">{selectedEventForWatch.title}</h3>
-              </div>
-              <button onClick={() => setSelectedEventForWatch(null)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                src={selectedEventForWatch.videoEmbedUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ'}
-                title="Broadcast"
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-
-            <div className="p-6 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <h4 className="text-white font-bold text-sm">Ready to scale your business?</h4>
-                <p className="text-xs text-slate-400">Join the official Eviona Partner network or explore our marketplace tools.</p>
-              </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
-                onClick={() => alert('Redirecting to partner registration')}
-                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30"
+                onClick={() => setSelectedEventForRegister(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50"
               >
-                Claim Membership Offer Now
+                Cancel
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 5: CREATE EVENT WIZARD (With AI Copywriter) */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-base font-black text-slate-900">Host New Event or Webinar</h3>
-                <p className="text-xs text-slate-500">You will be the verified Host with full broadcast and attendee controls</p>
-              </div>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* AI Event Generator Bar */}
-            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 space-y-2">
-              <span className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
-                <Bot className="w-4 h-4 text-indigo-600" />
-                <span>AI Event Copywriter & Agenda Generator</span>
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter event topic (e.g. AI Agency Scaling Blueprint)..."
-                  value={aiTopic}
-                  onChange={(e) => setAiTopic(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleAIGenerateEvent}
-                  disabled={isGeneratingAI}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{isGeneratingAI ? 'Writing...' : 'Generate with AI'}</span>
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleCreateEventSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Event Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 6-Figure Affiliate Mastery Live Workshop"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Category</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                  >
-                    <option value="Webinar">Webinar</option>
-                    <option value="Training & Education">Training & Education</option>
-                    <option value="Conference & Summit">Conference & Summit</option>
-                    <option value="Recruitment & Opportunity">Recruitment & Opportunity</option>
-                    <option value="Product Launch">Product Launch</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Format</label>
-                  <select
-                    value={newFormat}
-                    onChange={(e) => setNewFormat(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                  >
-                    <option value="online_webinar">Online Webinar (Eviona Studio)</option>
-                    <option value="zoom">Zoom Meeting</option>
-                    <option value="google_meet">Google Meet</option>
-                    <option value="youtube_live">YouTube Live</option>
-                    <option value="prerecorded_evergreen">Pre-Recorded Evergreen</option>
-                    <option value="physical">Physical Venue</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Date</label>
-                  <input
-                    type="text"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Start Time & Timezone</label>
-                  <input
-                    type="text"
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Virtual Meeting Link / Broadcast URL</label>
-                <input
-                  type="url"
-                  value={newMeetingLink}
-                  onChange={(e) => setNewMeetingLink(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Description & Key Takeaways</label>
-                <textarea
-                  rows={3}
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-medium outline-none focus:border-indigo-500 leading-relaxed"
-                />
-              </div>
-
-              {/* Pricing & Free Pass Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">Event Pricing</span>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newIsPaid}
-                      onChange={(e) => setNewIsPaid(e.target.checked)}
-                      className="accent-indigo-600 w-4 h-4"
-                    />
-                    <span className="font-bold text-slate-700">Paid Ticket Event</span>
-                  </label>
-                </div>
-
-                {newIsPaid && (
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Ticket Price ($ USD / EVO)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1"
-                      value={newPrice}
-                      onChange={(e) => setNewPrice(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold"
-                    />
-                  </div>
+              <button
+                onClick={() => handleCompleteRegistration(
+                  selectedEventForRegister.isPaid ? eventPaymentMethod : 'free'
                 )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
-                >
-                  Publish Event & Webinar
-                </button>
-              </div>
-            </form>
+                disabled={isRegistering}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                <span>{isRegistering ? 'Processing...' : 'Confirm Registration'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

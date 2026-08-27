@@ -668,12 +668,18 @@ The Google Maps Scraper Kit (`gosom/google-maps-scraper` wrapper) is integrated 
 ### 16.2 Membership Quota & Plan Gating
 - **Launch Plan ($100/mo):** 100 business searches/month, basic contact extraction, manual CSV export.
 - **Growth Plan ($300/mo):** 1,000 business searches/month, deep website email extraction, 1-click CRM sync, AI email drafting.
-- **Legacy Plan ($500/mo):** 10,000 searches/month (fair-use limit), automated multi-step cold outreach campaigns, multi-user sales pipeline assignment.
 
-### 16.3 Infrastructure & Proxy Mesh Architecture
-- **Daemon Sidecar:** Encapsulated Go-based microservice worker running in an isolated Docker container on the private backend network.
-- **Residential Proxy Pool:** Egress traffic is routed through a rotating residential proxy mesh (BrightData / Oxylabs) to prevent IP throttling and rate limiting.
-- **Regulatory Compliance:** Clear UI notices ensuring member outreach complies with CAN-SPAM, GDPR, and CASL privacy standards.
+---
 
+## 17. AI Webinar & Conversion Center (Book 21)
 
+### 17.1 Product Positioning & Strategic Fit
+The **AI Webinar & Conversion Center** transforms traditional video conferencing and broadcasting into an autonomous, high-converting digital sales stage. It connects real-time video streaming, an **AI Webinar Assistant (Host Co-Pilot)**, **Dynamic Timed Call-to-Action (CTA) Banners**, **Affiliate Product Binding**, **Live Q&A / Poll Moderation**, and **Automated CRM & Email Marketing Sequences**.
 
+### 17.2 Core Capabilities & Value Chain:
+1. **Webinar Archetypes:** Free Live, Paid Live, Free Evergreen, Paid Masterclass, Product Demo, Recruitment Webinar, and Training Workshop.
+2. **Affiliate Webinar Funnels:** Affiliates can pick any marketplace product, attach a high-converting webinar recording or live session, generate a branded registration funnel, and earn instant double-entry wallet commissions on in-webinar sales.
+3. **AI Webinar Host:** Greets attendees by name in live chat, answers product FAQs from the knowledge base, delivers timed engagement prompts, introduces speakers, and announces CTA drops without interrupting presenters.
+4. **Dynamic CTA Engine:** Configurable time-stamped and manual visual banners with 1-click in-page checkout (Paystack, Wallet, Crypto) and membership upgrades.
+5. **Interactive Live Room & Chat:** Real-time chat, sentiment analysis, AI moderation, Q&A question queue, live polls, and emoji reaction streams.
+6. **Automated CRM & Email Sequencing:** Ingests registrations into the host's isolated CRM (`crmEngine`), creates verified QR ticket passes, and triggers automated pre-webinar confirmation and reminder emails.

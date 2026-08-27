@@ -387,6 +387,90 @@ export type EventFormat =
   | 'prerecorded_evergreen'
   | 'hybrid';
 
+export type WebinarType =
+  | 'free_live'
+  | 'paid_live'
+  | 'free_evergreen'
+  | 'paid_evergreen'
+  | 'product_demo'
+  | 'recruitment'
+  | 'training'
+  | 'masterclass'
+  | 'workshop'
+  | 'conference';
+
+export interface DynamicCTA {
+  id: string;
+  title: string;
+  description?: string;
+  buttonText: string;
+  buttonUrl?: string;
+  ctaType: 'buy_now' | 'join_membership' | 'register_today' | 'schedule_call' | 'download_guide' | 'visit_store' | 'contact_sales';
+  triggerType: 'timestamp' | 'end_of_webinar' | 'manual';
+  triggerTimestampSeconds: number;
+  price?: number;
+  discountCode?: string;
+  productId?: string;
+  active: boolean;
+}
+
+export interface AIAssistantConfig {
+  enabled: boolean;
+  assistantName: string;
+  assistantAvatar?: string;
+  welcomeMessage?: string;
+  faqs?: Array<{ question: string; answer: string }>;
+  timedReminders?: Array<{ timestampSeconds: number; message: string }>;
+  autoModerateChat?: boolean;
+}
+
+export interface WebinarChatMessage {
+  id: string;
+  senderName: string;
+  senderRole?: 'host' | 'presenter' | 'ai_assistant' | 'attendee';
+  senderAvatar?: string;
+  text: string;
+  time: string;
+  isPinned?: boolean;
+}
+
+export interface WebinarPoll {
+  id: string;
+  question: string;
+  options: Array<{ id: string; text: string; votes: number }>;
+  isActive: boolean;
+  totalVotes: number;
+}
+
+export interface WebinarQuestion {
+  id: string;
+  authorName: string;
+  question: string;
+  upvotes: number;
+  isAnswered: boolean;
+  answeredBy?: string;
+}
+
+export interface AffiliateWebinarConfig {
+  isAffiliateWebinar: boolean;
+  affiliateProductId?: string;
+  affiliateProductName?: string;
+  affiliateProductPrice?: number;
+  affiliateCommissionRate?: number;
+  affiliateTrackingLink?: string;
+  vendorId?: string;
+}
+
+export interface WebinarAnalytics {
+  views: number;
+  peakAttendees: number;
+  avgWatchTimeMinutes: number;
+  ctaClicks: number;
+  conversionCount: number;
+  totalRevenue: number;
+  affiliateCommissions: number;
+}
+
 export interface EventSpeaker {
   id: string;
   name: string;
@@ -426,6 +510,7 @@ export interface EventItem {
   subtitle?: string;
   description?: string;
   category: string;
+  webinarType?: WebinarType;
   format?: EventFormat;
   date: string;
   time: string;
@@ -447,6 +532,8 @@ export interface EventItem {
   ticketPrice?: number;
   image?: string;
   bannerImage?: string;
+  isEvergreen?: boolean;
+  videoSource?: 'youtube' | 'vimeo' | 'mp4' | 'hls' | 'zoom' | 'google_meet' | 'teams' | 'youtube_live' | 'facebook_live' | 'custom';
   videoEmbedUrl?: string;
   replayUrl?: string;
   status: 'Upcoming' | 'Live' | 'Past' | 'Draft' | 'Completed' | 'Cancelled';
@@ -455,6 +542,10 @@ export interface EventItem {
   agenda?: EventAgendaItem[];
   faqs?: Array<{ question: string; answer: string }>;
   tags?: string[];
+  affiliateConfig?: AffiliateWebinarConfig;
+  aiAssistantConfig?: AIAssistantConfig;
+  dynamicCTAs?: DynamicCTA[];
+  analytics?: WebinarAnalytics;
   createdAt?: string;
 }
 
