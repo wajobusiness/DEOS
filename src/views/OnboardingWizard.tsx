@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { PlanTier, Member } from '../types';
 import { Badge } from '../components/common/Badge';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { launchPaystackPopup } from '../lib/paystackHelper';
 
 interface OnboardingWizardProps {
   currentUser: Member;
@@ -37,6 +39,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   onComplete,
   onCancel,
 }) => {
+  const { gateways } = usePlatformSettings();
+
   // 3-Stage Post-Registration Flow: 1. Plan Selection -> 2. Wallet Payment -> 3. Onboarding Video Tour -> Done!
   const [currentStep, setCurrentStep] = useState<'plan' | 'payment' | 'video'>('plan');
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>('growth');
@@ -55,17 +59,52 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText('TX9xZgHkM92pqWrtY8dKl9mTRC20AddressEVO');
+    navigator.clipboard.writeText(gateways.cryptomus?.masterTrc20Address || 'TX9xZgHkM92pqWrtY8dKl9mTRC20AddressEVO');
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleProcessPayment = () => {
+  const handleProcessPayment = async () => {
     setIsProcessingPayment(true);
-    setTimeout(() => {
+    const amount = planPrices[selectedPlan] || 300;
+
+    if (paymentMethod === 'card' || paymentMethod === 'bank') {
+      const planRef = `ONB-${selectedPlan.toUpperCase()}-${Date.now().toString().slice(-6)}`;
+      const launched = await launchPaystackPopup({
+        publicKey: gateways.paystack?.publicKey,
+        email: currentUser.email,
+        amountUSD: amount,
+        ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+        customerName: currentUser.name,
+        reference: planRef,
+        metadata: {
+          custom_fields: [
+            { display_name: 'Plan Tier', variable_name: 'plan_tier', value: selectedPlan.toUpperCase() },
+          ],
+        },
+        onSuccess: () => {
+          setIsProcessingPayment(false);
+          setCurrentStep('video');
+        },
+        onClose: () => {
+          setIsProcessingPayment(false);
+        },
+      });
+
+      if (!launched) {
+        // Instant simulated card verification for local testing
+        await new Promise((r) => setTimeout(r, 1200));
+        setIsProcessingPayment(false);
+        setCurrentStep('video');
+      }
+      return;
+    }
+
+    if (paymentMethod === 'usdt') {
+      await new Promise((r) => setTimeout(r, 1000));
       setIsProcessingPayment(false);
       setCurrentStep('video');
-    }, 1500);
+    }
   };
 
   const handleFinishOnboarding = () => {

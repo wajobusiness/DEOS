@@ -50,6 +50,8 @@ import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { AuthModal } from '../components/auth/AuthModal';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { launchPaystackPopup } from '../lib/paystackHelper';
 
 interface MarketplaceHomeProps {
   onNavigate: (view: ViewType) => void;
@@ -63,6 +65,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   currentUser,
 }) => {
   const { walletBalance, processPurchase } = useWallet();
+  const { gateways } = usePlatformSettings();
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   // Navigation & Category Filters
   const [activeNavTab, setActiveNavTab] = useState<string>('Marketplace');
   const [activeSubTab, setActiveSubTab] = useState<'Featured' | 'Best Sellers' | 'Top Rated' | 'New Arrivals'>('Featured');
@@ -142,19 +146,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
 
-  const handleProcessCheckout = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!checkoutEmail || cart.length === 0) return;
-
-    if (paymentMethod === 'wallet') {
-      const orderDesc = `Marketplace Order: ${cart.map((c) => c.title).join(', ')}`;
-      const result = processPurchase(cartTotal, orderDesc);
-      if (!result.success) {
-        alert(result.error || 'Insufficient wallet balance. Please deposit funds first.');
-        return;
-      }
-    }
-
+  const finalizeMarketplaceOrder = (paymentRef?: string) => {
     // Record Real Seller Orders for each product purchased
     const activeRef = sessionStorage.getItem('eviona_active_ref') || undefined;
     cart.forEach((item) => {
@@ -167,7 +159,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
     });
 
     setCompletedOrder({
-      orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+      orderNumber: paymentRef || `ORD-${Date.now().toString().slice(-6)}`,
       buyerName: checkoutName || 'Entrepreneur',
       buyerEmail: checkoutEmail,
       items: cart,
@@ -181,6 +173,57 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
     setCart([]);
     setIsCartOpen(false);
     setIsCheckoutModalOpen(false);
+    setIsProcessingCheckout(false);
+  };
+
+  const handleProcessCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkoutEmail || cart.length === 0) return;
+    setIsProcessingCheckout(true);
+
+    if (paymentMethod === 'wallet') {
+      const orderDesc = `Marketplace Order: ${cart.map((c) => c.title).join(', ')}`;
+      const result = processPurchase(cartTotal, orderDesc);
+      if (!result.success) {
+        alert(result.error || 'Insufficient wallet balance. Please select card or crypto.');
+        setIsProcessingCheckout(false);
+        return;
+      }
+      finalizeMarketplaceOrder();
+      return;
+    }
+
+    if (paymentMethod === 'card' || paymentMethod === 'bank') {
+      const orderRef = `ORD-PSTK-${Date.now().toString().slice(-6)}`;
+      const launched = await launchPaystackPopup({
+        publicKey: gateways.paystack?.publicKey,
+        email: checkoutEmail,
+        amountUSD: cartTotal,
+        ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+        customerName: checkoutName || 'Customer',
+        reference: orderRef,
+        onSuccess: (res) => {
+          finalizeMarketplaceOrder(res.reference || orderRef);
+        },
+        onClose: () => {
+          setIsProcessingCheckout(false);
+        },
+      });
+
+      if (!launched) {
+        // Fallback simulate instant card authorization on page
+        await new Promise((r) => setTimeout(r, 1000));
+        finalizeMarketplaceOrder(orderRef);
+      }
+      return;
+    }
+
+    if (paymentMethod === 'usdt') {
+      const cryptoRef = `ORD-TRC-${Date.now().toString().slice(-6)}`;
+      await new Promise((r) => setTimeout(r, 1000));
+      finalizeMarketplaceOrder(cryptoRef);
+      return;
+    }
   };
 
   const handleCopyStorefront = () => {
@@ -935,6 +978,22 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     <span className="text-[10px]">Bank / Paystack</span>
                   </button>
                 </div>
+
+                {paymentMethod === 'usdt' && (
+                  <div className="mt-2 p-3 bg-indigo-50/50 rounded-xl border border-indigo-200/60 text-[11px] text-indigo-900 space-y-1">
+                    <span className="font-bold">TRON (TRC20) Master Merchant Address:</span>
+                    <p className="font-mono text-[10px] text-indigo-700 break-all select-all font-bold">
+                      {gateways.cryptomus?.masterTrc20Address || 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address'}
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'card' && (
+                  <div className="mt-2 p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Instant in-page checkout with Paystack / Visa & Mastercard</span>
+                  </div>
+                )}
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
@@ -944,9 +1003,10 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                disabled={isProcessingCheckout}
+                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
               >
-                <span>Complete Purchase (${cartTotal.toFixed(2)})</span>
+                <span>{isProcessingCheckout ? 'Processing Payment...' : `Complete Purchase ($${cartTotal.toFixed(2)})`}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

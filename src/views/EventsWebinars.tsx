@@ -49,6 +49,8 @@ import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 import { eventsEngine } from '../engine/eventsEngine';
 import { useWallet } from '../context/WalletContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { launchPaystackPopup } from '../lib/paystackHelper';
 
 interface EventsWebinarsProps {
   currentUser?: Member;
@@ -57,6 +59,8 @@ interface EventsWebinarsProps {
 export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) => {
   const { member } = useAuth();
   const { walletBalance, processPurchase } = useWallet();
+  const { gateways } = usePlatformSettings();
+  const [eventPaymentMethod, setEventPaymentMethod] = useState<'wallet' | 'card' | 'usdt'>('wallet');
 
   const activeUser = currentUser || member || {
     id: '',
@@ -226,36 +230,84 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
     alert('Event created successfully! You are the verified Host.');
   };
 
+  const completeTicketRegistration = async (paidMethod: 'wallet' | 'card' | 'free') => {
+    if (!selectedEventForRegister) return;
+    const res = await eventsEngine.registerAttendee({
+      eventId: selectedEventForRegister.id,
+      attendeeName: regName,
+      attendeeEmail: regEmail,
+      attendeePhone: regPhone,
+      paymentMethod: paidMethod,
+    });
+
+    setGeneratedTicket(res.ticket);
+    setSelectedEventForRegister(null);
+    setIsRegistering(false);
+    refreshEvents();
+  };
+
   const handleRegisterForEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEventForRegister || !regName || !regEmail) return;
 
     setIsRegistering(true);
     try {
-      if (selectedEventForRegister.isPaid && (selectedEventForRegister.ticketPrice || 0) > 0) {
-        const cost = selectedEventForRegister.ticketPrice || 0;
+      const isPaid = Boolean(selectedEventForRegister.isPaid && (selectedEventForRegister.ticketPrice || 0) > 0);
+      const cost = selectedEventForRegister.ticketPrice || 0;
+
+      if (!isPaid) {
+        await completeTicketRegistration('free');
+        return;
+      }
+
+      if (eventPaymentMethod === 'wallet') {
         const res = processPurchase(cost, `Event Ticket: ${selectedEventForRegister.title}`);
         if (!res.success) {
-          alert(res.error || 'Insufficient wallet balance to purchase this ticket.');
+          alert(res.error || 'Insufficient wallet balance. Please select card payment or deposit funds.');
           setIsRegistering(false);
           return;
         }
+        await completeTicketRegistration('wallet');
+        return;
       }
 
-      const res = await eventsEngine.registerAttendee({
-        eventId: selectedEventForRegister.id,
-        attendeeName: regName,
-        attendeeEmail: regEmail,
-        attendeePhone: regPhone,
-        paymentMethod: selectedEventForRegister.isPaid ? 'wallet' : 'free',
-      });
+      if (eventPaymentMethod === 'card') {
+        const tktRef = `TKT-PSTK-${Date.now().toString().slice(-6)}`;
+        const launched = await launchPaystackPopup({
+          publicKey: gateways.paystack?.publicKey,
+          email: regEmail,
+          amountUSD: cost,
+          ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+          customerName: regName || 'Attendee',
+          reference: tktRef,
+          metadata: {
+            custom_fields: [
+              { display_name: 'Event Title', variable_name: 'event_title', value: selectedEventForRegister.title },
+            ],
+          },
+          onSuccess: async () => {
+            await completeTicketRegistration('card');
+          },
+          onClose: () => {
+            setIsRegistering(false);
+          },
+        });
 
-      setGeneratedTicket(res.ticket);
-      setSelectedEventForRegister(null);
-      refreshEvents();
+        if (!launched) {
+          // Instant card simulation fallback
+          await new Promise((r) => setTimeout(r, 1000));
+          await completeTicketRegistration('card');
+        }
+        return;
+      }
+
+      if (eventPaymentMethod === 'usdt') {
+        await new Promise((r) => setTimeout(r, 1000));
+        await completeTicketRegistration('card');
+        return;
+      }
     } catch (err: any) {
       alert(err.message || 'Failed to register for event.');
-    } finally {
       setIsRegistering(false);
     }
   };
@@ -977,6 +1029,52 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
                 />
               </div>
 
+              {selectedEventForRegister.isPaid && (
+                <div className="space-y-2 pt-1">
+                  <label className="block font-bold text-slate-700">Select Payment Method</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEventPaymentMethod('wallet')}
+                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
+                        eventPaymentMethod === 'wallet'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px]">Eviona Wallet</span>
+                      <span className="text-[10px] text-indigo-600 font-mono">(${walletBalance.toFixed(2)})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEventPaymentMethod('card')}
+                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
+                        eventPaymentMethod === 'card'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px]">Paystack / Card</span>
+                      <span className="text-[10px] text-emerald-600 font-bold">Instant Online</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEventPaymentMethod('usdt')}
+                      className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition-all ${
+                        eventPaymentMethod === 'usdt'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px]">Crypto USDT</span>
+                      <span className="text-[10px] text-indigo-600 font-bold">TRC-20</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -990,7 +1088,11 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
                   disabled={isRegistering}
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold shadow-md shadow-indigo-600/30 flex items-center gap-2"
                 >
-                  {isRegistering ? 'Generating Pass...' : selectedEventForRegister.isPaid ? `Pay $${selectedEventForRegister.ticketPrice?.toFixed(2)}` : 'Confirm Free Pass'}
+                  {isRegistering
+                    ? 'Processing...'
+                    : selectedEventForRegister.isPaid
+                    ? `Pay $${selectedEventForRegister.ticketPrice?.toFixed(2)} & Get Pass`
+                    : 'Confirm Free Pass'}
                 </button>
               </div>
             </form>

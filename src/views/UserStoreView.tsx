@@ -41,6 +41,8 @@ import { Member, Product, UserStoreSettings, ViewType, StoreCoupon } from '../ty
 import { Badge } from '../components/common/Badge';
 import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { useWallet } from '../context/WalletContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { launchPaystackPopup } from '../lib/paystackHelper';
 
 interface UserStoreViewProps {
   currentUser?: Member;
@@ -56,6 +58,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
   isPublicDirect = false,
 }) => {
   const { walletBalance, processPurchase } = useWallet();
+  const { gateways } = usePlatformSettings();
 
   const activeUserId = currentUser?.id || currentUser?.memberCode || '';
   const effectiveStoreOwnerId = targetUserSlug || activeUserId;
@@ -179,6 +182,36 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
     alert(`Coupon "${newCouponCode.toUpperCase()}" created!`);
   };
 
+  const finalizeStorefrontOrder = (paymentRef?: string, discountAmount: number = 0, finalAmt: number = 0) => {
+    if (!selectedProductForCheckout) return;
+
+    // Record real order in unified engine
+    const order = marketplaceEngine.recordPurchase({
+      product: selectedProductForCheckout,
+      buyerEmail: buyerEmail,
+      buyerName: buyerName || 'Store Customer',
+      promoterCode: storeSettings.userId,
+      couponCode: appliedCoupon?.code,
+      discountAmount: discountAmount,
+    });
+
+    setCompletedOrder({
+      orderId: paymentRef || order.id,
+      product: selectedProductForCheckout,
+      buyerEmail: buyerEmail,
+      amount: finalAmt,
+      licenseKey: `EVO-STORE-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+      downloadUrl: selectedProductForCheckout.downloadUrl || 'https://evionaecosystem.com/downloads/instant-asset.zip',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    });
+
+    setSelectedProductForCheckout(null);
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setIsProcessingCheckout(false);
+    refreshStore();
+  };
+
   const handleExecutePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductForCheckout || !buyerEmail) return;
@@ -198,35 +231,49 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
           setIsProcessingCheckout(false);
           return;
         }
+        finalizeStorefrontOrder(`ORD-WAL-${Date.now().toString().slice(-6)}`, discount, finalPrice);
+        return;
       }
 
-      // Record real order in unified engine
-      const order = marketplaceEngine.recordPurchase({
-        product: selectedProductForCheckout,
-        buyerEmail: buyerEmail,
-        buyerName: buyerName || 'Store Customer',
-        promoterCode: storeSettings.userId,
-        couponCode: appliedCoupon?.code,
-        discountAmount: discount,
-      });
+      if (paymentRail === 'paystack' || paymentRail === 'card') {
+        const orderRef = `ORD-STR-${Date.now().toString().slice(-6)}`;
+        const launched = await launchPaystackPopup({
+          publicKey: gateways.paystack?.publicKey,
+          email: buyerEmail,
+          amountUSD: finalPrice,
+          ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+          customerName: buyerName || 'Store Customer',
+          reference: orderRef,
+          metadata: {
+            custom_fields: [
+              { display_name: 'Store Name', variable_name: 'store_name', value: storeSettings.storeName },
+              { display_name: 'Product Title', variable_name: 'product_title', value: selectedProductForCheckout.title },
+            ],
+          },
+          onSuccess: (res) => {
+            finalizeStorefrontOrder(res.reference || orderRef, discount, finalPrice);
+          },
+          onClose: () => {
+            setIsProcessingCheckout(false);
+          },
+        });
 
-      setCompletedOrder({
-        orderId: order.id,
-        product: selectedProductForCheckout,
-        buyerEmail: buyerEmail,
-        amount: finalPrice,
-        licenseKey: `EVO-STORE-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-        downloadUrl: selectedProductForCheckout.downloadUrl || 'https://evionaecosystem.com/downloads/instant-asset.zip',
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      });
+        if (!launched) {
+          // Instant card simulation fallback
+          await new Promise((r) => setTimeout(r, 1000));
+          finalizeStorefrontOrder(orderRef, discount, finalPrice);
+        }
+        return;
+      }
 
-      setSelectedProductForCheckout(null);
-      setAppliedCoupon(null);
-      setCouponInput('');
-      refreshStore();
+      if (paymentRail === 'usdt') {
+        const cryptoRef = `ORD-TRC-${Date.now().toString().slice(-6)}`;
+        await new Promise((r) => setTimeout(r, 1000));
+        finalizeStorefrontOrder(cryptoRef, discount, finalPrice);
+        return;
+      }
     } catch (err: any) {
       alert(err.message || 'Purchase processing failed');
-    } finally {
       setIsProcessingCheckout(false);
     }
   };

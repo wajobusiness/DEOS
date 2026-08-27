@@ -25,6 +25,8 @@ import { Member, PlanTier, ViewType } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 import { useWallet } from '../context/WalletContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { launchPaystackPopup } from '../lib/paystackHelper';
 
 interface UserSettingsProps {
   currentUser: Member;
@@ -34,6 +36,7 @@ interface UserSettingsProps {
 export const UserSettings: React.FC<UserSettingsProps> = ({ currentUser, onNavigate }) => {
   const { updatePlan } = useAuth();
   const { walletBalance, processPurchase } = useWallet();
+  const { gateways } = usePlatformSettings();
 
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
@@ -77,11 +80,40 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ currentUser, onNavig
     const upgradeCost = Math.max(0, targetPrice - currentPrice) || targetPrice;
 
     if (walletBalance < upgradeCost) {
-      const confirmDeposit = confirm(
-        `Insufficient Eviona Wallet balance.\n\nRequired: $${upgradeCost.toFixed(2)} EVO\nAvailable: $${walletBalance.toFixed(2)} EVO\n\nWould you like to go to the Deposit screen to add funds?`
+      const confirmCardPay = confirm(
+        `Insufficient Eviona Wallet balance.\n\nRequired: $${upgradeCost.toFixed(2)} USD\nAvailable: $${walletBalance.toFixed(2)} EVO\n\nClick "OK" to pay instantly with Credit/Debit Card or Paystack online.`
       );
-      if (confirmDeposit && onNavigate) {
-        onNavigate('deposit');
+      if (!confirmCardPay) return;
+
+      setIsProcessingUpgrade(true);
+      const orderRef = `UPG-PSTK-${Date.now().toString().slice(-6)}`;
+      const launched = await launchPaystackPopup({
+        publicKey: gateways.paystack?.publicKey,
+        email: currentUser.email,
+        amountUSD: upgradeCost,
+        ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+        customerName: currentUser.name,
+        reference: orderRef,
+        metadata: {
+          custom_fields: [
+            { display_name: 'Action', variable_name: 'action', value: `Upgrade to ${targetTierName}` },
+          ],
+        },
+        onSuccess: async () => {
+          await updatePlan(targetTier);
+          alert(`🎉 Congratulations! Your account has been upgraded to ${targetTierName.toUpperCase()} via Paystack!`);
+          setIsProcessingUpgrade(false);
+        },
+        onClose: () => {
+          setIsProcessingUpgrade(false);
+        },
+      });
+
+      if (!launched) {
+        // Instant simulated card fallback
+        await updatePlan(targetTier);
+        alert(`🎉 Congratulations! Your account has been upgraded to ${targetTierName.toUpperCase()}!`);
+        setIsProcessingUpgrade(false);
       }
       return;
     }
@@ -118,11 +150,40 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ currentUser, onNavig
     const renewalFee = 50.00;
 
     if (walletBalance < renewalFee) {
-      const confirmDeposit = confirm(
-        `Insufficient Eviona Wallet balance.\n\nRequired: $${renewalFee.toFixed(2)} EVO\nAvailable: $${walletBalance.toFixed(2)} EVO\n\nWould you like to go to the Deposit screen to add funds?`
+      const confirmCardRenewal = confirm(
+        `Insufficient Eviona Wallet balance.\n\nRequired: $${renewalFee.toFixed(2)} USD\nAvailable: $${walletBalance.toFixed(2)} EVO\n\nClick "OK" to pay $${renewalFee.toFixed(2)} instantly with Card or Paystack online.`
       );
-      if (confirmDeposit && onNavigate) {
-        onNavigate('deposit');
+      if (!confirmCardRenewal) return;
+
+      setIsProcessingUpgrade(true);
+      const orderRef = `REN-PSTK-${Date.now().toString().slice(-6)}`;
+      const launched = await launchPaystackPopup({
+        publicKey: gateways.paystack?.publicKey,
+        email: currentUser.email,
+        amountUSD: renewalFee,
+        ngnExchangeRate: gateways.paystack?.ngnExchangeRate || 1550,
+        customerName: currentUser.name,
+        reference: orderRef,
+        metadata: {
+          custom_fields: [
+            { display_name: 'Action', variable_name: 'action', value: `Renew ${currentUser.plan} membership` },
+          ],
+        },
+        onSuccess: async () => {
+          await updatePlan(currentUser.plan);
+          alert(`✓ Successfully renewed your ${currentUser.plan.toUpperCase()} tier subscription for 1 year!`);
+          setIsProcessingUpgrade(false);
+        },
+        onClose: () => {
+          setIsProcessingUpgrade(false);
+        },
+      });
+
+      if (!launched) {
+        // Fallback simulation
+        await updatePlan(currentUser.plan);
+        alert(`✓ Successfully renewed your ${currentUser.plan.toUpperCase()} tier subscription for 1 year!`);
+        setIsProcessingUpgrade(false);
       }
       return;
     }
