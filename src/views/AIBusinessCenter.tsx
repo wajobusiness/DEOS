@@ -22,11 +22,21 @@ import {
   Layers,
   Search,
   ExternalLink,
-  Target
+  Target,
+  Building2,
+  MapPin,
+  Mail,
+  Phone,
+  Star,
+  Download,
+  Check,
+  Share2,
+  Copy
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 import { websiteBuilderEngine } from '../engine/websiteBuilderEngine';
+import { leadGenerationEngine, ProspectLead } from '../engine/leadGenerationEngine';
 
 function getUserAIKey(userId: string, suffix: string): string {
   const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
@@ -42,7 +52,18 @@ export const AIBusinessCenter: React.FC = () => {
   const siteConfig = websiteBuilderEngine.getWebsiteConfig(activeUserId, activeUserName);
   const activeDomain = siteConfig.customDomain || `${siteConfig.subdomain}.evionaecosystem.com`;
 
-  const [activeTab, setActiveTab] = useState<'copilot' | 'chatbot' | 'website' | 'knowledge' | 'crm-ai' | 'tools'>('copilot');
+  const [activeTab, setActiveTab] = useState<'copilot' | 'lead-finder' | 'chatbot' | 'website' | 'knowledge' | 'crm-ai' | 'tools'>('copilot');
+
+  // Lead Finder State (Book 20 Google Maps Scraper Kit Integration)
+  const [searchCategory, setSearchCategory] = useState('Dental Clinics & Orthodontics');
+  const [searchCity, setSearchCity] = useState('Austin');
+  const [searchCountry, setSearchCountry] = useState('United States');
+  const [isSearchingLeads, setIsSearchingLeads] = useState(false);
+  const [discoveredLeads, setDiscoveredLeads] = useState<ProspectLead[]>([]);
+  const [importedLeadIds, setImportedLeadIds] = useState<string[]>([]);
+  const [pitchLead, setPitchLead] = useState<ProspectLead | null>(null);
+  const [pitchDraft, setPitchDraft] = useState<{ subject: string; body: string } | null>(null);
+  const [isCopiedPitch, setIsCopiedPitch] = useState(false);
 
   // Business Context State derived dynamically from active user
   const [businessProfile, setBusinessProfile] = useState({
@@ -174,6 +195,51 @@ export const AIBusinessCenter: React.FC = () => {
     }, 1200);
   };
 
+  // Lead Finder Handlers
+  const handleSearchLeads = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchCategory || !searchCity) return;
+    setIsSearchingLeads(true);
+    try {
+      const leads = await leadGenerationEngine.executeProspectSearch(
+        { category: searchCategory, city: searchCity, country: searchCountry },
+        activeUserId
+      );
+      setDiscoveredLeads(leads);
+      setCreditsUsed(prev => prev + 25);
+    } catch {
+      alert('Failed to search leads.');
+    } finally {
+      setIsSearchingLeads(false);
+    }
+  };
+
+  const handleImportLead = (lead: ProspectLead) => {
+    const success = leadGenerationEngine.importToCRM(lead, activeUserId, activeUserName);
+    if (success) {
+      setImportedLeadIds(prev => [...prev, lead.id]);
+    }
+  };
+
+  const handleImportAllLeads = () => {
+    let count = 0;
+    discoveredLeads.forEach(lead => {
+      if (!importedLeadIds.includes(lead.id)) {
+        if (leadGenerationEngine.importToCRM(lead, activeUserId, activeUserName)) {
+          count++;
+        }
+      }
+    });
+    setImportedLeadIds(discoveredLeads.map(l => l.id));
+    alert(`Successfully imported ${count} leads directly into your CRM!`);
+  };
+
+  const handleDraftPitch = (lead: ProspectLead) => {
+    setPitchLead(lead);
+    const draft = leadGenerationEngine.generatePitchEmail(lead, activeUserName);
+    setPitchDraft(draft);
+  };
+
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* Top Banner: AI Center Header with Navigation & Credit Usage */}
@@ -213,6 +279,7 @@ export const AIBusinessCenter: React.FC = () => {
       <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full sm:w-max overflow-x-auto">
         {[
           { id: 'copilot', label: 'Business Co-Pilot', icon: Sparkles },
+          { id: 'lead-finder', label: 'AI Lead Finder (Google Maps)', icon: Target },
           { id: 'chatbot', label: 'Lead Capture Bot', icon: Bot },
           { id: 'website', label: 'AI Copywriter', icon: LayoutTemplate },
           { id: 'knowledge', label: 'Knowledge Base', icon: Database },
@@ -318,6 +385,253 @@ export const AIBusinessCenter: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: AI LEAD FINDER (GOOGLE MAPS PROSPECTING) */}
+      {activeTab === 'lead-finder' && (
+        <div className="space-y-6">
+          {/* Query Formulation Form */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-indigo-600" />
+                  <span>Google Maps B2B Lead Finder & Prospect Intelligence</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Search local high-intent businesses, extract contact details & social channels, and import leads directly into your CRM.
+                </p>
+              </div>
+              <Badge variant="emerald" size="sm">● High-Speed Extraction Ready</Badge>
+            </div>
+
+            <form onSubmit={handleSearchLeads} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Industry / Category</label>
+                <select
+                  value={searchCategory}
+                  onChange={(e) => setSearchCategory(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500 bg-white"
+                >
+                  {leadGenerationEngine.popularNiches.map((niche) => (
+                    <option key={niche} value={niche}>{niche}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Target City</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Austin, London, Miami"
+                  value={searchCity}
+                  onChange={(e) => setSearchCity(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Country</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. United States"
+                  value={searchCountry}
+                  onChange={(e) => setSearchCountry(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex items-end">
+                <button
+                  type="submit"
+                  disabled={isSearchingLeads}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Search className={`w-3.5 h-3.5 ${isSearchingLeads ? 'animate-spin' : ''}`} />
+                  <span>{isSearchingLeads ? 'Extracting...' : 'Find Leads'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Results Display */}
+          {discoveredLeads.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-card space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Discovered Prospects ({discoveredLeads.length} Businesses Found)
+                  </h4>
+                  <p className="text-xs text-slate-500">Targeting {searchCategory} in {searchCity}, {searchCountry}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => leadGenerationEngine.exportCSV(discoveredLeads, `${searchCity}_${searchCategory.replace(/[^a-zA-Z0-9]/g, '_')}_leads.csv`)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Export CSV</span>
+                  </button>
+                  <button
+                    onClick={handleImportAllLeads}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Import All to CRM</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {discoveredLeads.map((lead) => {
+                  const isImported = importedLeadIds.includes(lead.id);
+                  return (
+                    <div
+                      key={lead.id}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-indigo-300 transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h5 className="font-bold text-slate-900 text-xs leading-snug">{lead.businessName}</h5>
+                            <span className="text-[10px] text-slate-500 font-medium">{lead.category}</span>
+                          </div>
+                          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/60 text-amber-700 text-[10px] font-bold shrink-0">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{lead.rating} ({lead.reviewCount})</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-[11px] text-slate-600">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="truncate">{lead.address}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 truncate font-mono">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{lead.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 truncate text-indigo-600">
+                            <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <span className="truncate">{lead.email}</span>
+                          </div>
+                          {lead.website && (
+                            <div className="flex items-center gap-1.5 truncate text-slate-500">
+                              <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <a
+                                href={lead.website}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="truncate hover:underline text-[10px]"
+                              >
+                                {lead.website.replace(/^https?:\/\//, '')}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => handleDraftPitch(lead)}
+                          className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center gap-1 transition-all"
+                        >
+                          <Sparkles className="w-3 h-3 text-indigo-600" />
+                          <span>AI Pitch</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleImportLead(lead)}
+                          disabled={isImported}
+                          className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
+                            isImported
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                              : 'bg-white border border-slate-300 hover:bg-slate-100 text-slate-800'
+                          }`}
+                        >
+                          {isImported ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>In CRM</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3" />
+                              <span>Add to CRM</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* AI Cold Outreach Draft Modal */}
+          {pitchDraft && pitchLead && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+              <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4 text-slate-900">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">AI Cold Outreach Pitch</h4>
+                      <p className="text-[11px] text-slate-500">Personalized for {pitchLead.businessName}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setPitchDraft(null); setPitchLead(null); }}
+                    className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center font-bold text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Subject Line</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={pitchDraft.subject}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Email Body</label>
+                    <textarea
+                      rows={10}
+                      readOnly
+                      value={pitchDraft.body}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-[11px] leading-relaxed text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${pitchDraft.subject}\n\n${pitchDraft.body}`);
+                      setIsCopiedPitch(true);
+                      setTimeout(() => setIsCopiedPitch(false), 2000);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all"
+                  >
+                    {isCopiedPitch ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{isCopiedPitch ? 'Copied Pitch!' : 'Copy to Clipboard'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
