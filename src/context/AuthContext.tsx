@@ -242,7 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name,
         email: cleanEmail,
         country: country || 'Global',
-        sponsorCode: sponsorCode || 'EVO-ID-100245',
+        sponsorCode: sponsorCode || 'EVO-ID-000001',
         preferredPlacementLeg: preferredPlacementLeg || 'auto',
         plan: 'growth',
       });
@@ -271,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             data: {
               name,
               country: country || 'Global',
-              sponsorCode: sponsorCode || 'EVO-ID-100245',
+              sponsorCode: sponsorCode || 'EVO-ID-000001',
               memberCode: newUser.memberCode,
               hasCompletedOnboarding: false,
             },

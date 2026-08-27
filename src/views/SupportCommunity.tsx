@@ -20,7 +20,7 @@ import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 
 function getUserTicketsKey(userId: string): string {
-  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return `eviona_user_${cleanId}_support_tickets`;
 }
 
@@ -34,7 +34,7 @@ interface SupportTicket {
 
 export const SupportCommunity: React.FC = () => {
   const { member } = useAuth();
-  const activeUserId = member?.id || 'EVO-ID-100245';
+  const activeUserId = member?.id || member?.memberCode || '';
 
   const [search, setSearch] = useState('');
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);

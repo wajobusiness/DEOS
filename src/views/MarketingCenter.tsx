@@ -45,13 +45,14 @@ interface MarketingCenterProps {
 export const MarketingCenter: React.FC<MarketingCenterProps> = ({ currentUser }) => {
   const { member } = useAuth();
   const activeUser = currentUser || member || {
-    id: 'EVO-ID-100245',
-    name: 'Entrepreneur',
-    email: 'user@evionaecosystem.com',
+    id: '',
+    memberCode: '',
+    name: 'Member',
+    email: '',
   };
 
-  const userId = activeUser.id || 'EVO-ID-100245';
-  const userName = activeUser.name || 'Entrepreneur';
+  const userId = activeUser.id || activeUser.memberCode || '';
+  const userName = activeUser.name || 'Member';
   const userStoreLink = `https://evionaecosystem.com/store?user=${userId}`;
 
   const [activeTab, setActiveTab] = useState<'pixels' | 'campaigns' | 'swipes' | 'ai-ads' | 'telemetry'>('pixels');

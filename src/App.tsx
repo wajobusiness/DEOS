@@ -45,9 +45,9 @@ export function App() {
   const [targetStoreUser, setTargetStoreUser] = useState<string>('');
   const [activeReferralCode, setActiveReferralCode] = useState<string>(() => {
     try {
-      return sessionStorage.getItem('eviona_active_ref') || 'EVO-ID-100245';
+      return sessionStorage.getItem('eviona_active_ref') || '';
     } catch {
-      return 'EVO-ID-100245';
+      return '';
     }
   });
 
@@ -289,10 +289,10 @@ export function App() {
 
   // 4. Authenticated Full Operating System Shell (User Dashboard, Store, Wallet, CRM, etc.)
   const activeMember = member || {
-    id: 'EVO-ID-100245',
-    memberCode: 'EVO-ID-100245',
+    id: '',
+    memberCode: '',
     name: 'Entrepreneur',
-    email: 'entrepreneur@evionaecosystem.com',
+    email: '',
     phone: '',
     country: 'Global',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',

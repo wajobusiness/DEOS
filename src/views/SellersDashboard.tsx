@@ -53,14 +53,15 @@ export const SellersDashboard: React.FC<SellersDashboardProps> = ({
   const { commissions } = usePlatformSettings();
 
   const activeUser = currentUser || member || {
-    id: 'EVO-ID-100245',
-    name: 'Entrepreneur',
-    email: 'user@evionaecosystem.com',
+    id: '',
+    memberCode: '',
+    name: 'Creator',
+    email: '',
   };
 
-  const sellerId = activeUser.id || 'EVO-ID-100245';
+  const sellerId = activeUser.id || activeUser.memberCode || '';
   const sellerName = activeUser.name || 'Digital Creator';
-  const sellerEmail = activeUser.email || 'seller@evionaecosystem.com';
+  const sellerEmail = activeUser.email || '';
 
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);

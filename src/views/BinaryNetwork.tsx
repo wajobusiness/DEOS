@@ -38,8 +38,8 @@ export const BinaryNetwork: React.FC = () => {
   const { commissions } = usePlatformSettings();
 
   // Short EVO-ID standard for current member
-  const rawId = member?.id || 'EVO-ID-100245';
-  const memberCode = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
+  const rawId = member?.id || member?.memberCode || '';
+  const memberCode = rawId ? (rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`) : '';
 
   // Root view user (Super Admin can switch to view any user's tree)
   const [viewRootId, setViewRootId] = useState<string>(memberCode);

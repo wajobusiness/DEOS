@@ -36,8 +36,8 @@ import { crmEngine } from '../engine/crmEngine';
 
 export const CRMDashboard: React.FC = () => {
   const { member } = useAuth();
-  const activeUserId = member?.id || 'EVO-ID-100245';
-  const activeUserName = member?.name || 'Entrepreneur';
+  const activeUserId = member?.id || member?.memberCode || '';
+  const activeUserName = member?.name || 'Member';
 
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequences' | 'campaigns'>('pipeline');
 

@@ -57,16 +57,16 @@ function getActiveUserIdentifier(): { id: string; email: string; name: string } 
     const raw = localStorage.getItem(LOCAL_STORAGE_ACTIVE_MEMBER_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const rawId = parsed.id || parsed.memberCode || 'EVO-ID-100245';
-      const cleanId = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
+      const rawId = parsed.id || parsed.memberCode || '';
+      const cleanId = rawId ? (rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`) : '';
       return {
         id: cleanId,
-        email: (parsed.email || 'user@evionaecosystem.com').toLowerCase(),
-        name: parsed.name || 'Entrepreneur',
+        email: (parsed.email || '').toLowerCase(),
+        name: parsed.name || 'Member',
       };
     }
   } catch {}
-  return { id: 'EVO-ID-100245', email: 'user@evionaecosystem.com', name: 'Entrepreneur' };
+  return { id: '', email: '', name: 'Member' };
 }
 
 function getUserStorageKey(identifier: string, suffix: 'balance' | 'ledger'): string {

@@ -59,9 +59,10 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
   const { walletBalance, processPurchase } = useWallet();
 
   const activeUser = currentUser || member || {
-    id: 'EVO-ID-100245',
-    name: 'Entrepreneur',
-    email: 'user@evionaecosystem.com',
+    id: '',
+    memberCode: '',
+    name: 'Member',
+    email: '',
   };
 
   const [events, setEvents] = useState<EventItem[]>(() => eventsEngine.getEvents('All'));
@@ -187,9 +188,9 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
       meetingLink: newMeetingLink,
       venue: newVenue || (newFormat === 'physical' ? 'Grand Hyatt Convention Center' : 'Eviona Virtual Studio'),
       meetingPlatform: newFormat.toUpperCase().replace('_', ' '),
-      organizerId: activeUser.id || 'EVO-ID-100245',
-      organizerName: activeUser.name || 'Eviona Leader',
-      organizerEmail: activeUser.email || 'user@evionaecosystem.com',
+      organizerId: activeUser.id || activeUser.memberCode || '',
+      organizerName: activeUser.name || 'Member',
+      organizerEmail: activeUser.email || '',
       instructor: newSpeakerName || activeUser.name,
       instructorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
       capacity: parseInt(newCapacity) || 500,

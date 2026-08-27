@@ -29,14 +29,14 @@ import { useAuth } from '../context/AuthContext';
 import { websiteBuilderEngine } from '../engine/websiteBuilderEngine';
 
 function getUserAIKey(userId: string, suffix: string): string {
-  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return `eviona_user_${cleanId}_ai_${suffix}`;
 }
 
 export const AIBusinessCenter: React.FC = () => {
   const { member } = useAuth();
-  const activeUserId = member?.id || 'EVO-ID-100245';
-  const activeUserName = member?.name || 'Entrepreneur';
+  const activeUserId = member?.id || member?.memberCode || '';
+  const activeUserName = member?.name || 'Member';
   const tier = (member?.plan || 'pro').toLowerCase();
 
   const siteConfig = websiteBuilderEngine.getWebsiteConfig(activeUserId, activeUserName);

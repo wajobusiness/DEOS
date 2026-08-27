@@ -18,14 +18,12 @@ import {
   Tag,
   Check,
   Globe,
-  Wallet,
-  Play
+  Wallet
 } from 'lucide-react';
 import { Member } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
-import { calculateMarketplaceFeeSplit, getDirectReferralBonus } from '../engine/binaryEngine';
 
 interface PartnerCenterProps {
   currentUser: Member;
@@ -39,13 +37,10 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const [selectedProductSlug, setSelectedProductSlug] = useState('ai-prompts-mastery');
   const [showQRModal, setShowQRModal] = useState(false);
 
-  // Live Affiliate State
-  const [clicksCount, setClicksCount] = useState(148);
-  const [conversionsCount, setConversionsCount] = useState(12);
-  const [unclaimedAffiliateEarnings, setUnclaimedAffiliateEarnings] = useState(145.00);
-  const [simType, setSimType] = useState<'plan' | 'product'>('product');
-  const [selectedPlan, setSelectedPlan] = useState<'launch' | 'growth' | 'legacy'>('growth');
-  const [isSimulating, setIsSimulating] = useState(false);
+  // Live Affiliate State (Zero Default State)
+  const [clicksCount, setClicksCount] = useState(0);
+  const [conversionsCount, setConversionsCount] = useState(0);
+  const [unclaimedAffiliateEarnings, setUnclaimedAffiliateEarnings] = useState(0.00);
   const [lastCreditNotice, setLastCreditNotice] = useState<string | null>(null);
 
   // Dynamic SuperAdmin configured rates
@@ -54,11 +49,10 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
   const uplineRatePct = commissions.uplineOverrideRatePct || 3;
 
   // Short EVO-ID standard for current member
-  const rawId = currentUser.id || 'EVO-ID-100245';
-  const memberCode = rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`;
+  const rawId = currentUser.id || currentUser.memberCode || '';
+  const memberCode = rawId ? (rawId.startsWith('EVO-ID-') ? rawId : `EVO-ID-${rawId.replace(/^EVO-?I?D?-?/i, '')}`) : 'EVO-NEW';
 
   const referralLink = `https://evionaecosystem.com/join?ref=${memberCode}`;
-  const websiteEmbeddedLink = `https://johnsonagency.com/#join?ref=${memberCode}`;
   const productAffiliateLink = `https://evionaecosystem.com/marketplace/${selectedProductSlug}?ref=${memberCode}`;
 
   const handleCopy = (text: string, type: string) => {
@@ -87,46 +81,7 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
     setTimeout(() => setLastCreditNotice(null), 5000);
   };
 
-  // Simulate an affiliate conversion and credit immediately to the live wallet
-  const handleSimulateConversion = () => {
-    setIsSimulating(true);
 
-    setTimeout(() => {
-      let earnedAmount = 0;
-      let desc = '';
-      let type: any = 'promoter_commission';
-
-      if (simType === 'plan') {
-        earnedAmount = getDirectReferralBonus(selectedPlan, commissions);
-        desc = `Direct Referral Bonus — ${selectedPlan.toUpperCase()} Plan Signup`;
-        type = 'direct_referral_bonus';
-      } else {
-        const productPrices: Record<string, { title: string; price: number }> = {
-          'ai-prompts-mastery': { title: 'AI Prompts Mastery Kit', price: 49.00 },
-          'saas-starter-boilerplate': { title: 'Enterprise SaaS Boilerplate', price: 149.00 },
-          'ecom-automation-funnel': { title: 'E-Commerce High-Converting Funnel', price: 79.00 },
-          'digital-growth-masterclass': { title: 'Digital Growth Masterclass', price: 99.00 },
-        };
-
-        const prod = productPrices[selectedProductSlug] || { title: 'Marketplace Product', price: 49.00 };
-        const split = calculateMarketplaceFeeSplit(prod.price, affRatePct / 100, {
-          platformMarketplaceFeePct: commissions.platformMarketplaceFeePct,
-          uplineOverrideRatePct: commissions.uplineOverrideRatePct,
-        });
-        earnedAmount = split.promoterCommissionNet;
-        desc = `${affRatePct}% Affiliate Commission — ${prod.title}`;
-        type = 'promoter_commission';
-      }
-
-      const tx = creditCommission(earnedAmount, type, desc);
-      setConversionsCount(prev => prev + 1);
-      setClicksCount(prev => prev + 4);
-      setIsSimulating(false);
-
-      setLastCreditNotice(`Success! +$${earnedAmount.toFixed(2)} EVO credited to your wallet (Ref: ${tx.id})`);
-      setTimeout(() => setLastCreditNotice(null), 6000);
-    }, 600);
-  };
 
   const marketingSwipes = [
     {
@@ -297,103 +252,47 @@ export const PartnerCenter: React.FC<PartnerCenterProps> = ({ currentUser }) => 
         </div>
       </div>
 
-      {/* Live Affiliate & MLM Commission Trigger Engine */}
+      {/* Affiliate & MLM Commission Settlement Overview */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-card space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Live Commission Trigger & Wallet Crediting Engine</h3>
+            <h3 className="text-base font-bold text-slate-900">Affiliate Commission & Automated Settlement Rules</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Simulate live affiliate referrals and marketplace sales to verify instant double-entry wallet credits.
+              All commissions from your referral link are automatically calculated and credited via our double-entry ledger.
             </p>
           </div>
-          <Badge variant="blue" size="sm">Real-time Connection</Badge>
+          <Badge variant="emerald" size="sm">Automated Double-Entry</Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Conversion Event Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setSimType('product')}
-                  className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
-                    simType === 'product'
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  Digital Product Sale ({affRatePct}%)
-                </button>
-                <button
-                  onClick={() => setSimType('plan')}
-                  className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
-                    simType === 'plan'
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  Direct Plan Referral
-                </button>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 mb-1">
+              <DollarSign className="w-5 h-5" />
             </div>
-
-            {simType === 'plan' ? (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Select Membership Plan Sold</label>
-                <select
-                  value={selectedPlan}
-                  onChange={(e) => setSelectedPlan(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
-                >
-                  <option value="launch">Launch Tier ($100 → ${getDirectReferralBonus('launch', commissions)} Direct Bonus)</option>
-                  <option value="growth">Growth Tier ($300 → ${getDirectReferralBonus('growth', commissions)} Direct Bonus)</option>
-                  <option value="legacy">Legacy Tier ($500 → ${getDirectReferralBonus('legacy', commissions)} Direct Bonus)</option>
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Select Marketplace Product</label>
-                <select
-                  value={selectedProductSlug}
-                  onChange={(e) => setSelectedProductSlug(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500"
-                >
-                  <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00)</option>
-                  <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00)</option>
-                  <option value="ecom-automation-funnel">E-Commerce Automation Funnel ($79.00)</option>
-                  <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00)</option>
-                </select>
-              </div>
-            )}
-
-            <button
-              onClick={handleSimulateConversion}
-              disabled={isSimulating}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 transition-all disabled:opacity-50"
-            >
-              <Play className="w-4 h-4 fill-white" />
-              <span>{isSimulating ? 'Processing Double-Entry Credit...' : 'Trigger Conversion & Deposit to Wallet'}</span>
-            </button>
+            <h4 className="text-xs font-bold text-slate-900">Direct Plan Referral Bonus</h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Earn upfront cash bonuses on direct downline plan activations: Launch ($20), Growth ($60), and Legacy ($100).
+            </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">How Wallet Settlement Operates</span>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                When a customer purchases a product or membership through your link:
-              </p>
-              <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
-                <li>Instant {affRatePct}% net affiliate commission or plan direct bonus credited.</li>
-                <li>{uplineRatePct}% leadership override routed upwards to your sponsor.</li>
-                <li>Immutable double-entry transaction record logged in your wallet ledger.</li>
-                <li>Earned EVO Tokens can be withdrawn immediately or spent in the marketplace.</li>
-              </ul>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-1">
+              <Tag className="w-5 h-5" />
             </div>
+            <h4 className="text-xs font-bold text-slate-900">Marketplace Affiliate Share</h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Earn up to {affRatePct}% net affiliate commission instantly when someone buys digital products or templates via your link.
+            </p>
+          </div>
 
-            <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-500">Live Active Balance:</span>
-              <span className="text-emerald-600 font-mono text-sm">${walletBalance.toFixed(2)} EVO</span>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-1">
+              <Wallet className="w-5 h-5" />
             </div>
+            <h4 className="text-xs font-bold text-slate-900">Live Wallet Balance</h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Active Balance: <span className="font-bold text-emerald-600 font-mono">${walletBalance.toFixed(2)} EVO</span>. Withdraw anytime to USDT (TRC20) or local bank wire.
+            </p>
           </div>
         </div>
       </div>

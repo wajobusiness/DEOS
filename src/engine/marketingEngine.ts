@@ -41,7 +41,7 @@ export interface PromoSwipeFile {
 }
 
 function getUserMarketingKey(userId: string | undefined, suffix: 'pixels' | 'campaigns'): string {
-  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return `eviona_user_${cleanId}_marketing_${suffix}`;
 }
 
@@ -107,13 +107,13 @@ export const marketingEngine = {
     try {
       localStorage.setItem(key, JSON.stringify(pixels));
       (async () => {
-        try {
-          await supabase.from('MarketingSettings').upsert({
-            userId: userId || 'EVO-ID-100245',
-            configJson: JSON.stringify(pixels),
-            updatedAt: new Date().toISOString(),
-          });
-        } catch {}
+          if (userId) {
+            await supabase.from('MarketingSettings').upsert({
+              userId: userId,
+              configJson: JSON.stringify(pixels),
+              updatedAt: new Date().toISOString(),
+            });
+          }
       })();
     } catch {}
     return pixels;

@@ -4,12 +4,12 @@ import { supabase } from '../lib/supabaseClient';
 const STORAGE_MASTER_CRM_KEY = 'eviona_crm_leads_v3';
 
 function getUserLeadsStorageKey(userId: string): string {
-  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return `eviona_user_${cleanId}_crm_leads`;
 }
 
 function getUserDealsStorageKey(userId: string): string {
-  const cleanId = (userId || 'EVO-ID-100245').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  const cleanId = (userId || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return `eviona_user_${cleanId}_crm_deals`;
 }
 

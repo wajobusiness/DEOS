@@ -117,13 +117,15 @@ export const AcademyHub: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-          <button
-            onClick={() => setSelectedCourse(courses[0])}
-            className="px-6 py-3.5 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 font-bold text-xs shadow-lg transition-all flex items-center gap-2"
-          >
-            <Play className="w-4 h-4 fill-indigo-950" />
-            <span>Open Interactive Player</span>
-          </button>
+          {courses.length > 0 && (
+            <button
+              onClick={() => setSelectedCourse(courses[0])}
+              className="px-6 py-3.5 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 font-bold text-xs shadow-lg transition-all flex items-center gap-2"
+            >
+              <Play className="w-4 h-4 fill-indigo-950" />
+              <span>Open Interactive Player</span>
+            </button>
+          )}
           {progressPercent >= 60 && (
             <button
               onClick={() => setShowCertificateModal(true)}
@@ -171,7 +173,25 @@ export const AcademyHub: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCourses.length === 0 ? (
+          <div className="p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-3 shadow-card">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+              <GraduationCap className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-bold text-slate-900">No Academy Masterclasses Found</h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              There are currently no courses published under this filter. Create your first certified masterclass to educate your downline or sell in the marketplace.
+            </p>
+            <button
+              onClick={() => setShowCreateCourseModal(true)}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Masterclass</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((c) => (
             <div
               key={c.id}
@@ -212,7 +232,8 @@ export const AcademyHub: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Interactive Course Player Modal */}

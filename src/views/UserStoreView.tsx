@@ -57,7 +57,7 @@ export const UserStoreView: React.FC<UserStoreViewProps> = ({
 }) => {
   const { walletBalance, processPurchase } = useWallet();
 
-  const activeUserId = currentUser?.id || 'EVO-ID-100245';
+  const activeUserId = currentUser?.id || currentUser?.memberCode || '';
   const effectiveStoreOwnerId = targetUserSlug || activeUserId;
   const isOwner = !isPublicDirect && (effectiveStoreOwnerId === activeUserId || !targetUserSlug);
 

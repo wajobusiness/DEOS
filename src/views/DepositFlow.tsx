@@ -30,9 +30,9 @@ export const DepositFlow: React.FC<DepositFlowProps> = ({ onNavigate }) => {
   const { addDeposit } = useWallet();
   const { member } = useAuth();
   const activeUser = member || {
-    id: 'EVO-ID-100245',
-    name: 'Entrepreneur',
-    email: 'user@evionaecosystem.com',
+    id: '',
+    name: 'Member',
+    email: '',
   };
 
   const [currentStep, setCurrentStep] = useState<number>(1);

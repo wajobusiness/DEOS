@@ -91,8 +91,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedStorefront, setCopiedStorefront] = useState(false);
 
-  const rawCode = currentUser?.id || 'EVO-ID-100245';
-  const memberCode = rawCode.startsWith('EVO-ID-') ? rawCode : `EVO-ID-${rawCode.replace(/^EVO-?I?D?-?/i, '')}`;
+  const rawCode = currentUser?.id || currentUser?.memberCode || '';
+  const memberCode = rawCode ? (rawCode.startsWith('EVO-ID-') ? rawCode : `EVO-ID-${rawCode.replace(/^EVO-?I?D?-?/i, '')}`) : '';
 
   // Category Definitions
   const categoriesList = [

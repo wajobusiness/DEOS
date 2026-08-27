@@ -721,7 +721,7 @@ export class PaymentGatewayEngine {
 
         // 2. Ingest Customer into CRM as Lead
         crmEngine.addLead({
-          ownerId: rawBody?.metadata?.userId || 'EVO-ID-100245',
+          ownerId: rawBody?.metadata?.userId || 'EVO-ID-000001',
           name: customerName,
           email: customerEmail,
           source: `JVZoo Marketplace Sale (${rawBody?.cproditem || 'Product'})`,
@@ -738,7 +738,7 @@ export class PaymentGatewayEngine {
     const reference = rawBody?.reference || rawBody?.order_id || rawBody?.data?.reference;
     if (reference && webhookResult.status === 'SUCCESS') {
       const existing = this.getPaymentByReference(reference);
-      const userId = existing?.userId || rawBody?.metadata?.userId || 'EVO-ID-100245';
+      const userId = existing?.userId || rawBody?.metadata?.userId || 'EVO-ID-000001';
       const purpose = existing?.paymentPurpose || 'WALLET_DEPOSIT';
 
       const finalization = await this.finalizePayment({

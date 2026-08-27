@@ -20,7 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialMode = 'login',
   onSuccess,
-  defaultSponsorCode = 'EVO-ID-100245',
+  defaultSponsorCode = '',
   initialName = '',
   initialEmail = '',
   initialPhone = '',
@@ -229,7 +229,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     value={sponsorCode}
                     onChange={(e) => setSponsorCode(e.target.value)}
-                    placeholder="EVO-ID-100245"
+                    placeholder="EVO-ID-XXXXXX"
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-indigo-400 outline-none focus:border-indigo-500"
                   />
                 </div>

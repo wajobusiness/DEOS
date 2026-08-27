@@ -33,13 +33,14 @@ export const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({ currentUse
   const { walletBalance } = useWallet();
 
   const activeUser = currentUser || member || {
-    id: 'EVO-ID-100245',
-    name: 'Entrepreneur',
-    email: 'user@evionaecosystem.com',
+    id: '',
+    memberCode: '',
+    name: 'Member',
+    email: '',
   };
 
-  const userId = activeUser.id || 'EVO-ID-100245';
-  const userEmail = activeUser.email || 'user@evionaecosystem.com';
+  const userId = activeUser.id || activeUser.memberCode || '';
+  const userEmail = activeUser.email || '';
 
   const [timeRange, setTimeRange] = useState<'30d' | '90d' | '1y'>('30d');
 

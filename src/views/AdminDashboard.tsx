@@ -35,10 +35,14 @@ export const AdminDashboard: React.FC = () => {
     u.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const launchCount = userList.filter(u => u.plan === 'launch').length;
+  const growthCount = userList.filter(u => u.plan === 'growth').length;
+  const legacyCount = userList.filter(u => u.plan === 'legacy').length;
+
   const topPlans = [
-    { name: 'Growth Membership ($300)', count: `${userList.filter(u => u.plan === 'growth').length} members`, rev: '$3,126,000', growth: '+24.5%' },
-    { name: 'Legacy Membership ($500)', count: `${userList.filter(u => u.plan === 'legacy').length} members`, rev: '$2,590,000', growth: '+18.2%' },
-    { name: 'Launch Membership ($100)', count: `${userList.filter(u => u.plan === 'launch').length} members`, rev: '$324,200', growth: '+12.0%' },
+    { name: 'Growth Membership ($300)', count: `${growthCount} active member${growthCount === 1 ? '' : 's'}`, rev: `$${(growthCount * 300).toLocaleString()}`, growth: '100% Verified' },
+    { name: 'Legacy Membership ($500)', count: `${legacyCount} active member${legacyCount === 1 ? '' : 's'}`, rev: `$${(legacyCount * 500).toLocaleString()}`, growth: '100% Verified' },
+    { name: 'Launch Membership ($100)', count: `${launchCount} active member${launchCount === 1 ? '' : 's'}`, rev: `$${(launchCount * 100).toLocaleString()}`, growth: '100% Verified' },
   ];
 
   return (

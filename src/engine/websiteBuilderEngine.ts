@@ -62,7 +62,7 @@ const STORAGE_CRM_LEADS_KEY = 'eviona_crm_leads_v2';
 export const websiteBuilderEngine = {
   // 1. Get or Initialize User Website Configuration
   getWebsiteConfig(userId: string, userName?: string): WebsiteConfig {
-    const cleanId = (userId || 'EVO-ID-100245').trim();
+    const cleanId = (userId || 'anonymous').trim();
     try {
       const saved = localStorage.getItem(STORAGE_WEBSITES_KEY);
       if (saved) {

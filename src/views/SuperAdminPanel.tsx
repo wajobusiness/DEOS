@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Users,
+  User,
   DollarSign,
   ArrowUpRight,
   UserCheck,
@@ -52,10 +53,10 @@ import {
   Edit3,
   Phone,
   Share2,
-  User,
   CreditCard,
   EyeOff,
-  Copy
+  Copy,
+  Play
 } from 'lucide-react';
 import {
   initialKYCList,
@@ -72,6 +73,7 @@ import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { adminStoreData, MembershipPlanConfig } from '../engine/adminStoreData';
 import { userRegistryEngine, RegisteredUser } from '../engine/userRegistryEngine';
 import { binaryPlacementEngine } from '../engine/binaryPlacementEngine';
+import { calculateMarketplaceFeeSplit, getDirectReferralBonus } from '../engine/binaryEngine';
 import { Product, PlanTier } from '../types';
 import { UserRole, Member, ViewType } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -530,34 +532,109 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
 
   // Payouts & Corporate Leads
   const [payoutList, setPayoutList] = useState<PayoutRequest[]>(initialPayoutQueue);
-  const [sustainabilityFund] = useState(45820.0);
+  const [sustainabilityFund] = useState(0.0);
 
-  const [corporateLeads] = useState<any[]>([
-    {
-      id: 'LED-CORP-201',
-      name: 'Alexander Wright',
-      email: 'alex@enterprise-global.com',
-      company: 'Enterprise Global Corp',
-      source: 'Corporate Website (Contact Sales)',
-      assignedTo: 'Marcus (Enterprise Sales)',
-      stage: 'Qualified',
-    },
-    {
-      id: 'LED-CORP-202',
-      name: 'David K. O’Connor',
-      email: 'david@apexholdings.org',
-      company: 'Apex Digital Capital',
-      source: 'Corporate Landing Page (Book 7 §2)',
-      assignedTo: 'Super Admin',
-      stage: 'Negotiation',
-    },
-  ]);
+  const [corporateLeads] = useState<any[]>([]);
+
+  // Admin Live Commission Trigger Engine State
+  const [adminSimTargetUserId, setAdminSimTargetUserId] = useState<string>('');
+  const [adminSimType, setAdminSimType] = useState<'plan' | 'product' | 'binary'>('product');
+  const [adminSimPlan, setAdminSimPlan] = useState<'launch' | 'growth' | 'legacy'>('growth');
+  const [adminSimProductSlug, setAdminSimProductSlug] = useState<string>('ai-prompts-mastery');
+  const [adminSimBVAmount, setAdminSimBVAmount] = useState<number>(1000);
+  const [adminSimLoading, setAdminSimLoading] = useState<boolean>(false);
+  const [adminSimResult, setAdminSimResult] = useState<string | null>(null);
+
+  const handleAdminTriggerCommission = async () => {
+    if (!adminSimTargetUserId) {
+      alert('Please select a target user to credit');
+      return;
+    }
+    const targetUser = userRegistryEngine.getUserById(adminSimTargetUserId);
+    if (!targetUser) {
+      alert('Target user not found');
+      return;
+    }
+
+    setAdminSimLoading(true);
+    try {
+      let earnedAmount = 0;
+      let desc = '';
+      let txType = 'promoter_commission';
+
+      if (adminSimType === 'plan') {
+        earnedAmount = getDirectReferralBonus(adminSimPlan, commissionsForm);
+        desc = `Direct Referral Bonus — ${adminSimPlan.toUpperCase()} Plan Signup`;
+        txType = 'direct_referral_bonus';
+      } else if (adminSimType === 'binary') {
+        const rate = (commissionsForm.binaryCommissionRatePct || 10) / 100;
+        earnedAmount = adminSimBVAmount * rate;
+        desc = `Binary MLM Commission Settlement (${adminSimBVAmount} BV @ ${commissionsForm.binaryCommissionRatePct}%)`;
+        txType = 'binary_matching_bonus';
+      } else {
+        const productPrices: Record<string, { title: string; price: number }> = {
+          'ai-prompts-mastery': { title: 'AI Prompts Mastery Kit', price: 49.00 },
+          'saas-starter-boilerplate': { title: 'Enterprise SaaS Boilerplate', price: 149.00 },
+          'ecom-automation-funnel': { title: 'E-Commerce Automation Funnel', price: 79.00 },
+          'digital-growth-masterclass': { title: 'Digital Growth Masterclass', price: 99.00 },
+        };
+        const prod = productPrices[adminSimProductSlug] || { title: 'Marketplace Product', price: 49.00 };
+        const split = calculateMarketplaceFeeSplit(prod.price, (commissionsForm.affiliateCommissionRatePct || 40) / 100, {
+          platformMarketplaceFeePct: commissionsForm.platformMarketplaceFeePct || 5,
+          uplineOverrideRatePct: commissionsForm.uplineOverrideRatePct || 3,
+        });
+        earnedAmount = split.promoterCommissionNet;
+        desc = `${commissionsForm.affiliateCommissionRatePct || 40}% Affiliate Commission — ${prod.title}`;
+        txType = 'promoter_commission';
+      }
+
+      // Update user wallet balance in user registry
+      const newBal = (targetUser.walletBalance || 0) + earnedAmount;
+      const newTok = (targetUser.tokenBalance || 0) + earnedAmount;
+      await userRegistryEngine.updateUser(targetUser.id, {
+        walletBalance: Number(newBal.toFixed(2)),
+        tokenBalance: Number(newTok.toFixed(2)),
+      });
+
+      // Also record in wallet transactions storage for that user
+      const userTxKey = `eviona_wallet_transactions_${targetUser.id}`;
+      let txs: any[] = [];
+      try {
+        const raw = localStorage.getItem(userTxKey);
+        if (raw) txs = JSON.parse(raw);
+      } catch {}
+      const newTx = {
+        id: `TX-COMM-${Date.now().toString().slice(-6)}`,
+        memberId: targetUser.id,
+        type: txType,
+        amount: earnedAmount,
+        currency: 'USD',
+        status: 'Completed',
+        timestamp: new Date().toISOString(),
+        description: desc,
+      };
+      txs.unshift(newTx);
+      try {
+        localStorage.setItem(userTxKey, JSON.stringify(txs));
+      } catch {}
+
+      // Refresh local users list
+      setUsersList(userRegistryEngine.getAllUsers());
+      setAdminSimResult(`Successfully credited +$${earnedAmount.toFixed(2)} EVO to ${targetUser.name} (${targetUser.id})! New balance: $${newBal.toFixed(2)} EVO.`);
+      logAdminAction('Manual Commission Trigger', `Credited +$${earnedAmount.toFixed(2)} EVO to ${targetUser.id} via SuperAdmin Console (${desc})`);
+      setTimeout(() => setAdminSimResult(null), 8000);
+    } catch (err: any) {
+      alert(`Simulation failed: ${err.message}`);
+    } finally {
+      setAdminSimLoading(false);
+    }
+  };
 
   const logAdminAction = (action: string, details: string) => {
     const entry: AuditLogEntry = {
       id: `AUDIT-${Date.now()}`,
       action,
-      actor: 'Marcus Vance (Super Admin)',
+      actor: 'Super Admin',
       actorRole: 'super_admin',
       timestamp: new Date().toLocaleTimeString(),
       details,
@@ -2790,7 +2867,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                       <td className="p-4 text-right">
                         <button
                           onClick={() => {
-                            const leader = prompt('Assign this corporate lead to member ID/Name:', 'Marcus Vance');
+                            const leader = prompt('Assign this corporate lead to member ID/Name:', 'EVO-ID-000001');
                             if (leader) {
                               lead.assignedTo = leader;
                               showToast(`Lead assigned to ${leader}!`);
@@ -3116,6 +3193,149 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Section 6: Live Commission Trigger & Wallet Crediting Simulator (Admin Engine) */}
+          <div className="p-6 rounded-2xl bg-slate-950 border border-emerald-500/30 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 mb-1.5">
+                  <Play className="w-3.5 h-3.5 fill-emerald-400" />
+                  <span>Admin Commission Simulation & Verification Engine</span>
+                </div>
+                <h4 className="text-base font-bold text-white">Live Commission Trigger & Wallet Crediting</h4>
+                <p className="text-xs text-slate-400">
+                  Simulate live affiliate referrals, marketplace product sales, and MLM binary cycles to test and verify instant double-entry wallet credits for any member account.
+                </p>
+              </div>
+              <Badge variant="emerald" size="sm">Live Double-Entry</Badge>
+            </div>
+
+            {adminSimResult && (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 font-bold flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{adminSimResult}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Target User Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300">Target Member to Credit</label>
+                <select
+                  value={adminSimTargetUserId}
+                  onChange={(e) => setAdminSimTargetUserId(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-bold outline-none focus:border-emerald-500"
+                >
+                  <option value="">-- Select Registered Member --</option>
+                  {usersList.map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.memberCode || u.id}) — ${Number(u.walletBalance || 0).toFixed(2)} EVO
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Conversion Event Type */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300">Conversion Event Type</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAdminSimType('product')}
+                    className={`py-2 px-2 rounded-xl text-center font-bold text-[11px] border transition-all ${
+                      adminSimType === 'product'
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                        : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+                    }`}
+                  >
+                    Product Sale ({commissionsForm.affiliateCommissionRatePct}%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminSimType('plan')}
+                    className={`py-2 px-2 rounded-xl text-center font-bold text-[11px] border transition-all ${
+                      adminSimType === 'plan'
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                        : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+                    }`}
+                  >
+                    Direct Plan Bonus
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminSimType('binary')}
+                    className={`py-2 px-2 rounded-xl text-center font-bold text-[11px] border transition-all ${
+                      adminSimType === 'binary'
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                        : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+                    }`}
+                  >
+                    Binary Match ({commissionsForm.binaryCommissionRatePct}%)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Event Details Config */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {adminSimType === 'plan' ? (
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-300">Select Membership Plan Sold</label>
+                  <select
+                    value={adminSimPlan}
+                    onChange={(e) => setAdminSimPlan(e.target.value as any)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-bold outline-none focus:border-emerald-500"
+                  >
+                    <option value="launch">Launch Plan ($100 → ${getDirectReferralBonus('launch', commissionsForm)} Direct Cash Bonus)</option>
+                    <option value="growth">Growth Plan ($300 → ${getDirectReferralBonus('growth', commissionsForm)} Direct Cash Bonus)</option>
+                    <option value="legacy">Legacy Plan ($500 → ${getDirectReferralBonus('legacy', commissionsForm)} Direct Cash Bonus)</option>
+                  </select>
+                </div>
+              ) : adminSimType === 'binary' ? (
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-300">Matched Weaker-Leg Business Volume (BV)</label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="50"
+                    value={adminSimBVAmount}
+                    onChange={(e) => setAdminSimBVAmount(Number(e.target.value))}
+                    placeholder="Enter matched BV (e.g. 1000)"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-bold outline-none focus:border-emerald-500"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Calculated Payout: <span className="text-emerald-400 font-bold font-mono">${(adminSimBVAmount * ((commissionsForm.binaryCommissionRatePct || 10) / 100)).toFixed(2)} EVO</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-300">Select Marketplace Product</label>
+                  <select
+                    value={adminSimProductSlug}
+                    onChange={(e) => setAdminSimProductSlug(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-bold outline-none focus:border-emerald-500"
+                  >
+                    <option value="ai-prompts-mastery">AI Prompts Mastery Kit ($49.00)</option>
+                    <option value="saas-starter-boilerplate">Enterprise SaaS Boilerplate ($149.00)</option>
+                    <option value="ecom-automation-funnel">E-Commerce Automation Funnel ($79.00)</option>
+                    <option value="digital-growth-masterclass">Digital Growth Masterclass ($99.00)</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleAdminTriggerCommission}
+                disabled={adminSimLoading}
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Play className="w-4 h-4 fill-white" />
+                <span>{adminSimLoading ? 'Executing Double-Entry Credit Engine...' : 'Trigger Conversion & Deposit to User Wallet'}</span>
+              </button>
             </div>
           </div>
 

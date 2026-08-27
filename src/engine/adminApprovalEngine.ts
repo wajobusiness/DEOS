@@ -78,34 +78,7 @@ export const adminApprovalEngine = {
       }
     } catch {}
 
-    const initial: DepositApprovalRequest[] = [
-      {
-        id: 'DEP-REQ-101',
-        userId: 'EVO-ID-100246',
-        userName: 'Sarah Johnson',
-        userEmail: 'sarah@agency.com',
-        amount: 500.00,
-        rail: 'USDT (TRC20)',
-        reference: 'TXN-982341',
-        proofHash: '4f92bc8102a9e1d8823190ab7c12f00a89d',
-        status: 'Pending_Approval',
-        createdAt: 'May 24, 2025, 02:15 PM',
-      },
-      {
-        id: 'DEP-REQ-102',
-        userId: 'EVO-ID-100247',
-        userName: 'Michael Brown',
-        userEmail: 'michael@bright.com',
-        amount: 300.00,
-        rail: 'Bank Transfer (EFT)',
-        reference: 'TXN-874102',
-        proofHash: 'EFT-REF-NIP-998231',
-        status: 'Pending_Approval',
-        createdAt: 'May 24, 2025, 03:40 PM',
-      }
-    ];
-    localStorage.setItem(STORAGE_DEPOSITS_KEY, JSON.stringify(initial));
-    return initial;
+    return [];
   },
 
   createDepositRequest(data: {
@@ -238,22 +211,7 @@ export const adminApprovalEngine = {
       }
     } catch {}
 
-    const initial: WithdrawalApprovalRequest[] = [
-      {
-        id: 'WDR-REQ-201',
-        userId: 'EVO-ID-100245',
-        userName: 'Entrepreneur (You)',
-        userEmail: 'user@evionaecosystem.com',
-        amount: 250.00,
-        method: 'USDT (TRC20)',
-        destinationDetails: 'TX9xZgHkM92pqWrtY8dKl9mTRC20Address',
-        reference: 'WDR-192840',
-        status: 'Pending_Approval',
-        createdAt: 'May 24, 2025, 01:00 PM',
-      }
-    ];
-    localStorage.setItem(STORAGE_WITHDRAWALS_KEY, JSON.stringify(initial));
-    return initial;
+    return [];
   },
 
   createWithdrawalRequest(data: {
@@ -440,32 +398,7 @@ export const adminApprovalEngine = {
       }
     } catch {}
 
-    const initial: DomainApprovalRequest[] = [
-      {
-        id: 'DOM-REQ-301',
-        userId: 'EVO-ID-100245',
-        userName: 'Entrepreneur',
-        domainName: 'johnsonagency.com',
-        targetSubdomain: 'johnson.evionaecosystem.com',
-        dnsVerified: true,
-        sslActive: true,
-        status: 'Active',
-        createdAt: 'May 20, 2025',
-      },
-      {
-        id: 'DOM-REQ-302',
-        userId: 'EVO-ID-100248',
-        userName: 'Emily Davis',
-        domainName: 'emilyconsulting.io',
-        targetSubdomain: 'emily.evionaecosystem.com',
-        dnsVerified: false,
-        sslActive: false,
-        status: 'Pending_Verification',
-        createdAt: 'May 24, 2025',
-      }
-    ];
-    localStorage.setItem(STORAGE_DOMAINS_KEY, JSON.stringify(initial));
-    return initial;
+    return [];
   },
 
   verifyAndApproveDomain(reqId: string): boolean {
