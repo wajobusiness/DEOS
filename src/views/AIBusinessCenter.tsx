@@ -56,6 +56,8 @@ export const AIBusinessCenter: React.FC = () => {
 
   // Lead Finder State (Book 20 Google Maps Scraper Kit Integration)
   const [searchCategory, setSearchCategory] = useState('Dental Clinics & Orthodontics');
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
   const [searchCity, setSearchCity] = useState('Austin');
   const [searchCountry, setSearchCountry] = useState('United States');
   const [isSearchingLeads, setIsSearchingLeads] = useState(false);
@@ -198,11 +200,15 @@ export const AIBusinessCenter: React.FC = () => {
   // Lead Finder Handlers
   const handleSearchLeads = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchCategory || !searchCity) return;
+    const effectiveCategory = isCustomCategory
+      ? (customCategoryInput.trim() || 'Local Businesses')
+      : searchCategory;
+
+    if (!effectiveCategory || !searchCity) return;
     setIsSearchingLeads(true);
     try {
       const leads = await leadGenerationEngine.executeProspectSearch(
-        { category: searchCategory, city: searchCity, country: searchCountry },
+        { category: effectiveCategory, city: searchCity, country: searchCountry },
         activeUserId
       );
       setDiscoveredLeads(leads);
@@ -408,16 +414,51 @@ export const AIBusinessCenter: React.FC = () => {
 
             <form onSubmit={handleSearchLeads} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
               <div className="sm:col-span-4">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Industry / Category</label>
-                <select
-                  value={searchCategory}
-                  onChange={(e) => setSearchCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500 bg-white"
-                >
-                  {leadGenerationEngine.popularNiches.map((niche) => (
-                    <option key={niche} value={niche}>{niche}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">Industry / Category</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isCustomCategory;
+                      setIsCustomCategory(next);
+                      if (next && !customCategoryInput) {
+                        setCustomCategoryInput(searchCategory);
+                      }
+                    }}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                  >
+                    {isCustomCategory ? '← Choose from Preset List' : '+ Type Custom Category'}
+                  </button>
+                </div>
+
+                {isCustomCategory ? (
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Solar Installers, Pet Grooming, Bakeries..."
+                    value={customCategoryInput}
+                    onChange={(e) => setCustomCategoryInput(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-300 focus:border-indigo-600 bg-indigo-50/20 text-xs font-semibold outline-none"
+                  />
+                ) : (
+                  <select
+                    value={searchCategory}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomCategory(true);
+                        setCustomCategoryInput('');
+                      } else {
+                        setSearchCategory(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500 bg-white"
+                  >
+                    {leadGenerationEngine.popularNiches.map((niche) => (
+                      <option key={niche} value={niche}>{niche}</option>
+                    ))}
+                    <option value="__custom__">✍️ Enter Custom Niche / Industry...</option>
+                  </select>
+                )}
               </div>
 
               <div className="sm:col-span-3">
