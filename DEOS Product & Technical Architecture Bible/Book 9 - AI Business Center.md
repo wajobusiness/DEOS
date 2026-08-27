@@ -46,6 +46,7 @@ Matches Image 9's tool grid exactly:
 | AI Social Media Post | Platform-specific post generation |
 | AI Code Generator | Basic code/technical solutions |
 | AI Data Analyzer | Business data analysis and insight |
+| AI Lead Finder & Prospect Intelligence | Multi-region business discovery, email extraction & 1-click CRM pipeline ingestion (Book 20) |
 
 **Functional Requirement:** each tool opens into a focused, single-purpose interface (prompt/input on one side, generated output on the other, matches the "Describe what you want to create..." pattern from Image 9's hero panel) rather than a single generic chat window for everything — this keeps the tool approachable for non-technical members.
 
@@ -73,12 +74,13 @@ Direct implementation of Book 0 §16 — restated here as binding, tool-specific
 
 Matches Image 9's "Try Ready-Made Templates" and "Popular Use Cases" sections.
 
-**Functional Requirements:** pre-built prompt templates (Business Plan Template, Marketing Plan Template, SWOT Analysis, Invoices, Pitch Deck) that pre-fill the relevant AI tool with a structured starting prompt; use-case shortcuts (Content Marketing, Social Media Management, Email Marketing, Business Planning, E-commerce) that route to the most relevant tool combination for that goal.
+**Functional Requirements:** pre-built prompt templates (Business Plan Template, Marketing Plan Template, SWOT Analysis, Invoices, Pitch Deck) that pre-fill the relevant AI tool with a structured starting prompt; use-case shortcuts (Content Marketing, Social Media Management, Email Marketing, Business Planning, E-commerce, B2B Lead Prospecting) that route to the most relevant tool combination for that goal.
 
 ---
 
 ## 6. Integration with Other Modules
 
+- **AI Lead Finder & Prospect Intelligence** → extracts real business leads and provides 1-click ingestion to CRM Leads (Book 7) & AI Cold Email Writer (Book 9 / Book 20)
 - **AI Content Creator / Ad Copy / Social Media Post** → can populate Marketing Center campaigns (Book 2 Chapter 15) directly, subject to the review-and-confirm rule in §4
 - **AI Email Writer** → can populate CRM email sends (Book 7 §7), same review rule applies
 - **AI Business Plan** → saved to the member's Documents (Book 2 Chapter 16's sidebar "Documents" section)

@@ -653,4 +653,27 @@ This section establishes the binding architectural philosophy that governs all f
 3. **Decouple Payment Rails via Payment Gateway Engine:** No platform module may integrate directly with Stripe, Paystack, Kuda, or TRON RPC nodes. All monetary flow routes through `PaymentGatewayEngine`, which credits the immutable ledger in EVO Tokens and triggers internal events.
 4. **Enforce Role-Based Access Control (RBAC):** Normal members never see admin routes, menus, or switcher widgets. The `/backoffice` portal is accessible only to verified `super_admin`, `admin`, and `support_staff` roles.
 
+---
+
+## 16. AI Lead Generation & Prospect Intelligence Engine (Book 20)
+
+### 16.1 Product Positioning & Strategic Fit
+The Google Maps Scraper Kit (`gosom/google-maps-scraper` wrapper) is integrated not as a standalone raw scraping utility, but as a core **AI Lead Finder & Prospect Intelligence Engine** inside the **AI Business Center**. It provides a fully automated prospecting pipeline:
+- **Search & Discovery:** Search local businesses across any global country, state, city, or postal code by category (Dentists, Law Firms, Hotels, Real Estate, HVAC, Restaurants, etc.).
+- **Data Normalization:** Extracts business names, verified telephone numbers, addresses, websites, star ratings, review counts, and geo-coordinates.
+- **Deep Email & Social Extraction:** Asynchronously crawls discovered business websites to extract contact emails and social media channels.
+- **1-Click CRM Sync:** Ingests harvested prospects directly into the member's isolated CRM pipeline (`crm_leads`) with custom tags and provenance history.
+- **AI Cold Outreach:** Dispatches leads into the AI Email Writer to generate hyper-personalized, location-aware pitch emails and cold sequence drip campaigns.
+
+### 16.2 Membership Quota & Plan Gating
+- **Launch Plan ($100/mo):** 100 business searches/month, basic contact extraction, manual CSV export.
+- **Growth Plan ($300/mo):** 1,000 business searches/month, deep website email extraction, 1-click CRM sync, AI email drafting.
+- **Legacy Plan ($500/mo):** 10,000 searches/month (fair-use limit), automated multi-step cold outreach campaigns, multi-user sales pipeline assignment.
+
+### 16.3 Infrastructure & Proxy Mesh Architecture
+- **Daemon Sidecar:** Encapsulated Go-based microservice worker running in an isolated Docker container on the private backend network.
+- **Residential Proxy Pool:** Egress traffic is routed through a rotating residential proxy mesh (BrightData / Oxylabs) to prevent IP throttling and rate limiting.
+- **Regulatory Compliance:** Clear UI notices ensuring member outreach complies with CAN-SPAM, GDPR, and CASL privacy standards.
+
+
 
