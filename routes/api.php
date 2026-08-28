@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AcademyController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BinaryController;
 use App\Http\Controllers\Api\V1\CrmController;
+use App\Http\Controllers\Api\V1\LeadFinderController;
+use App\Http\Controllers\Api\V1\MarketingController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\StorefrontController;
 use App\Http\Controllers\Api\V1\WalletController;
+use App\Http\Controllers\Api\V1\WebinarController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +23,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/marketplace/products/{slug}', [MarketplaceController::class, 'show']);
     Route::post('/marketplace/checkout', [MarketplaceController::class, 'checkout']);
     Route::get('/storefront/{slugOrDomain}', [StorefrontController::class, 'show']);
+
+    // Public Webinars & Academy
+    Route::get('/webinars', [WebinarController::class, 'index']);
+    Route::get('/webinars/{slug}', [WebinarController::class, 'show']);
+    Route::post('/webinars/{webinar}/register', [WebinarController::class, 'register']);
+    Route::get('/academy/courses', [AcademyController::class, 'index']);
 
     // Public HMAC Verified Webhooks
     Route::post('/webhooks/paystack', [WebhookController::class, 'paystack']);
@@ -45,5 +55,16 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/binary/tree', [BinaryController::class, 'tree']);
         Route::post('/binary/pairing/calculate', [BinaryController::class, 'triggerPairing']);
+
+        // Phase 4: Growth Modules (AI Lead Finder, Academy Progress, Marketing CAPI)
+        Route::get('/leads/search', [LeadFinderController::class, 'search']);
+        Route::post('/leads/import', [LeadFinderController::class, 'import']);
+
+        Route::post('/academy/courses/{course}/lessons/{lessonId}/toggle', [AcademyController::class, 'toggleLesson']);
+        Route::get('/academy/certificates', [AcademyController::class, 'certificates']);
+
+        Route::get('/marketing/pixels', [MarketingController::class, 'getPixels']);
+        Route::put('/marketing/pixels', [MarketingController::class, 'updatePixels']);
+        Route::post('/marketing/campaigns', [MarketingController::class, 'createCampaign']);
     });
 });
