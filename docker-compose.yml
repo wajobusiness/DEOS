@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: deos_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: "DEOS SaaS"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: "http://localhost:8000"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: deos_db
+      DB_USERNAME: deos_user
+      DB_PASSWORD: deos_secure_password_2026
+      REDIS_HOST: redis
+      REDIS_PORT: 6397
+      QUEUE_CONNECTION: redis
+    depends_on:
+      - postgres
+      - redis
+      - scraper_daemon
+    networks:
+      - deos_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: deos_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: deos_db
+      POSTGRES_USER: deos_user
+      POSTGRES_PASSWORD: deos_secure_password_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - deos_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: deos_redis
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    networks:
+      - deos_network
+
+  scraper_daemon:
+    image: gosom/google-maps-scraper:latest
+    container_name: deos_scraper_daemon
+    restart: unless-stopped
+    command: ["-web", "-addr", "0.0.0.0:8080"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - deos_network
+
+networks:
+  deos_network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
