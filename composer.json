@@ -40,6 +40,7 @@
     "scripts": {
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php -r \"if(file_exists('vendor/laravel/framework/src/Illuminate/Support/Str.php')){ \\$c = file_get_contents('vendor/laravel/framework/src/Illuminate/Support/Str.php'); \\$c = str_replace(['mb_split(\\\'\\\\s+\\\',', 'mb_split(\\\'\\\\\\\\s+\\\','], 'preg_split(\\\'/\\\\s+/u\\\',', \\$c); file_put_contents('vendor/laravel/framework/src/Illuminate/Support/Str.php', \\$c); }\"",
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
