@@ -1,5 +1,13 @@
 <?php
 
+// Multi-byte string fallback polyfills
+if (!function_exists('mb_split')) {
+    function mb_split(string $pattern, string $string, int $limit = -1): array|false {
+        $result = @preg_split('/' . $pattern . '/u', $string, $limit);
+        return $result !== false ? $result : preg_split('/' . preg_quote($pattern, '/') . '/', $string, $limit);
+    }
+}
+
 use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
