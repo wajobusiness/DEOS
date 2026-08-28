@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AcademyController;
+use App\Http\Controllers\Api\V1\Admin\GatewaySettingsController;
+use App\Http\Controllers\Api\V1\Admin\SystemMetricsController;
+use App\Http\Controllers\Api\V1\Admin\WithdrawalApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BinaryController;
 use App\Http\Controllers\Api\V1\CrmController;
@@ -66,5 +69,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/marketing/pixels', [MarketingController::class, 'getPixels']);
         Route::put('/marketing/pixels', [MarketingController::class, 'updatePixels']);
         Route::post('/marketing/campaigns', [MarketingController::class, 'createCampaign']);
+
+        // Phase 5: Super Admin Control & Governance
+        Route::middleware(['admin.super'])->prefix('admin')->group(function () {
+            Route::get('/gateways', [GatewaySettingsController::class, 'index']);
+            Route::put('/gateways/{gatewayKey}', [GatewaySettingsController::class, 'update']);
+
+            Route::get('/withdrawals', [WithdrawalApprovalController::class, 'index']);
+            Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalApprovalController::class, 'approve']);
+
+            Route::get('/metrics', [SystemMetricsController::class, 'index']);
+        });
     });
 });
