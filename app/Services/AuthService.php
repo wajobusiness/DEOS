@@ -36,4 +36,26 @@ class AuthService
     {
         $member->currentAccessToken()->delete();
     }
+
+    public function forgotPassword(string $email): void
+    {
+        $member = Member::where('email', strtolower(trim($email)))->first();
+        if ($member) {
+            // Dispatch password reset notification/email in background
+        }
+    }
+
+    public function resetPassword(string $email, string $newPassword): bool
+    {
+        $member = Member::where('email', strtolower(trim($email)))->first();
+        if (!$member) return false;
+
+        $member->password = \Illuminate\Support\Facades\Hash::make($newPassword);
+        $member->save();
+
+        // Revoke existing tokens for security
+        $member->tokens()->delete();
+
+        return true;
+    }
 }

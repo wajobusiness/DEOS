@@ -21,7 +21,7 @@ services:
       DB_USERNAME: deos_user
       DB_PASSWORD: deos_secure_password_2026
       REDIS_HOST: redis
-      REDIS_PORT: 6397
+      REDIS_PORT: 6379
       QUEUE_CONNECTION: redis
     depends_on:
       - postgres

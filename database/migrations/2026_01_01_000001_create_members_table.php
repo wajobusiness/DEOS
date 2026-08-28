@@ -28,6 +28,7 @@ return new class extends Migration
             $table->decimal('usdt_balance', 16, 4)->default(0.0000);
             $table->decimal('binary_left_volume', 16, 4)->default(0.0000);
             $table->decimal('binary_right_volume', 16, 4)->default(0.0000);
+            $table->timestamp('email_verified_at')->nullable();
             $table->timestamp('renewal_date')->nullable();
             $table->rememberToken();
             $table->timestamps();

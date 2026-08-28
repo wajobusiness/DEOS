@@ -16,10 +16,14 @@ use App\Http\Controllers\Api\V1\WebinarController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->group(function () {
-    // Public Authentication Endpoints
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
+Route::prefix('v1')->middleware(['throttle:60,1'])->group(function () {
+    // Public Rate-Limited Authentication Endpoints (6 attempts/min)
+    Route::middleware(['throttle:6,1'])->group(function () {
+        Route::post('/auth/register', [AuthController::class, 'register']);
+        Route::post('/auth/login', [AuthController::class, 'login']);
+        Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    });
 
     // Public Marketplace & Storefront Discovery
     Route::get('/marketplace/products', [MarketplaceController::class, 'index']);
@@ -34,7 +38,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/academy/courses', [AcademyController::class, 'index']);
 
     // Public HMAC Verified Webhooks
-    Route::post('/webhooks/paystack', [WebhookController::class, 'paystack']);
+    Route::post('/webhooks/paystack', [WebhookController::class, 'paystack'])
+        ->middleware('webhook.signature:paystack');
     Route::post('/webhooks/cryptomus', [WebhookController::class, 'cryptomus']);
 
     // Authenticated Member Endpoints
