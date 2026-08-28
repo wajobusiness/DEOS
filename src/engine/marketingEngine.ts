@@ -233,5 +233,37 @@ export const marketingEngine = {
         }
       }
     } catch {}
+  },
+
+  // 8. Dispatch Real Pixel & CAPI Events (Meta, GA4, TikTok)
+  dispatchPixelEvent(
+    eventName: 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase' | 'Lead' | 'CompleteRegistration',
+    eventData: Record<string, any> = {},
+    userId?: string
+  ) {
+    const pixels = this.getTrackingPixels(userId);
+
+    // Meta Pixel (fbq)
+    if (typeof window !== 'undefined' && (window as any).fbq && pixels.metaPixelId) {
+      try {
+        (window as any).fbq('track', eventName, eventData);
+      } catch {}
+    }
+
+    // Google Analytics 4 (gtag)
+    if (typeof window !== 'undefined' && (window as any).gtag && pixels.ga4MeasurementId) {
+      try {
+        (window as any).gtag('event', eventName.toLowerCase(), eventData);
+      } catch {}
+    }
+
+    // TikTok Pixel (ttq)
+    if (typeof window !== 'undefined' && (window as any).ttq && pixels.tiktokPixelId) {
+      try {
+        (window as any).ttq.track(eventName, eventData);
+      } catch {}
+    }
+
+    console.log(`[MarketingEngine] Dispatched ${eventName} across configured ad pixels:`, eventData);
   }
 };
