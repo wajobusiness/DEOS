@@ -13,6 +13,12 @@ Route::get('/healthz', function () {
 
 // Single Page Application (React Frontend Catch-All)
 Route::get('/{any?}', function () {
+    $indexPath = public_path('index.html');
+    if (file_exists($indexPath)) {
+        return response()->file($indexPath, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+        ]);
+    }
     if (view()->exists('app')) {
         return view('app');
     }
