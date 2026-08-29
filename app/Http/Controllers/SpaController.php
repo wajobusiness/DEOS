@@ -16,7 +16,7 @@ class SpaController extends Controller
 
         foreach ($candidates as $candidate) {
             if (file_exists($candidate)) {
-                return response()->file($candidate, [
+                return response(file_get_contents($candidate), 200, [
                     'Content-Type' => 'text/html; charset=UTF-8',
                 ]);
             }
