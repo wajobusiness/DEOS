@@ -180,3 +180,4 @@ class CalculateDirectAndGenerationBonusAction
         return null;
     }
 }
+

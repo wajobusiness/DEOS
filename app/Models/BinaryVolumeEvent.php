@@ -29,3 +29,4 @@ class BinaryVolumeEvent extends Model
         return $this->belongsTo(Member::class, 'source_member_id');
     }
 }
+

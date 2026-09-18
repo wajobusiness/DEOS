@@ -33,3 +33,4 @@ return new class extends Migration
         Schema::dropIfExists('binary_volume_events');
     }
 };
+

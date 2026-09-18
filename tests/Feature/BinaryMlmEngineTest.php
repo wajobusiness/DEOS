@@ -289,3 +289,4 @@ class BinaryMlmEngineTest extends TestCase
         $this->assertGreaterThan(0.00, $result['total_disbursed']);
     }
 }
+

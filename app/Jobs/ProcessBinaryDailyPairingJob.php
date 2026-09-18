@@ -35,3 +35,4 @@ class ProcessBinaryDailyPairingJob implements ShouldQueue
         Log::info("ProcessBinaryDailyPairingJob completed successfully. Matched: {$stats['members_matched']}, Disbursed: \${$stats['total_disbursed']} EVO");
     }
 }
+
