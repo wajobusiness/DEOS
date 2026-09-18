@@ -33,6 +33,7 @@ import { Lead } from '../types';
 import { Badge } from '../components/common/Badge';
 import { useAuth } from '../context/AuthContext';
 import { crmEngine } from '../engine/crmEngine';
+import { apiClient } from '../lib/apiClient';
 
 export const CRMDashboard: React.FC = () => {
   const { member } = useAuth();
@@ -40,6 +41,7 @@ export const CRMDashboard: React.FC = () => {
   const activeUserName = member?.name || 'Member';
 
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequences' | 'campaigns'>('pipeline');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Member CRM displays leads strictly isolated by member tenant ID
   const [memberLeads, setMemberLeads] = useState<Lead[]>(() => crmEngine.getMemberLeads(activeUserId));
@@ -53,9 +55,39 @@ export const CRMDashboard: React.FC = () => {
   const [newLeadSource, setNewLeadSource] = useState('Personal Website Form');
   const [newLeadDealValue, setNewLeadDealValue] = useState('2500');
 
-  // Reload leads when active member changes
-  useEffect(() => {
+  // Load leads from backend API with fallback
+  const fetchLiveLeads = async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiClient.getLeads();
+      if (res && res.status === 'success' && Array.isArray(res.data)) {
+        const mapped: Lead[] = res.data.map((l: any) => ({
+          id: l.id || `LED-${Date.now()}`,
+          name: l.name || `${l.first_name || ''} ${l.last_name || ''}`.trim() || 'Prospect',
+          email: l.email || '',
+          phone: l.phone || '',
+          company: l.company || 'Direct Prospect',
+          avatar: l.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          source: l.source || 'Website Form',
+          status: l.status || 'New',
+          stage: l.stage || 'Qualified',
+          dealValue: Number(l.deal_value || l.dealValue || 0),
+          createdAt: l.created_at ? new Date(l.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          ownerId: l.user_id || activeUserId,
+        }));
+        setMemberLeads(mapped);
+        return;
+      }
+    } catch (e) {
+      console.warn('[CRMDashboard] API leads fetch note:', e);
+    } finally {
+      setIsLoading(false);
+    }
     setMemberLeads(crmEngine.getMemberLeads(activeUserId));
+  };
+
+  useEffect(() => {
+    fetchLiveLeads();
   }, [activeUserId]);
 
   // Automated Email Sequences State
@@ -122,11 +154,14 @@ export const CRMDashboard: React.FC = () => {
     l.source.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddLead = (e: React.FormEvent) => {
+  const handleAddLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLeadName.trim()) return;
 
     const email = newLeadEmail.trim() || 'lead@example.com';
+    const dealVal = parseFloat(newLeadDealValue) || 2500;
+    
+    // Save to local store for immediate responsive UI
     const addedLead = crmEngine.addLead({
       ownerId: activeUserId,
       ownerName: activeUserName,
@@ -137,7 +172,7 @@ export const CRMDashboard: React.FC = () => {
       source: newLeadSource,
       status: 'New',
       stage: 'New',
-      dealValue: parseFloat(newLeadDealValue) || 2500,
+      dealValue: dealVal,
     });
 
     setMemberLeads(prev => [addedLead, ...prev]);
@@ -146,15 +181,41 @@ export const CRMDashboard: React.FC = () => {
     setNewLeadEmail('');
     setNewLeadPhone('');
     setNewLeadCompany('');
+
+    // Call live backend API asynchronously
+    try {
+      const parts = newLeadName.trim().split(' ');
+      const firstName = parts[0] || '';
+      const lastName = parts.slice(1).join(' ') || '';
+      await apiClient.createLead({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone: newLeadPhone.trim(),
+        company: newLeadCompany.trim() || 'Direct Prospect',
+        source: newLeadSource,
+        status: 'New',
+        stage: 'Qualified',
+        deal_value: dealVal,
+      });
+    } catch (apiErr) {
+      console.warn('[CRMDashboard] Backend lead creation sync notice:', apiErr);
+    }
   };
 
-  const handleStatusChange = (leadId: string, newStatus: any) => {
+  const handleStatusChange = async (leadId: string, newStatus: any) => {
     const updated = crmEngine.updateLead(activeUserId, leadId, { status: newStatus });
     if (updated) {
       setMemberLeads(prev => prev.map(l => l.id === leadId ? updated : l));
       if (selectedLead && selectedLead.id === leadId) {
         setSelectedLead(updated);
       }
+    }
+
+    try {
+      await apiClient.updateLeadStage(leadId, newStatus);
+    } catch (e) {
+      console.warn('[CRMDashboard] Backend status update notice:', e);
     }
   };
 

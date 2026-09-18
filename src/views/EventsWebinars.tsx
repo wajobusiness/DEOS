@@ -71,6 +71,7 @@ import { eventsEngine } from '../engine/eventsEngine';
 import { useWallet } from '../context/WalletContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { launchPaystackPopup } from '../lib/paystackHelper';
+import { apiClient } from '../lib/apiClient';
 
 interface EventsWebinarsProps {
   currentUser?: Member;
@@ -92,6 +93,7 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
   const [activeTab, setActiveTab] = useState<'explore' | 'live_room' | 'ai_creator' | 'affiliate_funnels' | 'analytics' | 'my_tickets'>('explore');
   const [filterType, setFilterType] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Modals & Selected States
   const [selectedEventForRegister, setSelectedEventForRegister] = useState<EventItem | null>(null);
@@ -143,12 +145,53 @@ export const EventsWebinars: React.FC<EventsWebinarsProps> = ({ currentUser }) =
   });
   const [affiliateFunnelGenerated, setAffiliateFunnelGenerated] = useState(false);
 
-  const refreshEvents = () => {
-    const list = eventsEngine.getEvents('All');
-    setEvents(list);
-    setUserTickets(eventsEngine.getUserTickets(activeUser.email));
-    if (!activeRoomEvent && list.length > 0) {
-      setActiveRoomEvent(list[0]);
+  const refreshEvents = async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiClient.getWebinars();
+      if (res && res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+        const mappedList: EventItem[] = res.data.map((w: any) => ({
+          id: w.id || `EVT-${Date.now()}`,
+          title: w.title || 'Webinar',
+          subtitle: w.subtitle || '',
+          description: w.description || '',
+          category: w.category || 'Masterclass',
+          webinarType: w.webinar_type || 'masterclass',
+          date: w.scheduled_at ? new Date(w.scheduled_at).toLocaleDateString() : 'Upcoming',
+          time: w.scheduled_at ? new Date(w.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
+          status: w.status || 'Upcoming',
+          instructor: w.instructor || w.host_name || 'Host',
+          instructorRole: w.instructor_role || 'Presenter',
+          instructorAvatar: w.instructor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          bannerImage: w.banner_image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
+          videoEmbedUrl: w.video_embed_url || 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+          registered: Number(w.registered_count || 48),
+          capacity: Number(w.capacity || 500),
+          isPaid: Boolean(w.is_paid || (w.ticket_price && Number(w.ticket_price) > 0)),
+          ticketPrice: Number(w.ticket_price || 0),
+          revenue: Number(w.revenue || 0),
+        }));
+        setEvents(mappedList);
+        if (!activeRoomEvent && mappedList.length > 0) {
+          setActiveRoomEvent(mappedList[0]);
+        }
+      } else {
+        const list = eventsEngine.getEvents('All');
+        setEvents(list);
+        if (!activeRoomEvent && list.length > 0) {
+          setActiveRoomEvent(list[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('[EventsWebinars] API fetch fallback to local engine:', e);
+      const list = eventsEngine.getEvents('All');
+      setEvents(list);
+      if (!activeRoomEvent && list.length > 0) {
+        setActiveRoomEvent(list[0]);
+      }
+    } finally {
+      setIsLoading(false);
+      setUserTickets(eventsEngine.getUserTickets(activeUser.email));
     }
   };
 

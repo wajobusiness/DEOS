@@ -77,6 +77,7 @@ import { calculateMarketplaceFeeSplit, getDirectReferralBonus } from '../engine/
 import { Product, PlanTier } from '../types';
 import { UserRole, Member, ViewType } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { apiClient } from '../lib/apiClient';
 
 interface SuperAdminPanelProps {
   onImpersonateUser?: (user: Member) => void;
@@ -210,7 +211,12 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onImpersonateU
     }
   };
 
-  const handleApproveWithdrawal = (reqId: string) => {
+  const handleApproveWithdrawal = async (reqId: string) => {
+    try {
+      await apiClient.approveAdminWithdrawal(reqId);
+    } catch (apiErr) {
+      console.warn('[SuperAdminPanel] Backend withdrawal approval note:', apiErr);
+    }
     const res = adminApprovalEngine.approveWithdrawal(reqId, 'Super Admin');
     if (res.success) {
       setWithdrawalRequests(adminApprovalEngine.getWithdrawalRequests());

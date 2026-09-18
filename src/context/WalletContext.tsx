@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { WalletTransaction, LedgerEventType } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { userRegistryEngine } from '../engine/userRegistryEngine';
+import { apiClient } from '../lib/apiClient';
 
 export interface RecipientProfile {
   id: string;
@@ -38,6 +39,7 @@ interface WalletContextType {
   tokenBalance: number;
   availableBalance: number;
   transactions: WalletTransaction[];
+  isLoading: boolean;
   addDeposit: (amount: number, rail: string, reference?: string, description?: string) => Promise<WalletTransaction>;
   recordPendingDeposit: (amount: number, rail: string, reference?: string, description?: string) => Promise<WalletTransaction>;
   processWithdrawal: (amount: number, method: string, destination?: any) => Promise<{ success: boolean; transaction: WalletTransaction; message: string }>;
@@ -78,6 +80,7 @@ function getUserStorageKey(identifier: string, suffix: 'balance' | 'ledger'): st
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const activeUser = getActiveUserIdentifier();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load persistent user wallet balance strictly isolated by user
   const [walletBalance, setWalletBalance] = useState<number>(() => {
@@ -116,6 +119,47 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return [];
     }
   });
+
+  // Hydrate live balance and transactions from Laravel backend on mount
+  useEffect(() => {
+    async function loadBackendWallet() {
+      try {
+        setIsLoading(true);
+        const [balanceRes, txRes] = await Promise.allSettled([
+          apiClient.getWalletBalance(),
+          apiClient.getWalletTransactions(),
+        ]);
+
+        if (balanceRes.status === 'fulfilled' && balanceRes.value?.status === 'success') {
+          const bal = parseFloat(balanceRes.value.data?.wallet_balance || '0');
+          setWalletBalance(bal);
+        }
+
+        if (txRes.status === 'fulfilled' && txRes.value?.status === 'success' && Array.isArray(txRes.value.data)) {
+          const mappedTxs: WalletTransaction[] = txRes.value.data.map((t: any) => ({
+            id: t.id || t.reference_id || `tx-${Date.now()}`,
+            type: t.type || 'coin_deposit',
+            description: t.description || 'Ledger Transaction',
+            amount: parseFloat(t.amount || '0'),
+            currency: t.currency || 'EVO',
+            status: t.status || 'Completed',
+            date: new Date(t.created_at || Date.now()).toLocaleDateString(),
+            time: new Date(t.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            reference: t.reference_id,
+          }));
+          setTransactions(mappedTxs);
+        }
+      } catch (err) {
+        console.warn('[WalletContext] Backend wallet sync fallback to local store:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (localStorage.getItem('deos_sanctum_token')) {
+      loadBackendWallet();
+    }
+  }, [activeUser.id, activeUser.email]);
 
   // Persist wallet state for both email and ID keys
   useEffect(() => {
@@ -590,6 +634,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         tokenBalance: walletBalance,
         availableBalance: walletBalance,
         transactions,
+        isLoading,
         addDeposit,
         recordPendingDeposit,
         processWithdrawal,

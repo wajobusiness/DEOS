@@ -33,6 +33,7 @@ import {
   AcademyQuizQuestion,
   AcademyCertificate
 } from '../engine/academyEngine';
+import { apiClient } from '../lib/apiClient';
 
 export const AcademyHub: React.FC = () => {
   const { member } = useAuth();
@@ -42,6 +43,7 @@ export const AcademyHub: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('All');
   const [courses, setCourses] = useState<Course[]>(() => academyEngine.getCourses('All'));
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Lesson Player State
   const [courseLessons, setCourseLessons] = useState<AcademyLesson[]>([]);
@@ -69,9 +71,46 @@ export const AcademyHub: React.FC = () => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
 
-  const refreshAcademy = () => {
-    setCourses(academyEngine.getCourses('All'));
-    setUserCertificates(academyEngine.getUserCertificates(activeUserId));
+  const refreshAcademy = async () => {
+    try {
+      setIsLoading(true);
+      const [coursesRes, certsRes] = await Promise.allSettled([
+        apiClient.getAcademyCourses(),
+        apiClient.getCertificates(),
+      ]);
+
+      if (coursesRes.status === 'fulfilled' && coursesRes.value?.status === 'success' && Array.isArray(coursesRes.value.data) && coursesRes.value.data.length > 0) {
+        const mappedCourses: Course[] = coursesRes.value.data.map((c: any) => ({
+          id: c.id || `CRS-${Date.now()}`,
+          title: c.title || 'Academy Masterclass',
+          description: c.description || '',
+          category: c.category || 'Marketing',
+          image: c.image || c.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80',
+          instructor: c.instructor || 'DEOS Academy',
+          rating: Number(c.rating || 4.9),
+          studentsCount: Number(c.students_count || c.studentsCount || 120),
+          lessonsCount: Number(c.lessons_count || c.lessonsCount || (c.lessons ? c.lessons.length : 6)),
+          difficulty: c.difficulty || 'Intermediate',
+          status: c.status || 'Not Started',
+          progress: Number(c.progress || 0),
+        }));
+        setCourses(mappedCourses);
+      } else {
+        setCourses(academyEngine.getCourses('All'));
+      }
+
+      if (certsRes.status === 'fulfilled' && certsRes.value?.status === 'success' && Array.isArray(certsRes.value.data)) {
+        setUserCertificates(certsRes.value.data);
+      } else {
+        setUserCertificates(academyEngine.getUserCertificates(activeUserId));
+      }
+    } catch (e) {
+      console.warn('[AcademyHub] API fetch fallback to local engine:', e);
+      setCourses(academyEngine.getCourses('All'));
+      setUserCertificates(academyEngine.getUserCertificates(activeUserId));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

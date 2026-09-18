@@ -37,6 +37,7 @@ import { Badge } from '../components/common/Badge';
 import { Member } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { marketingEngine, TrackingPixelsConfig, MarketingCampaign, INITIAL_SWIPE_FILES, PromoSwipeFile } from '../engine/marketingEngine';
+import { apiClient } from '../lib/apiClient';
 
 interface MarketingCenterProps {
   currentUser?: Member;
@@ -62,6 +63,21 @@ export const MarketingCenter: React.FC<MarketingCenterProps> = ({ currentUser })
     marketingEngine.getTrackingPixels(userId)
   );
   const [isSaved, setIsSaved] = useState(false);
+
+  // Load tracking pixels from live backend
+  useEffect(() => {
+    async function loadPixels() {
+      try {
+        const res = await apiClient.getTrackingPixels();
+        if (res && res.status === 'success' && res.data) {
+          setPixels(prev => ({ ...prev, ...res.data }));
+        }
+      } catch (e) {
+        console.warn('[MarketingCenter] Backend pixel sync note:', e);
+      }
+    }
+    loadPixels();
+  }, [userId]);
 
   // Campaigns State
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>(() =>
@@ -97,9 +113,14 @@ export const MarketingCenter: React.FC<MarketingCenterProps> = ({ currentUser })
   // Live Metrics
   const metrics = marketingEngine.getMarketingMetrics(userId);
 
-  const handleSavePixels = (e: React.FormEvent) => {
+  const handleSavePixels = async (e: React.FormEvent) => {
     e.preventDefault();
     marketingEngine.saveTrackingPixels(userId, pixels);
+    try {
+      await apiClient.updateTrackingPixels(pixels);
+    } catch (apiErr) {
+      console.warn('[MarketingCenter] API pixel save note:', apiErr);
+    }
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };

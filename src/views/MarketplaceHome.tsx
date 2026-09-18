@@ -52,6 +52,7 @@ import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { launchPaystackPopup } from '../lib/paystackHelper';
+import { apiClient } from '../lib/apiClient';
 
 interface MarketplaceHomeProps {
   onNavigate: (view: ViewType) => void;
@@ -67,6 +68,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const { walletBalance, processPurchase } = useWallet();
   const { gateways } = usePlatformSettings();
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   // Navigation & Category Filters
   const [activeNavTab, setActiveNavTab] = useState<string>('Marketplace');
   const [activeSubTab, setActiveSubTab] = useState<'Featured' | 'Best Sellers' | 'Top Rated' | 'New Arrivals'>('Featured');
@@ -114,6 +116,37 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const [products, setProducts] = useState<Product[]>(() => marketplaceEngine.getProducts());
 
   useEffect(() => {
+    async function loadLiveProducts() {
+      try {
+        setIsLoadingProducts(true);
+        const res = await apiClient.getMarketplaceProducts();
+        if (res && res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped: Product[] = res.data.map((p: any) => ({
+            id: p.id,
+            slug: p.slug,
+            title: p.title,
+            description: p.description,
+            price: parseFloat(p.price || '0'),
+            category: p.category,
+            affiliateCommissionRate: parseFloat(p.affiliate_commission_rate || '0.4'),
+            rating: parseFloat(p.rating || '5.0'),
+            salesCount: parseInt(p.sales_count || '0'),
+            image: p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+            seller: p.seller?.name || 'DEOS Verified Seller',
+            sellerId: p.seller_id,
+            digitalFileUrl: p.digital_file_url,
+          }));
+          setProducts(mapped);
+        }
+      } catch (err) {
+        console.warn('[MarketplaceHome] Live products fetch notice:', err);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    }
+
+    loadLiveProducts();
+
     const handleUpdate = () => {
       setProducts(marketplaceEngine.getProducts());
     };

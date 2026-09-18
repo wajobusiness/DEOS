@@ -31,6 +31,7 @@ import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { calculateBinaryCommission, getDirectReferralBonus } from '../engine/binaryEngine';
 import { binaryPlacementEngine } from '../engine/binaryPlacementEngine';
 import { userRegistryEngine } from '../engine/userRegistryEngine';
+import { apiClient } from '../lib/apiClient';
 
 export const BinaryNetwork: React.FC = () => {
   const { walletBalance, creditCommission } = useWallet();
@@ -63,7 +64,21 @@ export const BinaryNetwork: React.FC = () => {
   const [isSubmittingSponsor, setIsSubmittingSponsor] = useState(false);
 
   // Refresh live tree data whenever viewRootId or member changes
-  const refreshTree = () => {
+  const refreshTree = async () => {
+    try {
+      const res = await apiClient.getBinaryTree(3);
+      if (res && res.status === 'success' && res.data) {
+        if (res.data.tree) {
+          setTreeData(res.data.tree);
+        }
+        if (res.data.stats) {
+          setNetworkStats(res.data.stats);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[BinaryNetwork] Live API tree query fallback:', e);
+    }
     const updatedTree = binaryPlacementEngine.buildBinaryTreeForUser(viewRootId);
     const updatedStats = binaryPlacementEngine.getNetworkStatistics(viewRootId);
     setTreeData(updatedTree);
@@ -103,41 +118,46 @@ export const BinaryNetwork: React.FC = () => {
   };
 
   // Run Binary Settlement & Credit to Wallet at SuperAdmin configured rate
-  const handleExecuteWeeklySettlement = () => {
+  const handleExecuteWeeklySettlement = async () => {
     if (weakerBV <= 0) {
       alert('There is currently 0 weaker-leg BV to match for settlement.');
       return;
     }
 
     setIsSettling(true);
-    setTimeout(() => {
-      const payout = calculateBinaryCommission(weakerBV, binaryRatePct);
-      const matched = weakerBV;
+    try {
+      // Trigger backend pairing calculation
+      await apiClient.triggerBinaryPairing();
+    } catch (apiErr) {
+      console.warn('[BinaryNetwork] Backend pairing calculation note:', apiErr);
+    }
 
-      // Credit commission to real wallet ledger
-      const tx = creditCommission(
-        payout,
-        'binary_commission',
-        `Binary Settlement: ${binaryRatePct}% on ${matched.toLocaleString()} BV Weaker-Leg Match`
-      );
+    const payout = calculateBinaryCommission(weakerBV, binaryRatePct);
+    const matched = weakerBV;
 
-      // Deduct matched volume from user's record
-      const currentReg = userRegistryEngine.getUserById(viewRootId);
-      if (currentReg) {
-        userRegistryEngine.updateUser(currentReg.id, {
-          binaryLeftVolume: Math.max(0, (currentReg.binaryLeftVolume || 0) - matched),
-          binaryRightVolume: Math.max(0, (currentReg.binaryRightVolume || 0) - matched),
-        });
-      }
+    // Credit commission to real wallet ledger
+    const tx = creditCommission(
+      payout,
+      'binary_commission',
+      `Binary Settlement: ${binaryRatePct}% on ${matched.toLocaleString()} BV Weaker-Leg Match`
+    );
 
-      setIsSettling(false);
-      refreshTree();
+    // Deduct matched volume from user's record
+    const currentReg = userRegistryEngine.getUserById(viewRootId);
+    if (currentReg) {
+      userRegistryEngine.updateUser(currentReg.id, {
+        binaryLeftVolume: Math.max(0, (currentReg.binaryLeftVolume || 0) - matched),
+        binaryRightVolume: Math.max(0, (currentReg.binaryRightVolume || 0) - matched),
+      });
+    }
 
-      setLastSettlementNotice(
-        `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet at ${binaryRatePct}% rate (Ref: ${tx.id}). Carried forward: ${carryForwardBV.toLocaleString()} BV.`
-      );
-      setTimeout(() => setLastSettlementNotice(null), 7000);
-    }, 600);
+    setIsSettling(false);
+    refreshTree();
+
+    setLastSettlementNotice(
+      `Binary Settlement Complete! $${payout.toFixed(2)} EVO credited to your wallet at ${binaryRatePct}% rate (Ref: ${tx.id}). Carried forward: ${carryForwardBV.toLocaleString()} BV.`
+    );
+    setTimeout(() => setLastSettlementNotice(null), 7000);
   };
 
   // Sponsor New Downline Member & Record Real Database Placement
