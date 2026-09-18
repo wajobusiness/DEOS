@@ -1,4 +1,10 @@
 User-agent: *
+Allow: /
 Disallow: /api/
 Disallow: /admin/
-Allow: /
+Disallow: /backoffice/
+Disallow: /private/
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+
+Sitemap: https://evionaecosystem.com/sitemap.xml
