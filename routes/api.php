@@ -40,7 +40,8 @@ Route::prefix('v1')->middleware(['throttle:60,1'])->group(function () {
     // Public HMAC Verified Webhooks
     Route::post('/webhooks/paystack', [WebhookController::class, 'paystack'])
         ->middleware('webhook.signature:paystack');
-    Route::post('/webhooks/cryptomus', [WebhookController::class, 'cryptomus']);
+    Route::post('/webhooks/cryptomus', [WebhookController::class, 'cryptomus'])
+        ->middleware('webhook.signature:cryptomus');
 
     // Authenticated Member Endpoints
     Route::middleware(['auth:sanctum', 'member.active'])->group(function () {

@@ -16,6 +16,8 @@ class LedgerTransaction extends Model
     protected $casts = [
         'type' => LedgerEventType::class,
         'amount' => 'decimal:4',
+        'balance_before' => 'decimal:4',
+        'balance_after' => 'decimal:4',
         'metadata' => 'array',
     ];
 

@@ -13,7 +13,10 @@ return new class extends Migration
             $table->uuid('member_id')->index();
             $table->string('type', 64)->index();
             $table->decimal('amount', 16, 4);
+            $table->decimal('balance_before', 16, 4)->default(0);
+            $table->decimal('balance_after', 16, 4)->default(0);
             $table->string('currency', 16)->default('EVO');
+            $table->string('channel', 64)->nullable()->index();
             $table->string('description', 512);
             $table->string('status', 32)->default('Completed');
             $table->string('reference_id', 128)->nullable()->unique();
