@@ -2,6 +2,8 @@
 
 namespace App\Actions\Auth;
 
+use App\Actions\Binary\CalculateDirectAndGenerationBonusAction;
+use App\Actions\Binary\PlaceMemberInBinaryTreeAction;
 use App\Enums\PlanTier;
 use App\Enums\MemberRole;
 use App\Enums\MemberStatus;
@@ -13,6 +15,11 @@ use Illuminate\Support\Str;
 
 class RegisterMemberAction
 {
+    public function __construct(
+        protected PlaceMemberInBinaryTreeAction $placementAction,
+        protected CalculateDirectAndGenerationBonusAction $bonusAction
+    ) {}
+
     public function execute(array $data): Member
     {
         return DB::transaction(function () use ($data) {
@@ -23,6 +30,9 @@ class RegisterMemberAction
 
             // Generate unique member code (EVO-ID-XXXXXX)
             $memberCode = 'EVO-' . strtoupper(Str::random(8));
+            $planTier = isset($data['plan'])
+                ? (is_string($data['plan']) ? PlanTier::from(strtolower($data['plan'])) : $data['plan'])
+                : PlanTier::GROWTH;
 
             $member = Member::create([
                 'member_code' => $memberCode,
@@ -31,7 +41,7 @@ class RegisterMemberAction
                 'password' => Hash::make($data['password']),
                 'phone' => $data['phone'] ?? null,
                 'country' => $data['country'] ?? 'United States',
-                'plan' => $data['plan'] ?? PlanTier::GROWTH->value,
+                'plan' => $planTier->value,
                 'role' => MemberRole::MEMBER->value,
                 'status' => MemberStatus::ACTIVE->value,
                 'sponsor_id' => $sponsor?->id,
@@ -53,7 +63,14 @@ class RegisterMemberAction
                 'theme_color' => 'indigo',
             ]);
 
-            return $member;
+            // Place in Binary Tree & Distribute Referral Bonuses if sponsor exists
+            if ($sponsor) {
+                $preferredLeg = $data['placement_leg'] ?? 'AUTO';
+                $this->placementAction->execute($member, $sponsor, $preferredLeg);
+                $this->bonusAction->execute($member, $planTier);
+            }
+
+            return $member->fresh();
         });
     }
 }

@@ -11,27 +11,36 @@ enum PlanTier: string
     public function price(): float
     {
         return match ($this) {
-            self::LAUNCH => 49.00,
-            self::GROWTH => 149.00,
-            self::LEGACY => 299.00,
+            self::LAUNCH => 100.00,
+            self::GROWTH => 300.00,
+            self::LEGACY => 500.00,
         };
     }
 
     public function directBonus(): float
     {
         return match ($this) {
-            self::LAUNCH => 20.00,
-            self::GROWTH => 60.00,
-            self::LEGACY => 100.00,
+            self::LAUNCH => 25.00,
+            self::GROWTH => 75.00,
+            self::LEGACY => 125.00,
         };
     }
 
     public function binaryVolume(): float
     {
         return match ($this) {
-            self::LAUNCH => 50.00,
-            self::GROWTH => 150.00,
-            self::LEGACY => 300.00,
+            self::LAUNCH => 100.00,
+            self::GROWTH => 300.00,
+            self::LEGACY => 500.00,
+        };
+    }
+
+    public function dailyBinaryCap(): float
+    {
+        return match ($this) {
+            self::LAUNCH => 200.00,
+            self::GROWTH => 600.00,
+            self::LEGACY => 1500.00,
         };
     }
 }

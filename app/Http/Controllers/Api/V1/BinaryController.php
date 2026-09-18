@@ -13,12 +13,16 @@ class BinaryController extends Controller
 
     public function tree(Request $request): JsonResponse
     {
-        $depth = min((int) $request->query('depth', 3), 5);
+        $depth = min((int) $request->query('depth', 3), 6);
         $tree = $this->binaryService->getTree($request->user(), $depth);
+        $stats = $this->binaryService->getDownlineStats($request->user());
 
         return response()->json([
             'success' => true,
-            'data' => $tree,
+            'data' => [
+                'tree' => $tree,
+                'stats' => $stats,
+            ],
         ]);
     }
 

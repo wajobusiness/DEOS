@@ -16,3 +16,4 @@ class WebhookEvent extends Model
         'processed_at' => 'datetime',
     ];
 }
+

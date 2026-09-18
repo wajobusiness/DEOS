@@ -2,40 +2,47 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Member;
+use App\Jobs\ProcessBinaryDailyPairingJob;
+use App\Models\AuditLog;
 use App\Services\BinaryEngineService;
 use Illuminate\Console\Command;
 
 class RunBinaryDailyPairingCommand extends Command
 {
-    protected $signature = 'deos:binary-pairing';
-    protected $description = 'Process daily binary matching volume and disburse 10% commission overrides to qualified members';
+    protected $signature = 'deos:binary-pairing {--async : Queue the calculation as a background job} {--limit=100000 : Global payout limit ceiling in EVO}';
+    protected $description = 'Process daily binary matching volume and disburse 10% commission overrides to qualified members with solvency caps';
 
     public function handle(BinaryEngineService $binaryService): int
     {
-        $this->info('Starting DEOS Daily Binary Pairing calculation...');
+        $this->info('Starting DEOS Binary Pairing Engine calculation...');
 
-        $activeMembers = Member::where('status', 'active')
-            ->where(function ($q) {
-                $q->where('binary_left_volume', '>', 0)
-                  ->where('binary_right_volume', '>', 0);
-            })
-            ->get();
-
-        $processed = 0;
-        $totalPaid = 0.0;
-
-        foreach ($activeMembers as $member) {
-            $result = $binaryService->calculatePairing($member);
-            if ($result) {
-                $processed++;
-                $totalPaid += $result['bonus_amount'];
-                $this->line("  [✓] {$member->name} ({$member->member_code}): Matched {$result['matched_volume']} BV -> Paid \${$result['bonus_amount']}");
-            }
+        if ($this->option('async')) {
+            ProcessBinaryDailyPairingJob::dispatch();
+            $this->info('Dispatched ProcessBinaryDailyPairingJob to queue.');
+            return Command::SUCCESS;
         }
 
-        $this->info("Completed: Processed {$processed} binary commissions. Total Distributed: \${$totalPaid} EVO");
+        $limit = (float) $this->option('limit');
+        $result = $binaryService->calculateAllDailyPairings($limit);
 
+        $this->table(
+            ['Metric', 'Value'],
+            [
+                ['Members Matched', $result['members_matched']],
+                ['Total Volume Matched', number_format($result['total_volume_matched'], 2) . ' BV'],
+                ['Total Commissions Disbursed', '$' . number_format($result['total_disbursed'], 2) . ' EVO'],
+            ]
+        );
+
+        AuditLog::create([
+            'action' => 'Daily Binary Pairing Command',
+            'actor_id' => '00000000-0000-0000-0000-000000000000',
+            'actor_role' => 'SYSTEM_CLI',
+            'impact_category' => 'Financial Engine',
+            'details' => "CLI run processed {$result['members_matched']} members. Total Disbursed: \${$result['total_disbursed']} EVO",
+        ]);
+
+        $this->info('Binary pairing calculations finished successfully.');
         return Command::SUCCESS;
     }
 }
