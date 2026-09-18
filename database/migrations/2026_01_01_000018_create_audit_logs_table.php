@@ -15,10 +15,11 @@ return new class extends Migration
             $table->string('actor_role', 64);
             $table->string('impact_category', 64)->index();
             $table->text('details');
-            $table->jsonb('metadata')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index(['impact_category', 'created_at']);
+            $table->index(['actor_id', 'created_at']);
         });
     }
 

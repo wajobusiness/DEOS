@@ -14,23 +14,31 @@ class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = Member::firstOrCreate(
-            ['email' => 'admin@evionaecosystem.com'],
+        $email = env('SUPERADMIN_EMAIL', 'admin@evionaecosystem.com');
+        $password = env('SUPERADMIN_PASSWORD', 'AdminSecret2026!');
+        $name = env('SUPERADMIN_NAME', 'DEOS Super Administrator');
+        $code = env('SUPERADMIN_CODE', 'EVO-ADMIN-001');
+        $phone = env('SUPERADMIN_PHONE', '+15550198234');
+        $country = env('SUPERADMIN_COUNTRY', 'United States');
+
+        $admin = Member::updateOrCreate(
+            ['email' => $email],
             [
-                'member_code' => 'EVO-ADMIN-001',
-                'name' => 'DEOS Super Administrator',
-                'password' => Hash::make('AdminSecret2026!'),
-                'phone' => '+15550198234',
-                'country' => 'United States',
+                'member_code' => $code,
+                'name' => $name,
+                'password' => Hash::make($password, ['rounds' => 12]),
+                'phone' => $phone,
+                'country' => $country,
                 'plan' => PlanTier::LEGACY->value,
                 'role' => MemberRole::SUPER_ADMIN->value,
                 'status' => MemberStatus::ACTIVE->value,
                 'wallet_balance' => 50000.0000,
                 'usdt_balance' => 50000.0000,
+                'email_verified_at' => now(),
             ]
         );
 
-        MemberSite::firstOrCreate(
+        MemberSite::updateOrCreate(
             ['member_id' => $admin->id],
             [
                 'subdomain' => 'admin-hub',

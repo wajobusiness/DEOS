@@ -17,10 +17,10 @@ return new class extends Migration
             $table->string('phone', 64)->nullable();
             $table->string('country', 64)->nullable();
             $table->string('avatar_url', 1024)->nullable();
-            $table->string('plan', 32)->default('growth');
-            $table->string('role', 32)->default('member');
-            $table->string('status', 32)->default('active');
-            $table->string('rank', 64)->default('Member');
+            $table->string('plan', 32)->default('growth')->index();
+            $table->string('role', 32)->default('member')->index();
+            $table->string('status', 32)->default('active')->index();
+            $table->string('rank', 64)->default('Member')->index();
             $table->uuid('sponsor_id')->nullable()->index();
             $table->uuid('placement_parent_id')->nullable()->index();
             $table->string('placement_leg', 16)->nullable(); // 'L' or 'R'
@@ -35,6 +35,7 @@ return new class extends Migration
 
             $table->foreign('sponsor_id')->references('id')->on('members')->nullOnDelete();
             $table->foreign('placement_parent_id')->references('id')->on('members')->nullOnDelete();
+            $table->index(['role', 'status']);
         });
     }
 

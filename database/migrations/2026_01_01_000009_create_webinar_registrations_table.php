@@ -24,6 +24,7 @@ return new class extends Migration
 
             $table->foreign('webinar_id')->references('id')->on('webinars')->cascadeOnDelete();
             $table->foreign('member_id')->references('id')->on('members')->nullOnDelete();
+            $table->index(['webinar_id', 'status']);
         });
     }
 

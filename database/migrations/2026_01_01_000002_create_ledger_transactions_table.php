@@ -17,11 +17,13 @@ return new class extends Migration
             $table->string('description', 512);
             $table->string('status', 32)->default('Completed');
             $table->string('reference_id', 128)->nullable()->unique();
-            $table->jsonb('metadata')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
 
-            $table->foreign('member_id')->references('id')->on('members')->cascadeOnDelete();
+            $table->foreign('member_id')->references('id')->on('members')->restrictOnDelete();
             $table->index(['member_id', 'created_at']);
+            $table->index(['type', 'created_at']);
+            $table->index('status');
         });
     }
 

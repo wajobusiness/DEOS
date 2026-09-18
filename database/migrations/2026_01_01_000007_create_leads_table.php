@@ -20,12 +20,14 @@ return new class extends Migration
             $table->string('stage', 32)->default('Qualified');
             $table->integer('score')->default(50);
             $table->decimal('deal_value', 12, 2)->nullable();
-            $table->jsonb('tags')->nullable();
-            $table->jsonb('activity_log')->nullable();
+            $table->json('tags')->nullable();
+            $table->json('activity_log')->nullable();
             $table->timestamps();
 
             $table->foreign('member_id')->references('id')->on('members')->cascadeOnDelete();
             $table->index(['member_id', 'stage']);
+            $table->index(['member_id', 'status']);
+            $table->index(['member_id', 'created_at']);
         });
     }
 

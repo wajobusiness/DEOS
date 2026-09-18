@@ -28,14 +28,16 @@ return new class extends Migration
             $table->string('video_source', 64)->default('youtube');
             $table->string('video_embed_url', 1024)->nullable();
             $table->string('replay_url', 1024)->nullable();
-            $table->string('status', 32)->default('Upcoming');
-            $table->jsonb('speakers')->nullable();
-            $table->jsonb('dynamic_ctas')->nullable();
-            $table->jsonb('ai_host_config')->nullable();
-            $table->jsonb('affiliate_config')->nullable();
+            $table->string('status', 32)->default('Upcoming')->index();
+            $table->json('speakers')->nullable();
+            $table->json('dynamic_ctas')->nullable();
+            $table->json('ai_host_config')->nullable();
+            $table->json('affiliate_config')->nullable();
             $table->timestamps();
 
             $table->foreign('organizer_id')->references('id')->on('members')->cascadeOnDelete();
+            $table->index(['status', 'date']);
+            $table->index(['is_evergreen', 'status']);
         });
     }
 

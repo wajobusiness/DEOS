@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('secret_key')->nullable();
             $table->string('merchant_id', 255)->nullable();
             $table->decimal('ngn_exchange_rate', 10, 2)->default(1550.00);
-            $table->jsonb('config_json')->nullable();
+            $table->json('config_json')->nullable();
             $table->timestamps();
         });
     }

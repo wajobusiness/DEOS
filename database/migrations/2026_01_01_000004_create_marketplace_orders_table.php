@@ -22,12 +22,14 @@ return new class extends Migration
             $table->decimal('seller_payout', 12, 2);
             $table->string('payment_method', 64);
             $table->string('payment_rail', 64);
-            $table->string('status', 32)->default('paid');
+            $table->string('status', 32)->default('paid')->index();
             $table->string('license_key', 128)->nullable();
             $table->timestamps();
 
             $table->foreign('buyer_member_id')->references('id')->on('members')->nullOnDelete();
             $table->foreign('promoter_member_id')->references('id')->on('members')->nullOnDelete();
+            $table->index(['status', 'created_at']);
+            $table->index(['buyer_member_id', 'created_at']);
         });
     }
 

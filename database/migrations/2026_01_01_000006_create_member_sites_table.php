@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('headline', 255)->nullable();
             $table->text('bio')->nullable();
             $table->string('theme_color', 32)->default('indigo');
-            $table->jsonb('content_schema')->nullable();
+            $table->json('content_schema')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->timestamps();
 

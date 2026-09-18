@@ -11,7 +11,7 @@ class AcademyCourseSeeder extends Seeder
 {
     public function run(): void
     {
-        $course = Course::firstOrCreate(
+        $course = Course::updateOrCreate(
             ['slug' => 'deos-core-blueprint'],
             [
                 'title' => 'Digital Entrepreneurship Operating System (DEOS) Core Blueprint',
@@ -50,7 +50,7 @@ class AcademyCourseSeeder extends Seeder
         ];
 
         foreach ($lessons as $lesson) {
-            CourseLesson::firstOrCreate(
+            CourseLesson::updateOrCreate(
                 ['course_id' => $course->id, 'sort_order' => $lesson['sort_order']],
                 $lesson
             );

@@ -22,10 +22,12 @@ return new class extends Migration
             $table->string('license_type', 64)->default('standard');
             $table->integer('sales_count')->default(0);
             $table->decimal('rating', 3, 2)->default(5.00);
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->index();
             $table->timestamps();
 
             $table->foreign('seller_id')->references('id')->on('members')->cascadeOnDelete();
+            $table->index(['category', 'is_active']);
+            $table->index(['seller_id', 'is_active']);
         });
     }
 

@@ -45,7 +45,7 @@ class MarketplaceProductSeeder extends Seeder
         ];
 
         foreach ($products as $p) {
-            Product::firstOrCreate(
+            Product::updateOrCreate(
                 ['slug' => Str::slug($p['title'])],
                 array_merge($p, ['seller_id' => $admin->id])
             );
