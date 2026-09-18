@@ -119,11 +119,11 @@
     </script>
 
     <!-- Compiled Production Assets -->
-    <script type="module" crossorigin src="/assets/index-Cckv0gfB.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-B14t4Fhm.js" />
-    <link rel="modulepreload" crossorigin href="/assets/vendor-react-AncwaEbf.js" />
+    <script type="module" crossorigin src="/assets/index-BYjDTvrl.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-CBtFMfzM.js" />
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Bf6WFD4T.js" />
     <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-CSIM0fnT.js" />
-    <link rel="stylesheet" crossorigin href="/assets/index-BnG6DChF.css" />
+    <link rel="stylesheet" crossorigin href="/assets/index-CeKbpeWW.css" />
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased font-sans">
     <div id="root"></div>

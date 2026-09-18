@@ -19,6 +19,7 @@ import {
 import { UserStoreSettings, ViewType, Member } from '../types';
 import { Badge } from '../components/common/Badge';
 import { marketplaceEngine } from '../engine/marketplaceEngine';
+import { GlobalHeaderControls } from '../components/common/GlobalHeaderControls';
 
 interface StoresDirectoryProps {
   onNavigate: (view: ViewType) => void;
@@ -98,7 +99,8 @@ export const StoresDirectory: React.FC<StoresDirectoryProps> = ({
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <GlobalHeaderControls theme="light" />
               <button
                 onClick={() => onNavigate('landing')}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-all"

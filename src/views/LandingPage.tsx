@@ -52,6 +52,9 @@ import { ViewType, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
 import { AuthModal } from '../components/auth/AuthModal';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { useLanguage } from '../context/LanguageContext';
+import { GlobalHeaderControls } from '../components/common/GlobalHeaderControls';
 import { supabase } from '../lib/supabaseClient';
 
 interface LandingPageProps {
@@ -60,6 +63,8 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const { branding, theme, homepage } = usePlatformSettings();
+  const { formatPrice, currencyConfig } = useCurrency();
+  const { t } = useLanguage();
 
   // Auth Modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -514,8 +519,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </button>
           </nav>
 
-          {/* Desktop Action Buttons (Login + Get Started) */}
+          {/* Desktop Action Buttons (Currency/Language Controls + Login + Get Started) */}
           <div className="hidden sm:flex items-center gap-3">
+            <GlobalHeaderControls theme="dark" />
             <button
               onClick={() => openAuth('login')}
               className="px-5 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-wider text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 transition-all shadow-xs"
@@ -531,14 +537,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </button>
           </div>
 
-          {/* Mobile Hamburger Button */}
+          {/* Mobile Hamburger Button & Currency Quick Control */}
           <div className="flex lg:hidden items-center gap-2">
-            <button
-              onClick={() => openAuth('login')}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800"
-            >
-              Login
-            </button>
+            <GlobalHeaderControls theme="dark" />
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition-colors"
@@ -552,6 +553,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         {/* Mobile Navigation Accordion Drawer */}
         {isMobileMenuOpen && (
           <div className="lg:hidden bg-slate-950/98 border-b border-slate-800 backdrop-blur-2xl px-5 py-6 space-y-3 animate-fadeIn">
+            {/* Mobile Header Quick Actions */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span className="text-xs text-slate-400 font-medium">Quick Access</span>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  openAuth('login');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 shadow-sm"
+              >
+                Sign In to Account
+              </button>
+            </div>
             {/* Direct Home Link */}
             <a
               href="#hero"
@@ -1395,7 +1409,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             {[
               {
                 name: 'Launch Tier',
-                price: '$100',
+                priceNum: 100,
                 coins: '100 EVO Token',
                 desc: 'Perfect for new entrepreneurs getting started online.',
                 features: [
@@ -1410,7 +1424,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               },
               {
                 name: 'Growth Tier',
-                price: '$300',
+                priceNum: 300,
                 coins: '300 EVO Token',
                 desc: 'The complete scaling system for serious business builders.',
                 features: [
@@ -1425,7 +1439,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               },
               {
                 name: 'Legacy Tier',
-                price: '$500',
+                priceNum: 500,
                 coins: '500 EVO Token',
                 desc: 'Maximum infrastructure, highest limits, and VIP support.',
                 features: [
@@ -1455,7 +1469,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     )}
                   </div>
                   <div>
-                    <span className="text-4xl font-black text-white">{plan.price}</span>
+                    <span className="text-4xl font-black text-white">{formatPrice(plan.priceNum)}</span>
                     <span className="text-xs text-slate-400 ml-1.5 font-medium">one-time</span>
                     <p className="text-xs text-indigo-400 font-semibold mt-0.5">{plan.coins}</p>
                   </div>
@@ -1542,17 +1556,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl space-y-4 shadow-xl">
                 <span className="text-[10px] font-bold uppercase text-slate-400">Projected Monthly Earnings</span>
                 <h4 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                  ${totalProjectedMonthly.toLocaleString()} / mo
+                  {formatPrice(totalProjectedMonthly)} / mo
                 </h4>
 
                 <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
                   <div className="flex justify-between text-slate-400">
                     <span>Direct Referral Bonuses:</span>
-                    <span className="font-bold text-white">${estimatedDirectBonus.toLocaleString()}</span>
+                    <span className="font-bold text-white">{formatPrice(estimatedDirectBonus)}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
                     <span>10% Binary Commissions:</span>
-                    <span className="font-bold text-white">${estimatedBinaryBonus.toLocaleString()}</span>
+                    <span className="font-bold text-white">{formatPrice(estimatedBinaryBonus)}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
                     <span>Generation Waterfall Bonus:</span>

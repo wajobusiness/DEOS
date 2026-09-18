@@ -13,6 +13,9 @@ import {
 import { Member, ViewType } from '../../types';
 import { usePlatformSettings } from '../../context/PlatformSettingsContext';
 import { useWallet } from '../../context/WalletContext';
+import { useCurrency } from '../../context/CurrencyContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { GlobalHeaderControls } from '../common/GlobalHeaderControls';
 
 interface HeaderProps {
   currentUser: Member;
@@ -31,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { branding, dashboard } = usePlatformSettings();
   const { walletBalance } = useWallet();
+  const { formatPrice, currencyConfig } = useCurrency();
+  const { t } = useLanguage();
   const getPageTitle = (view: ViewType): string => {
     switch (view) {
       case 'dashboard': return 'Dashboard';
@@ -99,8 +104,11 @@ export const Header: React.FC<HeaderProps> = ({
           title="View Wallet Ledger"
         >
           <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-          <span>${walletBalance.toFixed(2)} EVO</span>
+          <span>{formatPrice(walletBalance)} EVO</span>
         </button>
+
+        {/* Global Currency & Language Controls */}
+        <GlobalHeaderControls theme="light" />
 
         {/* Deposit Quick Action */}
         <button

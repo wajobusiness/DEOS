@@ -55,9 +55,11 @@ import { Product, ViewType, Member } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
 import { marketplaceEngine } from '../engine/marketplaceEngine';
 import { AuthModal } from '../components/auth/AuthModal';
-import { Badge } from '../components/common/Badge';
 import { useWallet } from '../context/WalletContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { useLanguage } from '../context/LanguageContext';
+import { GlobalHeaderControls } from '../components/common/GlobalHeaderControls';
 import { launchPaystackPopup } from '../lib/paystackHelper';
 import { apiClient } from '../lib/apiClient';
 
@@ -74,6 +76,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 }) => {
   const { walletBalance, processPurchase } = useWallet();
   const { gateways } = usePlatformSettings();
+  const { formatPrice, currencyConfig } = useCurrency();
+  const { t } = useLanguage();
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   // Navigation & Category Filters
@@ -389,8 +393,10 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               </button>
             </div>
 
-            {/* Guest Action CTAs */}
-            <div className="flex items-center gap-3">
+            {/* Guest Action CTAs & Global Controls */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <GlobalHeaderControls theme="light" />
+
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 relative transition-colors"
@@ -701,7 +707,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                       <div className="p-3.5 pt-0 space-y-2.5 border-t border-slate-100 mt-2">
                         <div className="flex items-center justify-between pt-2">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm font-black text-slate-900">${prod.price.toFixed(2)}</span>
+                            <span className="text-sm font-black text-slate-900">{formatPrice(prod.price)}</span>
                             <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
                               {prod.discountBadge}
                             </span>
@@ -715,7 +721,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                               title="Copy your affiliate promo link"
                             >
                               <Share2 className="w-2.5 h-2.5" />
-                              <span>Earn +${split.promoterCommissionNet.toFixed(0)}</span>
+                              <span>Earn +{formatPrice(split.promoterCommissionNet)}</span>
                             </button>
                           )}
                         </div>
@@ -1086,8 +1092,8 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     <div>
                       <span className="text-xs text-slate-500 font-semibold block">One-time Investment</span>
                       <div className="flex items-baseline gap-2 mt-0.5">
-                        <span className="text-2xl sm:text-3xl font-black text-indigo-600">${selectedProductDetail.price.toFixed(2)}</span>
-                        <span className="text-xs text-slate-400 line-through">${(selectedProductDetail.price * 1.5).toFixed(2)}</span>
+                        <span className="text-2xl sm:text-3xl font-black text-indigo-600">{formatPrice(selectedProductDetail.price)}</span>
+                        <span className="text-xs text-slate-400 line-through">{formatPrice(selectedProductDetail.price * 1.5)}</span>
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                           Save 33%
                         </span>
@@ -1137,7 +1143,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                       className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95"
                     >
                       <Zap className="w-4 h-4" />
-                      <span>Buy Now with 1-Click (${selectedProductDetail.price.toFixed(2)})</span>
+                      <span>Buy Now with 1-Click ({formatPrice(selectedProductDetail.price)})</span>
                     </button>
 
                     <button
@@ -1160,7 +1166,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                         <span className="text-xs font-black text-white">Promote & Earn 40% Commission</span>
                       </div>
                       <span className="text-xs font-black text-emerald-400">
-                        +${calculateMarketplaceFeeSplit(selectedProductDetail.price, selectedProductDetail.affiliateCommissionRate).promoterCommissionNet.toFixed(2)} Payout
+                        +{formatPrice(calculateMarketplaceFeeSplit(selectedProductDetail.price, selectedProductDetail.affiliateCommissionRate).promoterCommissionNet)} Payout
                       </span>
                     </div>
 
@@ -1234,7 +1240,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                       <img src={item.image} alt={item.title} className="w-12 h-12 rounded-xl object-cover" />
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-bold text-slate-900 truncate">{item.title}</h5>
-                        <p className="text-xs font-bold text-indigo-600 mt-0.5">${item.price.toFixed(2)}</p>
+                        <p className="text-xs font-bold text-indigo-600 mt-0.5">{formatPrice(item.price)}</p>
                       </div>
                       <button onClick={() => removeFromCart(idx)} className="p-1.5 text-slate-400 hover:text-rose-600">
                         <Trash2 className="w-4 h-4" />
@@ -1249,7 +1255,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
               <div className="pt-4 border-t border-slate-100 space-y-4">
                 <div className="flex justify-between items-center text-sm font-bold text-slate-900">
                   <span>Total Due:</span>
-                  <span className="text-lg font-black text-indigo-600">${cartTotal.toFixed(2)} USD</span>
+                  <span className="text-lg font-black text-indigo-600">{formatPrice(cartTotal)}</span>
                 </div>
 
                 <button
@@ -1320,7 +1326,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                     >
                       <Wallet className="w-4 h-4 text-indigo-600" />
                       <span className="text-[10px]">Eviona Wallet</span>
-                      <span className="text-[9px] font-mono text-indigo-600">(${walletBalance.toFixed(2)})</span>
+                      <span className="text-[9px] font-mono text-indigo-600">({formatPrice(walletBalance)})</span>
                     </button>
                   )}
 
@@ -1377,7 +1383,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
                 <span className="font-bold text-slate-700">Total Due:</span>
-                <span className="text-base font-black text-indigo-600">${cartTotal.toFixed(2)} USD</span>
+                <span className="text-base font-black text-indigo-600">{formatPrice(cartTotal)}</span>
               </div>
 
               <button
@@ -1385,7 +1391,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                 disabled={isProcessingCheckout}
                 className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
               >
-                <span>{isProcessingCheckout ? 'Processing Payment...' : `Complete Purchase ($${cartTotal.toFixed(2)})`}</span>
+                <span>{isProcessingCheckout ? 'Processing Payment...' : `Complete Purchase (${formatPrice(cartTotal)})`}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
