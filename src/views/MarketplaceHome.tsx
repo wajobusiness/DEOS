@@ -42,7 +42,14 @@ import {
   Store,
   Wallet,
   TrendingUp,
-  Package
+  Package,
+  Eye,
+  MessageCircle,
+  CheckCircle,
+  FileText,
+  Layers,
+  Award,
+  Info
 } from 'lucide-react';
 import { Product, ViewType, Member } from '../types';
 import { calculateMarketplaceFeeSplit } from '../engine/binaryEngine';
@@ -80,6 +87,10 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Product Detail Modal State
+  const [selectedProductDetail, setSelectedProductDetail] = useState<Product | null>(null);
+  const [copiedDetailLink, setCopiedDetailLink] = useState(false);
 
   // Auth Modal State for Guest Actions
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -269,6 +280,40 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
     navigator.clipboard.writeText(`https://evionaecosystem.com/marketplace/p/${p.id}?ref=${memberCode}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleBuyNow = (product: Product) => {
+    setCart([product]);
+    setSelectedProductDetail(null);
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handleCopyDetailLink = (p: Product) => {
+    const code = memberCode || 'OFFICIAL';
+    navigator.clipboard.writeText(`https://evionaecosystem.com/marketplace/p/${p.id}?ref=${code}`);
+    setCopiedDetailLink(true);
+    setTimeout(() => setCopiedDetailLink(false), 2000);
+  };
+
+  const handleShareWhatsApp = (p: Product) => {
+    const code = memberCode || 'OFFICIAL';
+    const url = `https://evionaecosystem.com/marketplace/p/${p.id}?ref=${code}`;
+    const text = encodeURIComponent(`Check out "${p.title}" on Eviona Digital Marketplace: ${url}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const handleShareTelegram = (p: Product) => {
+    const code = memberCode || 'OFFICIAL';
+    const url = `https://evionaecosystem.com/marketplace/p/${p.id}?ref=${code}`;
+    const text = encodeURIComponent(`Check out "${p.title}" on Eviona Digital Marketplace!`);
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
+  };
+
+  const handleShareTwitter = (p: Product) => {
+    const code = memberCode || 'OFFICIAL';
+    const url = `https://evionaecosystem.com/marketplace/p/${p.id}?ref=${code}`;
+    const text = encodeURIComponent(`Excited to recommend "${p.title}" on @EvionaEcosystem: ${url}`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
   return (
@@ -597,11 +642,14 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                   return (
                     <div
                       key={prod.id}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-lg hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group"
+                      className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col justify-between overflow-hidden group"
                     >
                       <div>
-                        {/* Thumbnail */}
-                        <div className="relative aspect-[4/3] bg-slate-900 overflow-hidden">
+                        {/* Thumbnail with Quick View Hover Button */}
+                        <div
+                          onClick={() => setSelectedProductDetail(prod)}
+                          className="relative aspect-[4/3] bg-slate-900 overflow-hidden cursor-pointer"
+                        >
                           <img
                             src={prod.image}
                             alt={prod.title}
@@ -612,19 +660,33 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                               {prod.badge}
                             </span>
                           </div>
+
+                          {/* Quick View Hover Pill */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                            <span className="px-3 py-1.5 rounded-xl bg-white/95 text-slate-900 text-[11px] font-bold shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                              <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Quick View</span>
+                            </span>
+                          </div>
                         </div>
 
                         {/* Body */}
                         <div className="p-3.5 space-y-2">
-                          <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                          <h4
+                            onClick={() => setSelectedProductDetail(prod)}
+                            className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug hover:text-indigo-600 transition-colors cursor-pointer"
+                          >
                             {prod.title}
                           </h4>
 
                           <div className="flex items-center justify-between text-[11px]">
-                            <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => onNavigate('stores')}
+                              className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors text-left"
+                            >
                               <img src={prod.sellerAvatar} alt={prod.sellerName} className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-slate-200" />
                               <span className="font-semibold text-slate-600 truncate max-w-[80px]">{prod.sellerName}</span>
-                            </div>
+                            </button>
 
                             <div className="flex items-center gap-0.5 text-amber-500 font-bold">
                               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -668,6 +730,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                                   ? 'bg-rose-50 border-rose-200 text-rose-500'
                                   : 'border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50'
                               }`}
+                              title="Add to wishlist"
                             >
                               <Heart className="w-3.5 h-3.5" />
                             </button>
@@ -675,6 +738,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
                             <button
                               onClick={() => addToCart(prod)}
                               className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 hover:border-indigo-600 transition-all shadow-xs"
+                              title="Add to shopping cart"
                             >
                               <ShoppingBag className="w-3.5 h-3.5" />
                             </button>
@@ -858,6 +922,288 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* 4. FULL-PAGE ECOSYSTEM FOOTER                                             */}
+      {/* ========================================================================= */}
+      <footer className="mt-16 border-t border-slate-200 bg-white/95 pt-12 pb-8 text-slate-600 text-xs">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            {/* Brand & Mission */}
+            <div className="md:col-span-4 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-md">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-black text-slate-900 text-base block leading-none">Eviona Ecosystem</span>
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Digital Marketplace</span>
+                </div>
+              </div>
+              <p className="text-slate-500 leading-relaxed text-xs">
+                The premier decentralized commerce platform for creators, masterminds, and digital entrepreneurs. Buy verified assets or earn automated 40% affiliate commissions on every recommendation.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div className="md:col-span-2 space-y-2.5">
+              <h5 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Marketplace</h5>
+              <ul className="space-y-1.5 text-xs">
+                <li><button onClick={() => setSelectedCategory('Digital Courses')} className="hover:text-indigo-600 transition-colors">Digital Courses</button></li>
+                <li><button onClick={() => setSelectedCategory('Templates')} className="hover:text-indigo-600 transition-colors">Templates & Funnels</button></li>
+                <li><button onClick={() => setSelectedCategory('Software')} className="hover:text-indigo-600 transition-colors">Software & Tools</button></li>
+                <li><button onClick={() => setSelectedCategory('eBooks')} className="hover:text-indigo-600 transition-colors">eBooks & Guides</button></li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-2 space-y-2.5">
+              <h5 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Ecosystem</h5>
+              <ul className="space-y-1.5 text-xs">
+                <li><button onClick={() => onNavigate('stores')} className="hover:text-indigo-600 transition-colors">Creator Stores</button></li>
+                <li><button onClick={() => onNavigate('academy')} className="hover:text-indigo-600 transition-colors">Eviona Academy</button></li>
+                <li><button onClick={() => onNavigate('binary')} className="hover:text-indigo-600 transition-colors">Network Genealogy</button></li>
+                <li><button onClick={() => onNavigate('sellers')} className="hover:text-indigo-600 transition-colors">Seller Dashboard</button></li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-4 space-y-3">
+              <h5 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Accepted Payment Rails</h5>
+              <div className="flex flex-wrap gap-2 text-[11px] font-bold">
+                <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800">Visa / Mastercard</span>
+                <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800">Paystack</span>
+                <span className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700">USDT (TRC-20)</span>
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">Eviona Wallet</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                All transactions protected by 256-bit SSL encryption and strict double-entry ledger security.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-[11px]">
+            <p>© {new Date().getFullYear()} Eviona Ecosystem. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <button onClick={() => onNavigate('landing')} className="hover:text-indigo-600">Home</button>
+              <button onClick={() => onNavigate('support')} className="hover:text-indigo-600">Support Desk</button>
+              <button onClick={() => onNavigate('landing')} className="hover:text-indigo-600">Terms of Service</button>
+              <button onClick={() => onNavigate('landing')} className="hover:text-indigo-600">Privacy Policy</button>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* ========================================================================= */}
+      {/* 5. INTERACTIVE PRODUCT DETAIL MODAL                                       */}
+      {/* ========================================================================= */}
+      {selectedProductDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                  {selectedProductDetail.category}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">Digital Product Overview</span>
+              </div>
+              <button
+                onClick={() => setSelectedProductDetail(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                {/* Product Cover & Media */}
+                <div className="md:col-span-5 space-y-4">
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-md">
+                    <img
+                      src={selectedProductDetail.image}
+                      alt={selectedProductDetail.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
+                        {selectedProductDetail.badge || 'Featured Asset'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Trust Micro-Pills */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-semibold text-slate-700">Verified Quality</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span className="font-semibold text-slate-700">Instant Download</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Info & Purchase Actions */}
+                <div className="md:col-span-7 space-y-5">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                      {selectedProductDetail.title}
+                    </h2>
+
+                    <div className="flex items-center gap-4 mt-2 text-xs">
+                      {/* Creator link */}
+                      <button
+                        onClick={() => {
+                          setSelectedProductDetail(null);
+                          onNavigate('stores');
+                        }}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                      >
+                        <img
+                          src={selectedProductDetail.sellerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                          alt={selectedProductDetail.sellerName || 'Creator'}
+                          className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-200"
+                        />
+                        <span className="font-bold text-slate-900">{selectedProductDetail.sellerName || 'Eviona Verified Creator'}</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      </button>
+
+                      {/* Ratings */}
+                      <div className="flex items-center gap-1 text-amber-500 font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{selectedProductDetail.rating || 5.0}</span>
+                        <span className="text-slate-400 font-normal">({selectedProductDetail.reviewsCount || 24} reviews)</span>
+                      </div>
+
+                      <span className="text-slate-400 font-medium">{selectedProductDetail.salesCount || '150+ sold'}</span>
+                    </div>
+                  </div>
+
+                  {/* Price Banner */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-slate-50 border border-indigo-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-500 font-semibold block">One-time Investment</span>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black text-indigo-600">${selectedProductDetail.price.toFixed(2)}</span>
+                        <span className="text-xs text-slate-400 line-through">${(selectedProductDetail.price * 1.5).toFixed(2)}</span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          Save 33%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">License</span>
+                      <span className="text-xs font-black text-slate-900">Commercial & Personal</span>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">About this Product</h4>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                      {selectedProductDetail.description || 'Premium, high-yield digital asset designed to accelerate your business operations, conversions, and growth. Full source files and lifetime updates included.'}
+                    </p>
+                  </div>
+
+                  {/* Key Features Checklist */}
+                  <div className="space-y-1.5 pt-1">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">What's Included</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Instant digital package download</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Lifetime updates & future versions</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Full commercial resale & personal rights</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>24/7 dedicated creator technical support</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Purchase Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                      onClick={() => handleBuyNow(selectedProductDetail)}
+                      className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>Buy Now with 1-Click (${selectedProductDetail.price.toFixed(2)})</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        addToCart(selectedProductDetail);
+                        setSelectedProductDetail(null);
+                      }}
+                      className="py-3.5 px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs border border-slate-300/80 flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <ShoppingBag className="w-4 h-4 text-indigo-600" />
+                      <span>Add to Cart</span>
+                    </button>
+                  </div>
+
+                  {/* 40% Affiliate Split & Social Share Box */}
+                  <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Share2 className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-black text-white">Promote & Earn 40% Commission</span>
+                      </div>
+                      <span className="text-xs font-black text-emerald-400">
+                        +${calculateMarketplaceFeeSplit(selectedProductDetail.price, selectedProductDetail.affiliateCommissionRate).promoterCommissionNet.toFixed(2)} Payout
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopyDetailLink(selectedProductDetail)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        {copiedDetailLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedDetailLink ? 'Affiliate Link Copied!' : 'Copy My Affiliate Link'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleShareWhatsApp(selectedProductDetail)}
+                        className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                        title="Share on WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleShareTelegram(selectedProductDetail)}
+                        className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                        title="Share on Telegram"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleShareTwitter(selectedProductDetail)}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-colors"
+                        title="Share on X"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sliding Cart Drawer */}
       {isCartOpen && (

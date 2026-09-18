@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   Bot,
   GraduationCap,
   ChevronDown,
+  ChevronUp,
   Lock,
   Star,
   Check,
@@ -36,7 +37,16 @@ import {
   Briefcase,
   Sliders,
   Calculator,
-  UserCheck
+  UserCheck,
+  Store,
+  Coins,
+  BarChart3,
+  BookOpen,
+  Video,
+  Award,
+  HelpCircle,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { ViewType, PlanTier } from '../types';
 import { Badge } from '../components/common/Badge';
@@ -55,8 +65,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
-  // Mobile menu drawer state
+  // Navigation Dropdowns & Mobile drawer state
+  const [activeDropdown, setActiveDropdown] = useState<'ecosystem' | 'academy' | 'company' | null>(null);
+  const [mobileAccordion, setMobileAccordion] = useState<'ecosystem' | 'academy' | 'company' | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (navContainerRef.current && !navContainerRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Corporate Contact Modal state
   const [isCorporateContactOpen, setIsCorporateContactOpen] = useState(false);
@@ -184,12 +208,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
       {/* ========================================================================= */}
       {/* 1. HEADER / NAVIGATION BAR (MATCHING REFERENCE DESIGN)                     */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-50 bg-[#070A12]/90 backdrop-blur-xl border-b border-slate-800/80">
+      <header className="sticky top-0 z-50 bg-[#070A12]/95 backdrop-blur-xl border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           {/* Logo & Brand Area */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group shrink-0"
           >
             {branding.logoUrl || branding.lightLogoUrl ? (
               <img
@@ -222,21 +246,272 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden xl:flex items-center gap-6 text-xs font-bold uppercase tracking-wider text-slate-300">
-            <a href="#hero" className="hover:text-white transition-colors">Home</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#academy" className="hover:text-white transition-colors">Academy</a>
+          {/* Desktop Navigation Mega Dropdowns */}
+          <nav ref={navContainerRef} className="hidden lg:flex items-center gap-2 xl:gap-3 text-xs font-bold tracking-wide text-slate-300">
+            {/* Direct Home Link */}
+            <a href="#hero" className="px-3 py-2 rounded-xl hover:text-white hover:bg-slate-800/50 transition-all">
+              Home
+            </a>
+
+            {/* 1. Ecosystem & Tools Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'ecosystem' ? null : 'ecosystem')}
+                className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all ${
+                  activeDropdown === 'ecosystem'
+                    ? 'text-indigo-400 bg-indigo-950/60 border border-indigo-500/30 shadow-xs'
+                    : 'hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <span>Ecosystem & Tools</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'ecosystem' ? 'rotate-180 text-indigo-400' : 'text-slate-400'}`} />
+              </button>
+
+              {activeDropdown === 'ecosystem' && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-[#0c101d]/98 border border-slate-700/80 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl z-50 space-y-1 animate-fadeIn">
+                  <a
+                    href="#features"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30 group-hover:scale-105 transition-transform">
+                      <Cpu className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">Core Platform Features</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Unified entrepreneur OS, lead gen, and binary tree tracking.</p>
+                    </div>
+                  </a>
+
+                  <button
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      onEnterApp('marketplace');
+                    }}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30 group-hover:scale-105 transition-transform">
+                      <ShoppingBag className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors">Digital Marketplace</h4>
+                        <span className="text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.2 rounded">Public</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Explore 10,000+ digital assets, courses, and templates.</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      onEnterApp('stores');
+                    }}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30 group-hover:scale-105 transition-transform">
+                      <Store className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">Creator Stores Directory</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Discover verified merchant storefronts & top creators.</p>
+                    </div>
+                  </button>
+
+                  <a
+                    href="#features"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30 group-hover:scale-105 transition-transform">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">AI Business Center</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Autonomous AI copilot for marketing copy, emails & CRM.</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#features"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30 group-hover:scale-105 transition-transform">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">No-Code Website Builder</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">High-converting sales funnels & custom domain publishing.</p>
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Academy & Community Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'academy' ? null : 'academy')}
+                className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all ${
+                  activeDropdown === 'academy'
+                    ? 'text-indigo-400 bg-indigo-950/60 border border-indigo-500/30 shadow-xs'
+                    : 'hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <span>Academy & Events</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'academy' ? 'rotate-180 text-indigo-400' : 'text-slate-400'}`} />
+              </button>
+
+              {activeDropdown === 'academy' && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-[#0c101d]/98 border border-slate-700/80 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl z-50 space-y-1 animate-fadeIn">
+                  <a
+                    href="#academy"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30 group-hover:scale-105 transition-transform">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors">Eviona Academy Hub</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Step-by-step masterclasses, certifications & training.</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#academy"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-pink-600/20 text-pink-400 flex items-center justify-center shrink-0 border border-pink-500/30 group-hover:scale-105 transition-transform">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-pink-300 transition-colors">Live Webinars & Masterminds</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Weekly live calls with top industry earners & leaders.</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#how-it-works"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30 group-hover:scale-105 transition-transform">
+                      <Rocket className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">How It Works Roadmap</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">The 4-step framework from zero to recurring digital revenue.</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#success-stories"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30 group-hover:scale-105 transition-transform">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">Success Stories & Testimonials</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Real-world payout proofs and partner testimonials.</p>
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Company & Pricing Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'company' ? null : 'company')}
+                className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all ${
+                  activeDropdown === 'company'
+                    ? 'text-indigo-400 bg-indigo-950/60 border border-indigo-500/30 shadow-xs'
+                    : 'hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <span>Company & Pricing</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'company' ? 'rotate-180 text-indigo-400' : 'text-slate-400'}`} />
+              </button>
+
+              {activeDropdown === 'company' && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-[#0c101d]/98 border border-slate-700/80 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl z-50 space-y-1 animate-fadeIn">
+                  <a
+                    href="#pricing"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30 group-hover:scale-105 transition-transform">
+                      <DollarSign className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">Membership Pricing Tiers</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Growth, Pro, and Enterprise membership packages.</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#pricing"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-teal-600/20 text-teal-400 flex items-center justify-center shrink-0 border border-teal-500/30 group-hover:scale-105 transition-transform">
+                      <Calculator className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-teal-300 transition-colors">Compensation Simulator</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Calculate your binary pairing and 40% affiliate volume.</p>
+                    </div>
+                  </a>
+
+                  <button
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      setIsCorporateContactOpen(true);
+                    }}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30 group-hover:scale-105 transition-transform">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">Corporate & Enterprise Sales</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Request custom white-label and team onboarding demos.</p>
+                    </div>
+                  </button>
+
+                  <a
+                    href="#features"
+                    onClick={() => setActiveDropdown(null)}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-800/70 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30 group-hover:scale-105 transition-transform">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">Security & Wallet Trust</h4>
+                      <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Double-entry ledger, cold storage & instant USDT payouts.</p>
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Direct Marketplace Button with Badge */}
             <button
               onClick={() => onEnterApp('marketplace')}
-              className="hover:text-indigo-400 transition-colors flex items-center gap-1 uppercase font-bold text-xs"
+              className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white transition-all flex items-center gap-1.5 shadow-xs"
             >
+              <ShoppingBag className="w-3.5 h-3.5 text-indigo-400" />
               <span>Marketplace</span>
-              <span className="text-[9px] bg-indigo-600/30 text-indigo-300 px-1.5 py-0.5 rounded font-bold">Public</span>
+              <span className="text-[9px] bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                Store
+              </span>
             </button>
-            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-            <a href="#success-stories" className="hover:text-white transition-colors">Success Stories</a>
           </nav>
 
           {/* Desktop Action Buttons (Login + Get Started) */}
@@ -257,7 +532,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
 
           {/* Mobile Hamburger Button */}
-          <div className="flex xl:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <button
               onClick={() => openAuth('login')}
               className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800"
@@ -274,74 +549,185 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Accordion Drawer */}
         {isMobileMenuOpen && (
-          <div className="xl:hidden bg-slate-950/98 border-b border-slate-800 backdrop-blur-2xl px-6 py-6 space-y-4 animate-fadeIn">
-            <nav className="flex flex-col space-y-3 text-sm font-bold uppercase tracking-wider text-slate-300">
-              <a
-                href="#hero"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                Home
-              </a>
-              <a
-                href="#features"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                Features
-              </a>
-              <a
-                href="#academy"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                Academy Hub
-              </a>
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onEnterApp('marketplace');
-                }}
-                className="py-1 text-left hover:text-indigo-400 transition-colors flex items-center justify-between"
-              >
-                <span>Marketplace</span>
-                <span className="text-[10px] bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded font-bold">Public Store</span>
-              </button>
-              <a
-                href="#how-it-works"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                How It Works
-              </a>
-              <a
-                href="#pricing"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                Pricing
-              </a>
-              <a
-                href="#success-stories"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-1 hover:text-white transition-colors"
-              >
-                Success Stories
-              </a>
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsCorporateContactOpen(true);
-                }}
-                className="py-1 text-left hover:text-white transition-colors"
-              >
-                Corporate Contact & Sales
-              </button>
-            </nav>
+          <div className="lg:hidden bg-slate-950/98 border-b border-slate-800 backdrop-blur-2xl px-5 py-6 space-y-3 animate-fadeIn">
+            {/* Direct Home Link */}
+            <a
+              href="#hero"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block py-2 text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white"
+            >
+              Home
+            </a>
 
-            <div className="pt-4 border-t border-slate-900 flex flex-col gap-2.5">
+            {/* Accordion: Ecosystem & Tools */}
+            <div className="border border-slate-800/80 rounded-2xl bg-slate-900/50 overflow-hidden">
+              <button
+                onClick={() => setMobileAccordion(mobileAccordion === 'ecosystem' ? null : 'ecosystem')}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-200"
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  <span>Ecosystem & Tools</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mobileAccordion === 'ecosystem' ? 'rotate-180 text-indigo-400' : ''}`} />
+              </button>
+
+              {mobileAccordion === 'ecosystem' && (
+                <div className="px-4 pb-3 space-y-2 border-t border-slate-800/50 pt-2 text-xs">
+                  <a
+                    href="#features"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-indigo-400"
+                  >
+                    Core Features Overview
+                  </a>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onEnterApp('marketplace');
+                    }}
+                    className="w-full text-left py-1.5 text-slate-300 hover:text-indigo-400 flex items-center justify-between"
+                  >
+                    <span>Digital Marketplace</span>
+                    <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 rounded font-bold">10K+ Assets</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onEnterApp('stores');
+                    }}
+                    className="w-full text-left py-1.5 text-slate-300 hover:text-indigo-400"
+                  >
+                    Creator Stores Directory
+                  </button>
+                  <a
+                    href="#features"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-indigo-400"
+                  >
+                    AI Business Center & Copilot
+                  </a>
+                  <a
+                    href="#features"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-indigo-400"
+                  >
+                    No-Code Website Builder
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion: Academy & Events */}
+            <div className="border border-slate-800/80 rounded-2xl bg-slate-900/50 overflow-hidden">
+              <button
+                onClick={() => setMobileAccordion(mobileAccordion === 'academy' ? null : 'academy')}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-200"
+              >
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-purple-400" />
+                  <span>Academy & Events</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mobileAccordion === 'academy' ? 'rotate-180 text-purple-400' : ''}`} />
+              </button>
+
+              {mobileAccordion === 'academy' && (
+                <div className="px-4 pb-3 space-y-2 border-t border-slate-800/50 pt-2 text-xs">
+                  <a
+                    href="#academy"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-purple-400"
+                  >
+                    Eviona Academy Hub
+                  </a>
+                  <a
+                    href="#academy"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-purple-400"
+                  >
+                    Live Webinars & Masterminds
+                  </a>
+                  <a
+                    href="#how-it-works"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-purple-400"
+                  >
+                    How It Works Roadmap
+                  </a>
+                  <a
+                    href="#success-stories"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-purple-400"
+                  >
+                    Success Stories & Proof
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion: Company & Pricing */}
+            <div className="border border-slate-800/80 rounded-2xl bg-slate-900/50 overflow-hidden">
+              <button
+                onClick={() => setMobileAccordion(mobileAccordion === 'company' ? null : 'company')}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-200"
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  <span>Company & Pricing</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mobileAccordion === 'company' ? 'rotate-180 text-emerald-400' : ''}`} />
+              </button>
+
+              {mobileAccordion === 'company' && (
+                <div className="px-4 pb-3 space-y-2 border-t border-slate-800/50 pt-2 text-xs">
+                  <a
+                    href="#pricing"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-emerald-400"
+                  >
+                    Membership Pricing Tiers
+                  </a>
+                  <a
+                    href="#pricing"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-1.5 text-slate-300 hover:text-emerald-400"
+                  >
+                    Compensation Simulator
+                  </a>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsCorporateContactOpen(true);
+                    }}
+                    className="w-full text-left py-1.5 text-slate-300 hover:text-emerald-400"
+                  >
+                    Corporate & Enterprise Demos
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Direct Mobile Marketplace Button */}
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onEnterApp('marketplace');
+              }}
+              className="w-full py-3 px-4 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-indigo-400" />
+                <span>Visit Digital Marketplace</span>
+              </div>
+              <span className="text-[9px] bg-pink-500 text-white font-black px-2 py-0.5 rounded-full uppercase">
+                Explore Store
+              </span>
+            </button>
+
+            {/* Mobile CTAs */}
+            <div className="pt-3 border-t border-slate-900 flex flex-col gap-2.5">
               <button
                 onClick={() => openAuth('register')}
                 className="w-full py-3.5 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"

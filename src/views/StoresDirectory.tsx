@@ -24,12 +24,14 @@ interface StoresDirectoryProps {
   onNavigate: (view: ViewType) => void;
   onOpenStore: (storeSlugOrUserId: string) => void;
   currentUser?: Member;
+  isPublicGuest?: boolean;
 }
 
 export const StoresDirectory: React.FC<StoresDirectoryProps> = ({
   onNavigate,
   onOpenStore,
   currentUser,
+  isPublicGuest = false,
 }) => {
   const [stores, setStores] = useState<UserStoreSettings[]>(() => marketplaceEngine.getAllStores());
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,7 +61,56 @@ export const StoresDirectory: React.FC<StoresDirectoryProps> = ({
   const featuredStores = stores.filter(s => s.isFeaturedStore);
 
   return (
-    <div className="space-y-8 pb-20 animate-fadeIn max-w-7xl mx-auto">
+    <div className="min-h-screen text-slate-900 font-sans antialiased">
+      {/* Public Visitor Header */}
+      {isPublicGuest && (
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs mb-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6 shrink-0">
+              <button onClick={() => onNavigate('landing')} className="flex items-center gap-2.5 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">Eviona</span>
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block -mt-0.5">Creator Stores</span>
+                </div>
+              </button>
+
+              <nav className="hidden md:flex items-center gap-2 pl-4">
+                <button
+                  onClick={() => onNavigate('landing')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => onNavigate('marketplace')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  Marketplace
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-600 bg-indigo-50"
+                >
+                  Stores Directory
+                </button>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onNavigate('landing')}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                Join as Creator
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
       {/* Directory Hero Header */}
       <div className="bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 rounded-3xl p-6 sm:p-10 text-white shadow-card border border-indigo-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2 max-w-2xl">
@@ -215,6 +266,21 @@ export const StoresDirectory: React.FC<StoresDirectoryProps> = ({
             );
           })}
         </div>
+      )}
+      </div>
+
+      {/* Footer for Public Visitors */}
+      {isPublicGuest && (
+        <footer className="mt-16 border-t border-slate-200 bg-white/95 pt-8 pb-8 text-slate-500 text-xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© {new Date().getFullYear()} Eviona Ecosystem. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <button onClick={() => onNavigate('landing')} className="hover:text-indigo-600">Home</button>
+              <button onClick={() => onNavigate('marketplace')} className="hover:text-indigo-600">Marketplace</button>
+              <button onClick={() => onNavigate('support')} className="hover:text-indigo-600">Support</button>
+            </div>
+          </div>
+        </footer>
       )}
     </div>
   );

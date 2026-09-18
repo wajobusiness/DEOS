@@ -189,9 +189,10 @@ export function App() {
   if (!isAuthenticated) {
     if (currentView === 'stores') {
       return (
-        <div className="min-h-screen bg-slate-50 p-4 sm:p-8 max-w-7xl mx-auto">
+        <>
           <StoresDirectory
             onNavigate={handleNavigate}
+            isPublicGuest={true}
             onOpenStore={(slug) => {
               setTargetStoreUser(slug);
               setCurrentView('store');
@@ -204,7 +205,7 @@ export function App() {
             defaultSponsorCode={activeReferralCode}
             onSuccess={() => setCurrentView('dashboard')}
           />
-        </div>
+        </>
       );
     }
 
